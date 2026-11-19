@@ -26,8 +26,16 @@ crossterm = "0.28"
 # `login`/`logout`/`whoami`/cloud doctor checks, so local commands
 # never pay its runtime cost; rustls avoids a system OpenSSL
 # dependency. Proxy env vars (HTTP_PROXY/HTTPS_PROXY/NO_PROXY) are
-# honoured by reqwest's default system-proxy behaviour.
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+# honoured by reqwest's default system-proxy behaviour. Roots are
+# the OS trust store (rustls-native-certs), NOT webpki-roots:
+# ForgeHub is self-hosted, so servers legitimately present
+# certificates from private/local CAs (e.g. Caddy's local CA on
+# https://localhost) that only the system store can vouch for —
+# the CLI must trust what the OS trusts, like curl and git do.
+# (With webpki-roots, `fg login` against https://localhost
+# failed TLS even after the CA was installed system-wide;
+# found in local testing, 2026-11-19.)
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls-native-roots"] }
 rusqlite = { version = "0.41", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
