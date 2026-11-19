@@ -27,7 +27,7 @@ export function AppShell({
 }: {
   title: string;
   navItems: NavItem[];
-  activeId: string;
+  activeId: string | null;
   onNavigate: (item: NavItem) => void;
   actions?: ReactNode;
   children: ReactNode;

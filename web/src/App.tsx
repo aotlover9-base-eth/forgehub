@@ -89,9 +89,20 @@ function Shell() {
   const me = useMe();
   const logout = useLogout();
   const [helpOpen, setHelpOpen] = useState(false);
-  const active =
-    NAV_ITEMS.find((item) => item.href !== '/' && location.pathname.startsWith(item.href))?.id ??
-    'home';
+  // Which nav item is "here": Home only at '/', Profile on
+  // your own profile page, otherwise the matching section —
+  // and nothing on pages that belong to no section (another
+  // user's profile, a snippet, settings). The old fallback
+  // lit up Home on all of those, which made Profile look
+  // like it had gone Home.
+  const active: string | null =
+    location.pathname === '/'
+      ? 'home'
+      : me.data && location.pathname === `/${me.data.username}`
+        ? 'profile'
+        : (NAV_ITEMS.find(
+            (item) => item.href !== '/' && location.pathname.startsWith(item.href),
+          )?.id ?? null);
 
   // Minimal keyboard shortcuts (discoverable via the help
   // dialog, opened with ?): n = new snippet, / = focus the

@@ -1,16 +1,18 @@
-import { Link, Navigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button, CodeBlock } from '../design';
 import { useMe } from '../api/hooks';
 
 /**
- * The logged-out home: one calm hero — what ForgeHub is, the
- * canonical example, and the two ways in.
+ * The home page for everyone: one calm hero — what ForgeHub
+ * is and the canonical example. Signed-out visitors get the
+ * way in; signed-in users get the way to their library.
+ * Home never silently becomes another page (it used to
+ * redirect signed-in users to the dashboard, which the nav
+ * calls Library — "Home goes to Library" was a real
+ * complaint).
  */
 export default function LandingPage() {
   const me = useMe();
-  if (me.data) {
-    return <Navigate to="/dashboard" replace />;
-  }
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gap: 'var(--fh-space-5)' }}>
       <div>
@@ -43,12 +45,25 @@ export default function LandingPage() {
         code={'# someone saved this once as "ubuntu-setup"\nfg ubuntu-setup'}
       />
       <p style={{ display: 'flex', gap: 'var(--fh-space-3)', alignItems: 'center', margin: 0 }}>
-        <Link to="/signup" style={{ textDecoration: 'none' }}>
-          <Button variant="filled">Create account</Button>
-        </Link>
-        <Link to="/explore" style={{ textDecoration: 'none' }}>
-          <Button variant="text">Explore</Button>
-        </Link>
+        {me.data ? (
+          <>
+            <Link to="/dashboard" style={{ textDecoration: 'none' }}>
+              <Button variant="filled">Open your library</Button>
+            </Link>
+            <Link to="/explore" style={{ textDecoration: 'none' }}>
+              <Button variant="text">Explore</Button>
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link to="/signup" style={{ textDecoration: 'none' }}>
+              <Button variant="filled">Create account</Button>
+            </Link>
+            <Link to="/explore" style={{ textDecoration: 'none' }}>
+              <Button variant="text">Explore</Button>
+            </Link>
+          </>
+        )}
       </p>
     </div>
   );
