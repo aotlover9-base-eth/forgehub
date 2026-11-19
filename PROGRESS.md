@@ -1,0 +1,26 @@
+# PROGRESS
+
+One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
+
+- [x] Step 1 — bootstrap monorepo, study forgenesis, CI skeleton
+- [ ] Step 2 — specs, ADRs, threat model, API contract
+- [ ] Step 3 — forge-core shared library
+- [ ] Step 4 — local CLI core (init, record, run, manage)
+- [ ] Step 5 — local CLI parity (vars, stats, backup, doctor, alias) — 🛑 CHECKPOINT 1
+- [ ] Step 6 — server foundation
+- [ ] Step 7 — web account auth and sessions
+- [ ] Step 8 — API tokens and device-code login
+- [ ] Step 9 — snippet and version API
+- [ ] Step 10 — search, tags, stars, forks, profiles
+- [ ] Step 11 — CLI login, whoami, credentials
+- [ ] Step 12 — CLI push, pull, remote list, fork
+- [ ] Step 13 — run from cloud with safety UX — 🛑 CHECKPOINT 2
+- [ ] Step 14 — web design system (Material 3)
+- [ ] Step 15 — web auth screens and dashboard
+- [ ] Step 16 — web snippet editor and detail pages
+- [ ] Step 17 — web explore, profiles, settings, device approval — 🛑 CHECKPOINT 3
+- [ ] Step 18 — CLI TUI, offline mode, completions, polish
+- [ ] Step 19 — security hardening pass
+- [ ] Step 20 — end-to-end tests and performance pass — 🛑 CHECKPOINT 4
+- [ ] Step 21 — packaging, installer, release pipeline
+- [ ] Step 22 — docs, final audit, v0.1.0

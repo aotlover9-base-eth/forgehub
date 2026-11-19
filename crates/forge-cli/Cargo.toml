@@ -1,0 +1,18 @@
+[package]
+name = "forge-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "ForgeHub CLI (binary `forgehub`, aliased to `fg`)."
+
+[[bin]]
+name = "forgehub"
+path = "src/main.rs"
+
+[dependencies]
+forge-core = { path = "../forge-core" }
+
+[lints]
+workspace = true

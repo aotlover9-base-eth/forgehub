@@ -1,0 +1,7 @@
+/* Placeholder styles for Step 1. The Material 3 token system
+   (seed #36618E, generated light/dark schemes, tokens only) is
+   implemented in Step 14 — no design system is built in Step 1. */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}

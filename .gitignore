@@ -1,0 +1,38 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock.orig
+
+# Node / web
+node_modules/
+web/dist/
+web/.vite/
+*.local
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Databases / local state
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Build / OS / editor
+dist/
+build/
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
+
+# ForgeHub local state
+.forgehub/
+.forgenesis/

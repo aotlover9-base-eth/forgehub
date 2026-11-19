@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/forge-core",
+    "crates/forge-cli",
+    "crates/forge-server",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Aotlover9"]
+repository = "https://github.com/aotlover9-base-eth/forgehub"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = 3
