@@ -17,10 +17,10 @@
 use crate::auth::{body, CurrentUser, RequireUser};
 use crate::db::now_iso;
 use crate::error::ApiError;
-use crate::repo::{SnippetRow, UserRow};
+use crate::repo::{SnippetRow, UserRow, VersionRow};
 use crate::snippets::{
-    check_write_scope_and_csrf, decode_cursor, encode_cursor, not_found, page_limit,
-    resolve_readable, snippet_json,
+    check_write_scope_and_csrf, decode_cursor, encode_cursor, forked_from_json, not_found,
+    page_limit, resolve_readable, snippet_json, snippet_json_parts,
 };
 use crate::state::AppState;
 use axum::extract::rejection::JsonRejection;
@@ -30,6 +30,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
 use axum::Router;
 use serde::Deserialize;
+use std::collections::{HashMap, HashSet};
 
 // ---------------------------------------------------------------- search
 
@@ -111,23 +112,139 @@ pub struct SearchQuery {
     cursor: Option<String>,
 }
 
+/// Everything needed to render a page of snippets, fetched
+/// with a fixed handful of bulk queries (Step 20: the search
+/// and list handlers previously ran ~5 queries *per snippet*,
+/// which dominated their latency at 10k+ snippets).
+struct HydratedPage {
+    versions: HashMap<i64, VersionRow>,
+    usernames: HashMap<i64, String>,
+    tags: HashMap<i64, Vec<String>>,
+    starred: HashSet<i64>,
+    fork_sources: HashMap<i64, SnippetRow>,
+}
+
+impl HydratedPage {
+    /// Render one snippet of the page.
+    fn render(&self, snippet: &SnippetRow) -> Result<serde_json::Value, ApiError> {
+        let version = self
+            .versions
+            .get(&snippet.id)
+            .ok_or_else(ApiError::internal)?;
+        let owner = self
+            .usernames
+            .get(&snippet.owner_id)
+            .ok_or_else(ApiError::internal)?;
+        let forked_from = snippet.forked_from_snippet_id.and_then(|source_id| {
+            let source = self.fork_sources.get(&source_id)?;
+            let source_owner = self.usernames.get(&source.owner_id)?;
+            Some(forked_from_json(snippet, source, source_owner))
+        });
+        snippet_json_parts(
+            snippet,
+            version,
+            owner,
+            self.tags.get(&snippet.id).map_or(&[], Vec::as_slice),
+            self.starred.contains(&snippet.id),
+            forked_from.as_ref(),
+        )
+    }
+
+    /// Owner username for a snippet of the page.
+    fn owner_of(&self, snippet: &SnippetRow) -> Result<&str, ApiError> {
+        self.usernames
+            .get(&snippet.owner_id)
+            .map(String::as_str)
+            .ok_or_else(ApiError::internal)
+    }
+
+    /// Tags for a snippet of the page.
+    fn tags_of(&self, snippet: &SnippetRow) -> &[String] {
+        self.tags.get(&snippet.id).map_or(&[], Vec::as_slice)
+    }
+
+    /// Latest version row for a snippet of the page.
+    fn version_of(&self, snippet: &SnippetRow) -> Result<&VersionRow, ApiError> {
+        self.versions
+            .get(&snippet.id)
+            .ok_or_else(ApiError::internal)
+    }
+}
+
+/// Bulk-fetch everything [`HydratedPage`] needs for `rows`.
+async fn hydrate(
+    state: &AppState,
+    rows: &[SnippetRow],
+    viewer: Option<&UserRow>,
+) -> Result<HydratedPage, ApiError> {
+    let ids: Vec<i64> = rows.iter().map(|s| s.id).collect();
+    let versions = state
+        .repos
+        .snippets
+        .latest_versions(&ids)
+        .await?
+        .into_iter()
+        .map(|v| (v.snippet_id, v))
+        .collect();
+    let mut tags: HashMap<i64, Vec<String>> = HashMap::new();
+    for (snippet_id, tag) in state.repos.snippets.tags_for(&ids).await? {
+        tags.entry(snippet_id).or_default().push(tag);
+    }
+    let starred: HashSet<i64> = match viewer {
+        Some(user) => state
+            .repos
+            .snippets
+            .starred_among(user.id, &ids)
+            .await?
+            .into_iter()
+            .collect(),
+        None => HashSet::new(),
+    };
+    // Fork sources are snippets too; fetch them and merge the
+    // owner set so one users query covers both.
+    let source_ids: Vec<i64> = rows
+        .iter()
+        .filter_map(|s| s.forked_from_snippet_id)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    let fork_sources: HashMap<i64, SnippetRow> = state
+        .repos
+        .snippets
+        .by_ids(&source_ids)
+        .await?
+        .into_iter()
+        .map(|s| (s.id, s))
+        .collect();
+    let mut user_ids: Vec<i64> = rows.iter().map(|s| s.owner_id).collect();
+    user_ids.extend(fork_sources.values().map(|s| s.owner_id));
+    user_ids.sort_unstable();
+    user_ids.dedup();
+    let usernames = state
+        .repos
+        .users
+        .by_ids(&user_ids)
+        .await?
+        .into_iter()
+        .map(|u| (u.id, u.username))
+        .collect();
+    Ok(HydratedPage {
+        versions,
+        usernames,
+        tags,
+        starred,
+        fork_sources,
+    })
+}
+
 /// Page through rows, rendering each with its latest version.
 async fn render_page(
     state: &AppState,
     rows: &[SnippetRow],
     viewer: Option<&UserRow>,
 ) -> Result<Vec<serde_json::Value>, ApiError> {
-    let mut items = Vec::new();
-    for snippet in rows {
-        let latest = state
-            .repos
-            .snippets
-            .latest_version(snippet.id)
-            .await?
-            .ok_or_else(ApiError::internal)?;
-        items.push(snippet_json(state, snippet, &latest, viewer).await?);
-    }
-    Ok(items)
+    let page = hydrate(state, rows, viewer).await?;
+    rows.iter().map(|snippet| page.render(snippet)).collect()
 }
 
 async fn search(
@@ -187,25 +304,18 @@ async fn search(
         )
         .await?;
     let has_more = i64::try_from(rows.len()).unwrap_or(i64::MAX) > limit;
+    let page_rows: Vec<SnippetRow> = rows
+        .into_iter()
+        .take(usize::try_from(limit).unwrap_or(0))
+        .collect();
+    let page = hydrate(&state, &page_rows, viewer_user.as_ref()).await?;
     let mut results = Vec::new();
-    for snippet in rows.iter().take(usize::try_from(limit).unwrap_or(0)) {
-        let latest = state
-            .repos
-            .snippets
-            .latest_version(snippet.id)
-            .await?
-            .ok_or_else(ApiError::internal)?;
-        let owner = state
-            .repos
-            .users
-            .by_id(snippet.owner_id)
-            .await?
-            .ok_or_else(ApiError::internal)?;
-        let tags = state.repos.snippets.tags(snippet.id).await?;
-        let item = snippet_json(&state, snippet, &latest, viewer_user.as_ref()).await?;
+    for snippet in &page_rows {
+        let latest = page.version_of(snippet)?;
+        let item = page.render(snippet)?;
         results.push(serde_json::json!({
             "snippet": item,
-            "highlights": highlights(snippet, &owner.username, &tags, &latest.body, &terms),
+            "highlights": highlights(snippet, page.owner_of(snippet)?, page.tags_of(snippet), &latest.body, &terms),
         }));
     }
     Ok(Json(serde_json::json!({

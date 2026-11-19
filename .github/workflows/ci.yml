@@ -59,6 +59,31 @@ jobs:
       - name: Build
         run: npm run build
 
+  e2e:
+    name: End-to-end (real server + real CLI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web deps (for the SPA build the server hosts)
+        working-directory: web
+        run: npm ci --legacy-peer-deps
+      - name: Run the end-to-end story
+        run: bash scripts/e2e.sh
+      - name: Install the headless browser
+        working-directory: web
+        run: npx playwright install --with-deps chromium-headless-shell
+      - name: Run the browser end-to-end story
+        run: bash scripts/e2e-web.sh --skip-build
+
   supply-chain:
     name: Supply chain (deny, audit, npm audit)
     runs-on: ubuntu-latest

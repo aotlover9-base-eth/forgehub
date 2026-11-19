@@ -416,3 +416,153 @@ fn whoami_without_login_is_exit_4() {
     assert_eq!(code, 0, "logout while logged out is a no-op: {stdout}");
     assert!(stdout.contains("Not logged in"), "{stdout}");
 }
+
+/// Mint a token through the session API (helper for Step 20 tests).
+fn mint_token(base: &str, cookie: &str, csrf: &str, scopes: &[&str]) -> String {
+    let client = reqwest::blocking::Client::new();
+    let resp = client
+        .post(format!("{base}/api/v1/tokens"))
+        .header("cookie", cookie)
+        .header("x-csrf-token", csrf)
+        .json(&serde_json::json!({ "name": "step20", "scopes": scopes }))
+        .send()
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+    let created: serde_json::Value = resp.json().unwrap();
+    created["token"].as_str().unwrap().to_string()
+}
+
+/// Step 20: `remote list` (and `status`) follow `next_cursor`
+/// past the first 100-item page instead of silently truncating.
+#[test]
+fn remote_list_follows_pagination_past_100() {
+    let rig = start_server();
+    let (cookie, csrf) = browser_signup(&rig.base, "pager");
+    let token = mint_token(&rig.base, &cookie, &csrf, &["read", "write"]);
+    let client = reqwest::blocking::Client::new();
+    for i in 0..105 {
+        let resp = client
+            .post(format!("{}/api/v1/snippets", rig.base))
+            .bearer_auth(&token)
+            .json(&serde_json::json!({
+                "name": format!("bulk-{i:03}"),
+                "body": "echo bulk",
+                "visibility": "private",
+            }))
+            .send()
+            .unwrap();
+        assert_eq!(resp.status(), 201, "create bulk-{i:03}");
+    }
+    let (code, _, stderr) = rig.run(
+        &["login", "--registry", &rig.base, "--token"],
+        Some(token.as_bytes()),
+    );
+    assert_eq!(code, 0, "{stderr}");
+    let (code, stdout, stderr) = rig.run(&["remote", "list", "--json"], None);
+    assert_eq!(code, 0, "{stderr}");
+    let body: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(
+        body["snippets"].as_array().unwrap().len(),
+        105,
+        "remote list must follow pagination past 100"
+    );
+}
+
+/// Step 20: a cloud run fetches the snippet with exactly ONE
+/// HTTP request (no metadata pre-flight, no second fetch).
+#[test]
+fn cloud_run_uses_exactly_one_snippet_request() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    // A counting variant of the usual test server: wrap the
+    // real router with middleware that counts snippet GETs.
+    let home = tempfile::tempdir().unwrap();
+    let db_path = home.path().join("server.db");
+    let web_dir = home.path().join("no-web");
+    let counter = Arc::new(AtomicUsize::new(0));
+    let counter_thread = counter.clone();
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async move {
+            let mut map: HashMap<String, String> = HashMap::new();
+            map.insert(
+                "FORGEHUB_DATABASE_URL".into(),
+                format!("sqlite://{}", db_path.display()),
+            );
+            map.insert("FORGEHUB_WEB_DIR".into(), web_dir.display().to_string());
+            map.insert("FORGEHUB_LOGIN_BACKOFF_BASE_MS".into(), "60".into());
+            let config = forge_server::config::Config::from_vars(&|k| map.get(k).cloned()).unwrap();
+            let pool = forge_server::db::connect(&config.database_url)
+                .await
+                .unwrap();
+            forge_server::db::migrate(&pool).await.unwrap();
+            let state = forge_server::state::AppState::new(
+                config,
+                forge_server::repo::Repos::sqlite(pool.clone()),
+                pool,
+            );
+            let app = forge_server::http::build_router(state).layer(axum::middleware::from_fn(
+                move |req: axum::extract::Request, next: axum::middleware::Next| {
+                    let c = counter_thread.clone();
+                    async move {
+                        if req.method() == axum::http::Method::GET
+                            && req.uri().path().starts_with("/api/v1/snippets/")
+                        {
+                            c.fetch_add(1, Ordering::SeqCst);
+                        }
+                        next.run(req).await
+                    }
+                },
+            ));
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            tx.send(format!("http://{addr}")).unwrap();
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+    });
+    let base = rx.recv_timeout(Duration::from_secs(30)).unwrap();
+    let rig = Rig {
+        base,
+        db_path: home.path().join("server.db"),
+        home,
+    };
+
+    let (cookie, csrf) = browser_signup(&rig.base, "runner");
+    let token = mint_token(&rig.base, &cookie, &csrf, &["read", "write"]);
+    let client = reqwest::blocking::Client::new();
+    let resp = client
+        .post(format!("{}/api/v1/snippets", rig.base))
+        .bearer_auth(&token)
+        .json(&serde_json::json!({
+            "name": "one-shot",
+            "body": "echo counted-run",
+            "visibility": "private",
+        }))
+        .send()
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+    let (code, _, stderr) = rig.run(
+        &["login", "--registry", &rig.base, "--token"],
+        Some(token.as_bytes()),
+    );
+    assert_eq!(code, 0, "{stderr}");
+
+    counter.store(0, Ordering::SeqCst);
+    // Own snippet + -y: the [y/N] prompt is skippable, so this
+    // runs non-interactively through the exact CLI path.
+    let (code, stdout, stderr) = rig.run(&["run", "one-shot", "-y"], None);
+    assert_eq!(code, 0, "{stderr}");
+    assert!(stdout.contains("counted-run"), "{stdout}");
+    assert_eq!(
+        counter.load(Ordering::SeqCst),
+        1,
+        "a cloud run must make exactly one snippet GET"
+    );
+}

@@ -776,22 +776,17 @@ pub fn cmd_status(
             )?);
         }
         // Remote-only snippets (mine, not saved locally).
-        let (_, mine, _) = sess
-            .client
-            .get("/me/snippets?limit=100&sort=name", Some(&sess.entry.token))
-            .map_err(|e| api_fail(&e, &sess.entry.token))?;
-        if let Some(arr) = mine["snippets"].as_array() {
-            for s in arr {
-                let rname = s["name"].as_str().unwrap_or_default().to_string();
-                if !seen.contains(&rname) && !store.exists(&rname) {
-                    rows.push(StatusRow {
-                        name: rname,
-                        owner: sess.username.clone(),
-                        state: SyncState::RemoteOnly,
-                        local_version: None,
-                        remote_version: s["version"].as_i64(),
-                    });
-                }
+        let mine = get_all_pages(&sess, "/me/snippets?limit=100&sort=name")?;
+        for s in &mine {
+            let rname = s["name"].as_str().unwrap_or_default().to_string();
+            if !seen.contains(&rname) && !store.exists(&rname) {
+                rows.push(StatusRow {
+                    name: rname,
+                    owner: sess.username.clone(),
+                    state: SyncState::RemoteOnly,
+                    local_version: None,
+                    remote_version: s["version"].as_i64(),
+                });
             }
         }
     }
@@ -918,6 +913,32 @@ fn snippet_page(body: &Value) -> Vec<Value> {
     body["snippets"].as_array().cloned().unwrap_or_default()
 }
 
+/// Fetch **every** page of a `/me/...` list endpoint, following
+/// `next_cursor` until the server says there is no more
+/// (Step 20: these commands previously stopped silently at
+/// the first 100 items). `base_path` must already contain
+/// its query string (`?limit=100...`); the cursor is
+/// base64url, so it can be appended verbatim.
+fn get_all_pages(sess: &Session, base_path: &str) -> Result<Vec<Value>> {
+    let mut out: Vec<Value> = Vec::new();
+    let mut cursor: Option<String> = None;
+    loop {
+        let path = match &cursor {
+            Some(c) => format!("{base_path}&cursor={c}"),
+            None => base_path.to_string(),
+        };
+        let (_, body, _) = sess
+            .client
+            .get(&path, Some(&sess.entry.token))
+            .map_err(|e| api_fail(&e, &sess.entry.token))?;
+        out.extend(snippet_page(&body));
+        match body["next_cursor"].as_str() {
+            Some(c) if !c.is_empty() => cursor = Some(c.to_string()),
+            _ => return Ok(out),
+        }
+    }
+}
+
 /// `fg remote list [--mine|--stars]`.
 pub fn cmd_remote_list(
     store: &Store,
@@ -932,11 +953,7 @@ pub fn cmd_remote_list(
     } else {
         "/me/snippets?limit=100&sort=name"
     };
-    let (_, body, _) = sess
-        .client
-        .get(path, Some(&sess.entry.token))
-        .map_err(|e| api_fail(&e, &sess.entry.token))?;
-    let snippets = snippet_page(&body);
+    let snippets = get_all_pages(&sess, path)?;
     if json {
         println!("{}", serde_json::json!({ "snippets": snippets }));
         return Ok(0);

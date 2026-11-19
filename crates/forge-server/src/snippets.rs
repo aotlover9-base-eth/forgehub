@@ -195,6 +195,54 @@ fn summary_json(body: &str) -> Result<serde_json::Value, ApiError> {
 // ------------------------------------------------------------ responses
 
 /// The openapi `Snippet` shape for one version of a snippet.
+/// Render a snippet from pre-fetched parts (Step 20: page
+/// handlers hydrate a whole page with a handful of bulk
+/// queries instead of ~5 queries per snippet).
+pub(crate) fn snippet_json_parts(
+    snippet: &SnippetRow,
+    version: &VersionRow,
+    owner_username: &str,
+    tags: &[String],
+    starred_by_me: bool,
+    forked_from: Option<&serde_json::Value>,
+) -> Result<serde_json::Value, ApiError> {
+    Ok(serde_json::json!({
+        "owner": owner_username,
+        "name": snippet.name,
+        "description": snippet.description,
+        "visibility": snippet.visibility,
+        "tags": tags,
+        "version": version.version,
+        "hash": version.hash,
+        "short_hash": version.hash[..8.min(version.hash.len())],
+        "body": version.body,
+        "message": version.message,
+        "summary": summary_json(&version.body)?,
+        "star_count": snippet.star_count,
+        "fork_count": snippet.fork_count,
+        "pull_count": snippet.pull_count,
+        "forked_from": forked_from,
+        "starred_by_me": starred_by_me,
+        "created_at": snippet.created_at,
+        "updated_at": snippet.updated_at,
+    }))
+}
+
+/// The `forked_from` provenance object for one snippet, given
+/// its (already fetched) source snippet and source owner name.
+pub(crate) fn forked_from_json(
+    snippet: &SnippetRow,
+    source: &SnippetRow,
+    source_owner_username: &str,
+) -> serde_json::Value {
+    serde_json::json!({
+        "owner": source_owner_username,
+        "name": source.name,
+        "version": snippet.forked_from_version,
+        "hash": snippet.forked_from_hash,
+    })
+}
+
 pub(crate) async fn snippet_json(
     state: &AppState,
     snippet: &SnippetRow,
@@ -227,37 +275,20 @@ pub(crate) async fn snippet_json(
                     .by_id(source.owner_id)
                     .await?
                     .ok_or_else(ApiError::internal)?;
-                Some(serde_json::json!({
-                    "owner": source_owner.username,
-                    "name": source.name,
-                    "version": snippet.forked_from_version,
-                    "hash": snippet.forked_from_hash,
-                }))
+                Some(forked_from_json(snippet, &source, &source_owner.username))
             }
             None => None,
         },
         None => None,
     };
-    Ok(serde_json::json!({
-        "owner": owner.username,
-        "name": snippet.name,
-        "description": snippet.description,
-        "visibility": snippet.visibility,
-        "tags": tags,
-        "version": version.version,
-        "hash": version.hash,
-        "short_hash": version.hash[..8.min(version.hash.len())],
-        "body": version.body,
-        "message": version.message,
-        "summary": summary_json(&version.body)?,
-        "star_count": snippet.star_count,
-        "fork_count": snippet.fork_count,
-        "pull_count": snippet.pull_count,
-        "forked_from": forked_from,
-        "starred_by_me": starred_by_me,
-        "created_at": snippet.created_at,
-        "updated_at": snippet.updated_at,
-    }))
+    snippet_json_parts(
+        snippet,
+        version,
+        &owner.username,
+        &tags,
+        starred_by_me,
+        forked_from.as_ref(),
+    )
 }
 
 fn etag_matches(headers: &HeaderMap, hash: &str) -> bool {

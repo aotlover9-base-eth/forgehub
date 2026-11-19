@@ -194,6 +194,8 @@ pub trait UserRepo: Send + Sync {
     ) -> RepoResult<UserRow>;
     /// By primary key.
     async fn by_id(&self, id: i64) -> RepoResult<Option<UserRow>>;
+    /// Bulk: users by id (Step 20 page hydration).
+    async fn by_ids(&self, ids: &[i64]) -> RepoResult<Vec<UserRow>>;
     /// By username (case-insensitive).
     async fn by_username(&self, username: &str) -> RepoResult<Option<UserRow>>;
     /// By email (case-insensitive).
@@ -363,6 +365,14 @@ pub trait SnippetRepo: Send + Sync {
     async fn versions(&self, snippet_id: i64) -> RepoResult<Vec<VersionRow>>;
     /// Current tags.
     async fn tags(&self, snippet_id: i64) -> RepoResult<Vec<String>>;
+    /// Bulk: snippets by id (Step 20 page hydration).
+    async fn by_ids(&self, ids: &[i64]) -> RepoResult<Vec<SnippetRow>>;
+    /// Bulk: the latest version row of each requested snippet.
+    async fn latest_versions(&self, ids: &[i64]) -> RepoResult<Vec<VersionRow>>;
+    /// Bulk: `(snippet_id, tag)` pairs for the requested snippets.
+    async fn tags_for(&self, ids: &[i64]) -> RepoResult<Vec<(i64, String)>>;
+    /// Bulk: which of the requested snippets this user starred.
+    async fn starred_among(&self, user_id: i64, ids: &[i64]) -> RepoResult<Vec<i64>>;
     /// Update metadata (description/visibility/tags), syncing FTS.
     async fn update_metadata(
         &self,
@@ -567,6 +577,14 @@ fn map_unique(err: sqlx::Error) -> RepoError {
 
 // ------------------------------------------------------------------ users
 
+/// `?,?,?` for an `IN (...)` list of `n` ids (Step 20 bulk
+/// reads). The SQL built with it contains only `?` placeholders
+/// — ids are always bound as parameters, never interpolated —
+/// which is why the call sites may use `AssertSqlSafe`.
+fn in_placeholders(n: usize) -> String {
+    std::iter::repeat_n("?", n).collect::<Vec<_>>().join(",")
+}
+
 #[async_trait]
 impl UserRepo for SqliteStore {
     async fn create(
@@ -602,6 +620,21 @@ impl UserRepo for SqliteStore {
                 .fetch_optional(&self.pool)
                 .await?,
         )
+    }
+
+    async fn by_ids(&self, ids: &[i64]) -> RepoResult<Vec<UserRow>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let sql = format!(
+            "SELECT * FROM users WHERE id IN ({})",
+            in_placeholders(ids.len())
+        );
+        let mut q = sqlx::query_as::<_, UserRow>(sqlx::AssertSqlSafe(sql));
+        for id in ids {
+            q = q.bind(id);
+        }
+        Ok(q.fetch_all(&self.pool).await?)
     }
 
     async fn by_username(&self, username: &str) -> RepoResult<Option<UserRow>> {
@@ -1163,6 +1196,67 @@ impl SnippetRepo for SqliteStore {
                 .fetch_all(&self.pool)
                 .await?,
         )
+    }
+
+    async fn by_ids(&self, ids: &[i64]) -> RepoResult<Vec<SnippetRow>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let sql = format!(
+            "SELECT * FROM snippets WHERE id IN ({})",
+            in_placeholders(ids.len())
+        );
+        let mut q = sqlx::query_as::<_, SnippetRow>(sqlx::AssertSqlSafe(sql));
+        for id in ids {
+            q = q.bind(id);
+        }
+        Ok(q.fetch_all(&self.pool).await?)
+    }
+
+    async fn latest_versions(&self, ids: &[i64]) -> RepoResult<Vec<VersionRow>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let sql = format!(
+            "SELECT v.* FROM snippet_versions v JOIN snippets s ON s.id = v.snippet_id \
+             WHERE v.snippet_id IN ({}) AND v.version = s.latest_version",
+            in_placeholders(ids.len())
+        );
+        let mut q = sqlx::query_as::<_, VersionRow>(sqlx::AssertSqlSafe(sql));
+        for id in ids {
+            q = q.bind(id);
+        }
+        Ok(q.fetch_all(&self.pool).await?)
+    }
+
+    async fn tags_for(&self, ids: &[i64]) -> RepoResult<Vec<(i64, String)>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let sql = format!(
+            "SELECT snippet_id, tag FROM snippet_tags WHERE snippet_id IN ({}) ORDER BY tag",
+            in_placeholders(ids.len())
+        );
+        let mut q = sqlx::query_as::<_, (i64, String)>(sqlx::AssertSqlSafe(sql));
+        for id in ids {
+            q = q.bind(id);
+        }
+        Ok(q.fetch_all(&self.pool).await?)
+    }
+
+    async fn starred_among(&self, user_id: i64, ids: &[i64]) -> RepoResult<Vec<i64>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let sql = format!(
+            "SELECT snippet_id FROM stars WHERE user_id = ? AND snippet_id IN ({})",
+            in_placeholders(ids.len())
+        );
+        let mut q = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql)).bind(user_id);
+        for id in ids {
+            q = q.bind(id);
+        }
+        Ok(q.fetch_all(&self.pool).await?)
     }
 
     async fn update_metadata(

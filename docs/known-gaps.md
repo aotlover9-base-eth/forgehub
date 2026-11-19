@@ -58,13 +58,22 @@ advisories:
 
 ## Web bundle size (Step 17)
 
-The web shell chunk is ~687 kB (179 kB gzip), dominated by
-`@material/web` being imported wholesale. A per-route import
-pass is the top item of the Step 20 performance pass.
+The web shell chunk is ~671 kB (177 kB gzip) after Step 20
+removed four dead `@material/web` registrations. The rest is
+the design system itself (buttons, fields, menus, dialogs are
+used by the shell and nearly every page) plus React, the
+router and TanStack Query; route chunks are 2–12 kB. Splitting
+element registration per route could shave more, at real
+complexity cost; it is a post-v1 optimisation, not a defect.
 
-## CLI list pagination (Step 12)
+## Search latency at very large scale (Step 20)
 
-`push --all` and `remote list` read a single 100-item page
-from `/me/snippets`. Users with more than 100 cloud snippets
-will not see the rest in those two commands. Cursor following
-is a Step 20 candidate.
+At the budgeted scale (10k snippets) search p95 is ~37 ms,
+inside the 50 ms budget. At 50k snippets with a term that
+matches *every* snippet, p95 rises to ~94 ms: FTS5 must score
+every match for bm25 ranking, and that scan is linear in the
+number of matches. Reads and lists stay at ~2–4 ms p95 at
+50k. If a deployment grows past ~50k public snippets, the
+fixes are a covering index on the FTS auxiliary data or
+precomputed popularity ordering; neither is needed at v1
+scale.

@@ -36,3 +36,5 @@ build/
 # ForgeHub local state
 .forgehub/
 .forgenesis/
+web/test-results/
+web/playwright-report/
