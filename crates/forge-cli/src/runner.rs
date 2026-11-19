@@ -457,3 +457,109 @@ pub fn execute(
         skipped,
     })
 }
+
+/// Step-through execution (`--step`, Step 13): like
+/// [`execute`], but before each main step the user is shown the
+/// step and asked; `y` runs it, `n`/Enter skips it, `q` aborts
+/// the run (exit code 2 — refused). Script mode has a single
+/// unit of work, so it behaves exactly like [`execute`].
+/// `always` steps are not prompted (they are cleanup by
+/// definition) and still run after an abort.
+///
+/// # Errors
+/// Only for script-mode setup failures.
+pub fn execute_stepwise(
+    snippet: &Snippet,
+    values: &BTreeMap<String, String>,
+    base: &Path,
+    tmp_root: &Path,
+    stdin: &mut impl std::io::BufRead,
+) -> Result<RunOutcome> {
+    if snippet.effective_mode() == Mode::Script {
+        eprintln!("forgehub: --step has no effect on script-mode snippets (one unit of work)");
+        return execute(snippet, values, base, tmp_root);
+    }
+    let steps = snippet.resolved_steps();
+    let always = snippet.always_steps();
+    let total = steps.len();
+    let mut executed = 0usize;
+    let mut skipped = 0usize;
+    let mut result = 0i32;
+    let mut aborted = false;
+    for (i, step) in steps.iter().enumerate() {
+        if let Some(cond) = &step.condition {
+            if !condition_met(cond, snippet, step, values, base) {
+                eprintln!(
+                    "[{}/{}] skipped (condition not met): {}",
+                    i + 1,
+                    total,
+                    step.label()
+                );
+                skipped += 1;
+                continue;
+            }
+        }
+        let display = if let Some(command) = &step.command {
+            subst(command, values)
+        } else if !step.parallel.is_empty() {
+            step.parallel
+                .iter()
+                .map(|c| subst(c, values))
+                .collect::<Vec<_>>()
+                .join(" ; ")
+        } else {
+            step.label()
+        };
+        eprintln!(
+            "[{}/{}] {} — {}",
+            i + 1,
+            total,
+            step.label(),
+            crate::cmds::escape_display(&display)
+        );
+        match crate::prompt::ask_step(stdin) {
+            crate::prompt::StepChoice::Run => {}
+            crate::prompt::StepChoice::Skip => {
+                eprintln!("  skipped by user");
+                skipped += 1;
+                continue;
+            }
+            crate::prompt::StepChoice::Abort => {
+                eprintln!("forgehub: run aborted by user");
+                aborted = true;
+                result = 2;
+                break;
+            }
+        }
+        executed += 1;
+        let code = run_step(snippet, step, values, base, i, total);
+        if code != 0 {
+            if step.continue_on_error {
+                eprintln!(
+                    "forgehub: step {} failed (exit {code}); continuing (continue_on_error)",
+                    i + 1
+                );
+            } else {
+                result = code;
+                break;
+            }
+        }
+    }
+    for step in &always {
+        if let Some(cond) = &step.condition {
+            if !condition_met(cond, snippet, step, values, base) {
+                continue;
+            }
+        }
+        let code = run_step(snippet, step, values, base, 0, always.len());
+        if code != 0 && result == 0 {
+            result = code;
+        }
+    }
+    let _ = aborted; // reflected in the exit code
+    Ok(RunOutcome {
+        exit_code: result,
+        executed,
+        skipped,
+    })
+}

@@ -191,8 +191,9 @@ pub fn render_plan(
 }
 
 /// Arguments shared by the run paths.
+#[allow(clippy::struct_excessive_bools)]
 pub struct RunArgs {
-    /// Snippet name (local for Step 4).
+    /// Snippet name or `owner/name[@version]` reference.
     pub name: String,
     /// `KEY=value` assignments.
     pub assignments: Vec<String>,
@@ -202,30 +203,76 @@ pub struct RunArgs {
     pub dry_run: bool,
     /// JSON output.
     pub json: bool,
+    /// Step-through execution (Step 13).
+    pub step: bool,
+    /// Do not write the run cache (cloud runs).
+    pub no_cache: bool,
+    /// Cache-only mode (cloud runs).
+    pub offline: bool,
+}
+
+impl RunArgs {
+    /// The cloud-run view of these options.
+    #[must_use]
+    pub fn to_cloud(&self) -> crate::cloudrun::CloudRunArgs {
+        crate::cloudrun::CloudRunArgs {
+            yes: self.yes,
+            dry_run: self.dry_run,
+            json: self.json,
+            step: self.step,
+            no_cache: self.no_cache,
+            offline: self.offline,
+            assignments: self.assignments.clone(),
+        }
+    }
+}
+
+/// The not-found error for a run reference, with up to 3
+/// suggestions (similar local names, then remote search hits
+/// when logged in). A suggestion is never auto-run (spec-cli §5).
+fn run_not_found(store: &Store, stdin: &mut impl BufRead, name: &str) -> CliError {
+    let suggestions = crate::cloudrun::suggestions(store, stdin, name);
+    let mut msg = format!(
+        "forgehub: no snippet named `{name}`\n  what: not found locally, and no cloud snippet matched either\n  why: names must match exactly\n  fix: run `fg list` locally, or `fg remote search <text>` in the cloud"
+    );
+    if !suggestions.is_empty() {
+        use std::fmt::Write as _;
+        let _ = write!(msg, "\n  did you mean: {}", suggestions.join(", "));
+    }
+    CliError::not_found(msg)
 }
 
 /// `fg run <name> [KEY=value…]` and the `fg <name>` shorthand.
+///
+/// Resolution (Step 13): an explicit `owner/name` or an `@N`
+/// pin goes to the cloud; a bare name runs the local snippet
+/// when one exists, else the caller's own cloud snippet, else
+/// a not-found error with suggestions.
 pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Result<i32> {
+    let refr = crate::cloudrun::parse_reference(&args.name);
+    if refr.owner.is_some() || refr.version.is_some() {
+        return crate::cloudrun::run_cloud(store, stdin, &refr, &args.to_cloud());
+    }
     let snippet = match store.load(&args.name) {
         Ok(s) => s,
         Err(e) => {
             if crate::exit::code_of(&e) == 3 {
-                let suggestions: Vec<String> = store
-                    .names()
-                    .into_iter()
-                    .filter(|n| n.contains(&args.name) || args.name.contains(n.as_str()))
-                    .take(3)
-                    .collect();
-                let mut msg = format!(
-                    "forgehub: no local snippet named `{}`\n  what: the name was not found in {}\n  why: names must match exactly\n  fix: run `fg list` to see your snippets",
-                    args.name,
-                    store.snippets_dir().display()
-                );
-                if !suggestions.is_empty() {
-                    use std::fmt::Write as _;
-                    let _ = write!(msg, "\n  similar: {}", suggestions.join(", "));
+                // Cloud fallback: my own cloud snippet of this
+                // name (needs a credential, or --offline cache).
+                let can_cloud = args.offline
+                    || matches!(
+                        crate::cloud::active_credential(store, stdin, None),
+                        Ok(Some(_))
+                    );
+                if can_cloud {
+                    match crate::cloudrun::run_cloud(store, stdin, &refr, &args.to_cloud()) {
+                        Err(ce) if crate::exit::code_of(&ce) == 3 => {
+                            return Err(run_not_found(store, stdin, &args.name).into());
+                        }
+                        other => return other,
+                    }
                 }
-                return Err(CliError::not_found(msg).into());
+                return Err(run_not_found(store, stdin, &args.name).into());
             }
             return Err(e);
         }
@@ -279,7 +326,11 @@ pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Resul
         .as_ref()
         .and_then(|db| db.start_run(&snippet.name).ok());
     let started = std::time::Instant::now();
-    let outcome = runner::execute(&snippet, &values, &base, &store.tmp_dir())?;
+    let outcome = if args.step {
+        runner::execute_stepwise(&snippet, &values, &base, &store.tmp_dir(), stdin)?
+    } else {
+        runner::execute(&snippet, &values, &base, &store.tmp_dir())?
+    };
     if let (Some(db), Some(id)) = (&history, run_id) {
         let commands = u32::try_from(snippet.command_count()).unwrap_or(u32::MAX);
         let _ = db.finish_run(
@@ -422,7 +473,13 @@ pub fn cmd_list(store: &Store, tag: Option<&str>, long: bool, json: bool) -> i32
 #[must_use]
 pub fn show_commands(snippet: &Snippet) -> Vec<String> {
     match snippet.effective_mode() {
-        Mode::Script => vec![snippet.script.clone().unwrap_or_default()],
+        Mode::Script => snippet
+            .script
+            .clone()
+            .unwrap_or_default()
+            .lines()
+            .map(ToString::to_string)
+            .collect(),
         Mode::Steps => snippet
             .resolved_steps()
             .iter()

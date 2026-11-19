@@ -11,6 +11,7 @@
 mod analyze;
 mod backup;
 mod cloud;
+mod cloudrun;
 mod cmds;
 mod exit;
 mod history;
@@ -20,6 +21,7 @@ mod record;
 mod runner;
 mod store;
 mod sync;
+mod trust;
 
 use clap::{Parser, Subcommand};
 use clap_complete::engine::{ArgValueCompleter, CompletionCandidate};
@@ -128,12 +130,22 @@ enum Command {
     },
     /// Run a snippet by name.
     Run {
-        /// Snippet name (local in this step; owner/name and cloud in later steps).
+        /// Snippet name, or `owner/name` / `name@version` for a
+        /// cloud snippet (Step 13).
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
         /// Print the plan and execute nothing (alias: --dry).
         #[arg(long = "dry-run", alias = "dry")]
         dry_run: bool,
+        /// Confirm each step before running it (steps mode).
+        #[arg(long)]
+        step: bool,
+        /// Do not write fetched snippets to the run cache.
+        #[arg(long)]
+        no_cache: bool,
+        /// Run from the local cache only; never fetch.
+        #[arg(long)]
+        offline: bool,
         /// KEY=value variable assignments.
         #[arg(value_name = "KEY=value")]
         assignments: Vec<String>,
@@ -379,6 +391,17 @@ enum Command {
         #[command(subcommand)]
         action: RemoteCommand,
     },
+    /// Manage execution trust for cloud snippets (Step 13):
+    /// `trust list`, `trust revoke <owner/name>`, or approve an
+    /// exact snippet directly: `trust <owner/name@hash>`.
+    #[command(args_conflicts_with_subcommands = true)]
+    Trust {
+        #[command(subcommand)]
+        action: Option<TrustCommand>,
+        /// Shorthand for `trust add`: `owner/name@hash` or
+        /// `owner/name@version`.
+        reference: Option<String>,
+    },
     /// Check the environment and library health.
     Doctor {
         /// Only run checks for this topic (e.g. alias, rust, python).
@@ -397,6 +420,43 @@ enum Command {
         /// Shell: bash, zsh, fish, powershell or elvish.
         shell: clap_complete::Shell,
     },
+}
+
+/// Subcommands of `trust` (Step 13).
+#[derive(Subcommand)]
+enum TrustCommand {
+    /// List trusted cloud snippets.
+    List,
+    /// Revoke trust for one snippet.
+    Revoke {
+        /// `owner/name` whose trust should be removed.
+        reference: String,
+    },
+    /// Approve an exact snippet without running it.
+    Add {
+        /// `owner/name@hash` or `owner/name@version`.
+        reference: String,
+    },
+}
+
+/// Dispatch for `trust` (Step 13).
+fn dispatch_trust(
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+    action: Option<TrustCommand>,
+    reference: Option<String>,
+    json: bool,
+) -> anyhow::Result<i32> {
+    match (action, reference) {
+        (Some(TrustCommand::List), _) | (None, None) => cloudrun::cmd_trust_list(store, json),
+        (Some(TrustCommand::Revoke { reference }), _) => {
+            cloudrun::cmd_trust_revoke(store, &reference, json)
+        }
+        (Some(TrustCommand::Add { reference }), _) => {
+            cloudrun::cmd_trust_add(store, stdin, &reference, json)
+        }
+        (None, Some(reference)) => cloudrun::cmd_trust_add(store, stdin, &reference, json),
+    }
 }
 
 /// Subcommands of `remote` (Step 12).
@@ -803,6 +863,9 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
         Command::Run {
             name,
             dry_run,
+            step,
+            no_cache,
+            offline,
             assignments,
         } => cmds::cmd_run(
             &store,
@@ -813,8 +876,14 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
                 yes: cli.yes,
                 dry_run,
                 json: cli.json,
+                step,
+                no_cache,
+                offline,
             },
         ),
+        Command::Trust { action, reference } => {
+            dispatch_trust(&store, stdin, action, reference, cli.json)
+        }
         Command::List { tag, long } => Ok(cmds::cmd_list(&store, tag.as_deref(), long, cli.json)),
         Command::Show { name } => cmds::cmd_show(&store, &name, cli.json),
         Command::Search { query } => Ok(cmds::cmd_search(&store, &query, cli.json)),

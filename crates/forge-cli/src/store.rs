@@ -294,6 +294,18 @@ impl Store {
         Ok(path)
     }
 
+    /// The cloud-run cache directory (Step 13): immutable
+    /// version bodies for offline replay and changed-hash diffs.
+    pub fn cache_dir(&self) -> PathBuf {
+        self.root.join("cache")
+    }
+
+    /// Path of the trust database (Step 13).
+    #[must_use]
+    pub fn trust_db_path(&self) -> PathBuf {
+        self.root.join("trust.db")
+    }
+
     /// Path of the cloud provenance sidecar for a local snippet
     /// (Step 12): `<name>.meta.json` next to the snippet file.
     pub fn meta_path(&self, name: &str) -> Result<PathBuf> {

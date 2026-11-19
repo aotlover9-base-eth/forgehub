@@ -12,6 +12,34 @@ pub fn stdin_is_tty() -> bool {
 /// Ask a `[y/N]` question on stderr (so stdout stays machine-clean) and
 /// read the answer from `input`. Only `y`/`yes` (any case) means yes;
 /// EOF or anything else means no.
+/// The answer to a step-through prompt (`--step`).
+#[derive(Debug, PartialEq, Eq)]
+pub enum StepChoice {
+    /// Run this step.
+    Run,
+    /// Skip this step.
+    Skip,
+    /// Abort the whole run.
+    Abort,
+}
+
+/// Ask about one step: `y` runs it, `n`/Enter/EOF skips it,
+/// `q` aborts. Anything else is treated as skip (fail safe:
+/// unrecognised input never runs code).
+pub fn ask_step(input: &mut impl BufRead) -> StepChoice {
+    eprint!("  Run this step? [y/N/q] ");
+    let _ = std::io::Write::flush(&mut std::io::stderr());
+    let mut line = String::new();
+    match input.read_line(&mut line) {
+        Ok(_) => match line.trim().to_ascii_lowercase().as_str() {
+            "y" | "yes" => StepChoice::Run,
+            "q" | "quit" => StepChoice::Abort,
+            _ => StepChoice::Skip,
+        },
+        Err(_) => StepChoice::Skip,
+    }
+}
+
 pub fn ask_yes_no(input: &mut impl BufRead, question: &str) -> bool {
     eprint!("{question} [y/N] ");
     let _ = std::io::stderr().flush();
@@ -22,10 +50,8 @@ pub fn ask_yes_no(input: &mut impl BufRead, question: &str) -> bool {
     }
 }
 
-/// Ask for a typed `yes` (third-party trust confirmations, Step 12).
-/// Anything else — including `y` — means no.
-// Implemented and unit-tested now; first called by the Step 12 trust flow.
-#[allow(dead_code)]
+/// Ask for a typed `yes` (third-party trust confirmations,
+/// Step 13). Anything else — including `y` — means no.
 pub fn ask_typed_yes(input: &mut impl BufRead, question: &str) -> bool {
     eprint!("{question} ");
     let _ = std::io::stderr().flush();
