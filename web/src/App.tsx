@@ -98,11 +98,22 @@ function Shell() {
   // dashboard search. Ignored while typing in a field.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const typing =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable;
+      // Material fields keep their real <input> inside a
+      // shadow root, so a keydown reaching the window is
+      // retargeted to the host element and e.target alone
+      // looks like "not typing". Walk the composed path
+      // (which pierces shadow DOM) and also accept a
+      // text-field host itself as typing.
+      const typing = e.composedPath().some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        return (
+          node instanceof HTMLInputElement ||
+          node instanceof HTMLTextAreaElement ||
+          node instanceof HTMLSelectElement ||
+          node.isContentEditable ||
+          node.tagName.endsWith('TEXT-FIELD')
+        );
+      });
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'n') {
         e.preventDefault();
