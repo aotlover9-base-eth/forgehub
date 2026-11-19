@@ -10,6 +10,8 @@ use std::fmt;
 pub const EXIT_REFUSED: u8 = 2;
 /// Exit code: the named thing was not found.
 pub const EXIT_NOT_FOUND: u8 = 3;
+/// Exit code: authentication required or expired (spec-cli §2).
+pub const EXIT_AUTH: u8 = 4;
 
 /// An error carrying the process exit code the CLI should return.
 #[derive(Debug)]
@@ -41,6 +43,14 @@ impl CliError {
     pub fn not_found(message: impl Into<String>) -> Self {
         Self {
             code: EXIT_NOT_FOUND,
+            message: message.into(),
+        }
+    }
+
+    /// Authentication required or expired (exit 4).
+    pub fn auth(message: impl Into<String>) -> Self {
+        Self {
+            code: EXIT_AUTH,
             message: message.into(),
         }
     }

@@ -12,7 +12,7 @@ One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
 - [x] Step 8 — API tokens and device-code login
 - [x] Step 9 — snippet and version API
 - [x] Step 10 — search, tags, stars, forks, profiles
-- [ ] Step 11 — CLI login, whoami, credentials
+- [x] Step 11 — CLI login, whoami, credentials
 - [ ] Step 12 — CLI push, pull, remote list, fork
 - [ ] Step 13 — run from cloud with safety UX — 🛑 CHECKPOINT 2
 - [ ] Step 14 — web design system (Material 3)

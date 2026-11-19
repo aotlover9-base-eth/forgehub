@@ -35,7 +35,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Vitest 5's worker pool does not start on Node 20
+          # ("Failed to start forks worker … reading 'bind'",
+          # first CI run 44482326352); the suite is developed and
+          # green on Node 24.
+          node-version: 24
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install

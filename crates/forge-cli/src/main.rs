@@ -10,6 +10,7 @@
 
 mod analyze;
 mod backup;
+mod cloud;
 mod cmds;
 mod exit;
 mod history;
@@ -275,6 +276,30 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
+    /// Log in to a `ForgeHub` server (device-code flow in the browser).
+    Login {
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+        /// Read an API token from stdin instead of the device flow (for CI).
+        #[arg(long)]
+        token: bool,
+    },
+    /// Log out: delete the stored credential for a registry.
+    Logout {
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+        /// Also revoke the token server-side.
+        #[arg(long)]
+        revoke: bool,
+    },
+    /// Show the current login (username, registry, token, scopes).
+    Whoami {
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
     /// Check the environment and library health.
     Doctor {
         /// Only run checks for this topic (e.g. alias, rust, python).
@@ -476,6 +501,15 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
             config,
             force,
         } => dispatch_restore(&store, stdin, file, config, force, cli.yes),
+        Command::Login { registry, token } => {
+            cloud::cmd_login(&store, stdin, registry.as_deref(), token, cli.json)
+        }
+        Command::Logout { registry, revoke } => {
+            cloud::cmd_logout(&store, stdin, registry.as_deref(), revoke, cli.json)
+        }
+        Command::Whoami { registry } => {
+            cloud::cmd_whoami(&store, stdin, registry.as_deref(), cli.json)
+        }
         Command::Doctor { topic } => parity::cmd_doctor(&store, topic.as_deref(), cli.json),
         Command::Alias { action, shell } => {
             parity::cmd_alias(stdin, &action, shell.as_deref(), cli.yes, cli.json)

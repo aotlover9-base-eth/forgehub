@@ -15,12 +15,27 @@ path = "src/main.rs"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 clap_complete = { version = "4", features = ["unstable-dynamic"] }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 forge-core = { path = "../forge-core" }
 regex = "1"
+# Cloud commands only (Step 11): reqwest is constructed lazily by
+# `login`/`logout`/`whoami`/cloud doctor checks, so local commands
+# never pay its runtime cost; rustls avoids a system OpenSSL
+# dependency. Proxy env vars (HTTP_PROXY/HTTPS_PROXY/NO_PROXY) are
+# honoured by reqwest's default system-proxy behaviour.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
+toml = "0.8"
+
+[dev-dependencies]
+# Integration tests drive the real server in-process (Step 11).
+axum = "0.8"
+forge-server = { path = "../forge-server" }
+tempfile = "3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 [lints]
 workspace = true

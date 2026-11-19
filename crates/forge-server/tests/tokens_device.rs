@@ -499,3 +499,54 @@ async fn device_lookup_bruteforce_lockout() {
         .unwrap();
     assert_eq!(resp.status(), 429, "locked out after 10 failed lookups");
 }
+
+#[tokio::test]
+async fn token_self_revoke_via_current() {
+    let s = start(&[]).await;
+    let (cookie, csrf) = signup(&s, "rene").await;
+    let created = create_token(&s, &cookie, &csrf, &["read"]).await;
+    let plaintext = created["token"].as_str().unwrap().to_string();
+    let other = create_token(&s, &cookie, &csrf, &["read"]).await;
+    let other_plaintext = other["token"].as_str().unwrap().to_string();
+
+    // A session calling /tokens/current has no current token.
+    let resp = s
+        .client
+        .delete(format!("{}/api/v1/tokens/current", s.base))
+        .header("cookie", &cookie)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 400);
+    let v: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(v["error"]["code"], "no_current_token");
+
+    // The bearer token revokes itself; the other token is untouched.
+    let resp = s
+        .client
+        .delete(format!("{}/api/v1/tokens/current", s.base))
+        .header("authorization", format!("Bearer {plaintext}"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 204, "self-revoke");
+    assert_eq!(
+        me_with_bearer(&s, &plaintext).await.status(),
+        401,
+        "revoked immediately"
+    );
+    assert_eq!(
+        me_with_bearer(&s, &other_plaintext).await.status(),
+        200,
+        "other token unaffected"
+    );
+
+    // Anonymous gets 401.
+    let resp = s
+        .client
+        .delete(format!("{}/api/v1/tokens/current", s.base))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 401);
+}

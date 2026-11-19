@@ -194,9 +194,35 @@ async fn revoke_token(
 }
 
 /// Token management routes (merged under `/api/v1`).
+/// `DELETE /tokens/current` (Step 11): a bearer token revokes
+/// ITSELF. This is what `fg logout --revoke` calls — the CLI holds
+/// no session, and token management is otherwise session-only by
+/// design. The credential being destroyed is its own proof; a
+/// session calling this has no "current token" and gets a 400.
+async fn revoke_current(
+    State(state): State<AppState>,
+    ctx: crate::auth::CurrentUser,
+) -> Result<Response, ApiError> {
+    let ctx = ctx
+        .0
+        .ok_or_else(|| ApiError::unauthorized("Authentication required"))?;
+    match &ctx.kind {
+        crate::auth::AuthKind::Token(row) => {
+            state.repos.tokens.revoke(row.id, &now_iso()).await?;
+            Ok(StatusCode::NO_CONTENT.into_response())
+        }
+        crate::auth::AuthKind::Session(_) => Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "no_current_token",
+            "This endpoint revokes the bearer token making the call; sessions manage tokens by id",
+        )),
+    }
+}
+
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/tokens", get(list_tokens).post(create_token_handler))
+        .route("/tokens/current", delete(revoke_current))
         .route("/tokens/{id}", delete(revoke_token))
 }
 

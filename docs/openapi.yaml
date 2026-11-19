@@ -287,6 +287,16 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '429': { $ref: '#/components/responses/Error' }
+  /tokens/current:
+    delete:
+      tags: [tokens]
+      summary: Revoke the bearer token making this call (self-revoke; used by `fg logout --revoke`)
+      operationId: revokeCurrentToken
+      security: [{ bearerToken: [] }]
+      responses:
+        '204': { description: The calling token was revoked }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
   /tokens/{id}:
     delete:
       tags: [tokens]

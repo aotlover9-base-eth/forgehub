@@ -981,21 +981,119 @@ fn credentials_check() -> Check {
     }
 }
 
-fn registry_check(store: &Store) -> Check {
-    match store.load_config() {
-        Ok(cfg) => match cfg.server {
-            Some(url) if !url.is_empty() => check(
-                "registry",
-                "warn",
-                format!("registry {url} configured; reachability is checked by cloud commands (Step 11+)"),
-            ),
-            _ => check(
+/// Cloud checks (Step 11): when a registry is configured, probe
+/// it — reachability, clock skew against the server's `Date`
+/// header, and validity of the stored token. All probes use a 3 s
+/// timeout and never prompt. No registry → a single ok note, so
+/// offline-only users see no change.
+fn cloud_checks(store: &Store) -> Vec<Check> {
+    let registry = match crate::cloud::resolve_registry(store, None) {
+        Ok(Some(url)) => url,
+        Ok(None) => {
+            return vec![check(
                 "registry",
                 "ok",
-                "no registry configured; reachability check skipped (offline-safe)".into(),
+                "no registry configured; cloud checks skipped (offline-safe)".into(),
+            )];
+        }
+        Err(e) => {
+            return vec![check("registry", "fail", format!("{e}"))];
+        }
+    };
+    let mut out = Vec::new();
+    let client =
+        match crate::cloud::ApiClient::with_timeout(&registry, std::time::Duration::from_secs(3)) {
+            Ok(c) => c,
+            Err(e) => {
+                return vec![check(
+                    "registry",
+                    "warn",
+                    format!("registry {registry}: cannot build a client: {e}"),
+                )];
+            }
+        };
+    match client.get("/health", None) {
+        Ok((_, _, headers)) => {
+            out.push(check(
+                "registry",
+                "ok",
+                format!("registry {registry} is reachable"),
+            ));
+            if let Some(date) = headers
+                .get(reqwest::header::DATE)
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| chrono::DateTime::parse_from_rfc2822(s).ok())
+            {
+                let skew = (chrono::Utc::now() - date.with_timezone(&chrono::Utc))
+                    .num_seconds()
+                    .abs();
+                if skew > 300 {
+                    out.push(check(
+                        "clock",
+                        "warn",
+                        format!(
+                            "local clock differs from the server by about {} min; token expiry and TLS can misbehave",
+                            skew / 60
+                        ),
+                    ));
+                } else {
+                    out.push(check(
+                        "clock",
+                        "ok",
+                        "local clock matches the server".into(),
+                    ));
+                }
+            }
+        }
+        Err(e) => {
+            out.push(check(
+                "registry",
+                "warn",
+                format!("registry {registry} is unreachable: {}", e.message),
+            ));
+            return out;
+        }
+    }
+    out.push(token_check(&client, &registry));
+    out
+}
+
+/// The doctor token check: is there a credential for this
+/// registry, and does the server still accept it? `FORGEHUB_TOKEN`
+/// is honoured too.
+fn token_check(client: &crate::cloud::ApiClient, registry: &str) -> Check {
+    let env_token = std::env::var("FORGEHUB_TOKEN")
+        .ok()
+        .filter(|t| !t.trim().is_empty());
+    let stored = crate::cloud::load_credentials_file()
+        .ok()
+        .and_then(|c| c.registries.get(registry).cloned());
+    let Some(token) = env_token.or_else(|| stored.map(|e| e.token)) else {
+        return check(
+            "token",
+            "ok",
+            "not logged in to this registry (cloud commands need `fg login`)".into(),
+        );
+    };
+    match client.get("/me", Some(&token)) {
+        Ok((_, me, _)) => check(
+            "token",
+            "ok",
+            format!(
+                "token is valid for {}",
+                me["username"].as_str().unwrap_or("?")
             ),
-        },
-        Err(_) => check("registry", "warn", "config unreadable; skipped".into()),
+        ),
+        Err(e) if e.status == 401 => check(
+            "token",
+            "fail",
+            "the stored token is invalid or expired — run `fg login`".into(),
+        ),
+        Err(e) => check(
+            "token",
+            "warn",
+            format!("token could not be verified: {}", e.message),
+        ),
     }
 }
 
@@ -1005,7 +1103,7 @@ fn run_checks(store: &Store) -> Vec<Check> {
     checks.push(alias_check());
     checks.push(database_check(store));
     checks.push(credentials_check());
-    checks.push(registry_check(store));
+    checks.extend(cloud_checks(store));
     let probe = store.tmp_dir().join(".doctor-probe");
     match std::fs::write(&probe, b"ok") {
         Ok(()) => {
@@ -1070,6 +1168,8 @@ fn topic_checks(store: &Store, topic: &str) -> Result<Vec<Check>> {
             "database",
             "credentials",
             "registry",
+            "token",
+            "clock",
             "tmp",
             "git",
         ];
