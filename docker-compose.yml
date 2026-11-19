@@ -16,7 +16,7 @@ services:
       FORGEHUB_ENV: prod
       FORGEHUB_BIND: 0.0.0.0:8080
       FORGEHUB_BASE_URL: https://${FORGEHUB_DOMAIN:-localhost}
-      FORGEHUB_DATABASE_URL: <redacted>
+      FORGEHUB_DATABASE_URL: sqlite:///data/forgehub.db
       FORGEHUB_WEB_DIR: /srv/web
       FORGEHUB_SECRET_KEY: ${FORGEHUB_SECRET_KEY:?set FORGEHUB_SECRET_KEY in .env (32+ random bytes)}
       FORGEHUB_ALLOW_SIGNUP: ${FORGEHUB_ALLOW_SIGNUP:-true}

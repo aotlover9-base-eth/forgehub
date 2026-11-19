@@ -31,17 +31,20 @@ Login throttling and API rate limits live in the memory of one
 server process. A multi-node deployment needs a shared store;
 single-node deployments (the v1 target) are exact.
 
-## Docker image not build-verified yet (Step 6, re-checked Step 21)
+## Docker image build-verified 2026-11-19; CI still does not build it
 
-The `Dockerfile` and `docker-compose.yml` are maintained with
-the code and statically reviewed, but they have never been
-built: the development machine has no Docker, and CI does not
-build the image either. Everything inside the image (server
-binary, SPA build) is fully tested outside it, and
-`docs/deploy.md` lists the smoke checks for a first real
-`docker compose up --build`. Closing this gap = adding a
-docker-build job to CI or verifying on the first deployment
-host; it is the top post-v1 operations item.
+The first real `docker compose up --build` on a user machine
+(2026-11-19) built the image and started Caddy fine — and
+caught a real bug: `docker-compose.yml` carried a literal
+`<redacted>` placeholder as `FORGEHUB_DATABASE_URL` (a
+redaction artifact introduced when the file was written in
+Step 21; the development machine has no Docker, so nothing
+had ever run it). The server therefore could not open its
+database (SQLite code 14). Fixed the same day in a
+post-v0.1.0 commit, together with the same placeholder in
+`docs/deploy.md`. Remaining gap: CI still does not build
+the image; adding a docker-build + health-smoke job to CI
+is the top post-v1 operations item.
 
 ## Features deliberately absent in v0.1.0
 

@@ -62,7 +62,7 @@ primary_region = "iad"
   FORGEHUB_ENV = "prod"
   FORGEHUB_BIND = "0.0.0.0:8080"
   FORGEHUB_BASE_URL = "https://your-forgehub.fly.dev"
-  FORGEHUB_DATABASE_URL = "<redacted>
+  FORGEHUB_DATABASE_URL = "sqlite:///data/forgehub.db"
   FORGEHUB_WEB_DIR = "/srv/web"
 
 [mounts]
