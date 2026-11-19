@@ -17,7 +17,7 @@ One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
 - [x] Step 13 — run from cloud with safety UX (checkpoint overridden by the user 2026-11-19; see the report's Checkpoint review)
 - [x] Step 14 — web design system (Material 3)
 - [x] Step 15 — web auth screens and dashboard
-- [ ] Step 16 — web snippet editor and detail pages
+- [x] Step 16 — web snippet editor and detail pages
 - [ ] Step 17 — web explore, profiles, settings, device approval — 🛑 CHECKPOINT 3
 - [ ] Step 18 — CLI TUI, offline mode, completions, polish
 - [ ] Step 19 — security hardening pass

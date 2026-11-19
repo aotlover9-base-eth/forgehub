@@ -32,6 +32,7 @@ import '@material/web/divider/divider.js';
 import '@material/web/icon/icon.js';
 import '@material/web/list/list.js';
 import '@material/web/list/list-item.js';
+import '@material/web/radio/radio.js';
 
 import type { MdFilledButton } from '@material/web/button/filled-button';
 import type { MdFilledTonalButton } from '@material/web/button/filled-tonal-button';
@@ -41,6 +42,7 @@ import type { MdIconButton } from '@material/web/iconbutton/icon-button';
 import type { MdOutlinedTextField } from '@material/web/textfield/outlined-text-field';
 import type { MdCheckbox } from '@material/web/checkbox/checkbox';
 import type { MdSwitch } from '@material/web/switch/switch';
+import type { MdRadio } from '@material/web/radio/radio';
 import type { MdChipSet } from '@material/web/chips/chip-set';
 import type { MdAssistChip } from '@material/web/chips/assist-chip';
 import type { MdFilterChip } from '@material/web/chips/filter-chip';
@@ -86,6 +88,7 @@ declare module 'react' {
       'md-outlined-text-field': MdProps<MdOutlinedTextField>;
       'md-checkbox': MdProps<MdCheckbox>;
       'md-switch': MdProps<MdSwitch>;
+      'md-radio': MdProps<MdRadio>;
       'md-chip-set': MdProps<MdChipSet>;
       'md-assist-chip': MdProps<MdAssistChip>;
       'md-filter-chip': MdProps<MdFilterChip>;

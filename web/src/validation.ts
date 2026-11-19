@@ -38,6 +38,29 @@ export function emailIssue(email: string): string | null {
   return null;
 }
 
+/** Snippet-name rules (forge-core validate_snippet_name):
+ * 1–64 chars, starts lowercase alnum, then [a-z0-9._-],
+ * not a reserved word. */
+export function snippetNameIssue(name: string): string | null {
+  if (name.length === 0) return null;
+  if (name.length > 64) return 'At most 64 characters.';
+  if (!/^[a-z0-9]/.test(name)) return 'Must start with a lowercase letter or digit.';
+  if (!/^[a-z0-9._-]+$/.test(name)) return 'Lowercase letters, digits, dots, underscores and hyphens only.';
+  if (RESERVED_USERNAMES.has(name)) return 'That name is reserved.';
+  return null;
+}
+
+/** Tag rules (forge-core normalize_tag): lowercase, trimmed,
+ * [a-z0-9._-] after the first char, at most 50 chars. */
+export function tagIssue(tag: string): string | null {
+  const t = tag.trim().toLowerCase();
+  if (t.length === 0) return 'Tag cannot be empty.';
+  if (t.length > 50) return 'At most 50 characters.';
+  if (!/^[a-z0-9]/.test(t)) return 'Tags start with a lowercase letter or digit.';
+  if (!/^[a-z0-9._-]+$/.test(t)) return 'Lowercase letters, digits, dots, underscores and hyphens only.';
+  return null;
+}
+
 /** "3h ago" style relative time, with the full date nearby
  * in a title attribute at the call site. */
 export function relativeTime(iso: string, now = Date.now()): string {

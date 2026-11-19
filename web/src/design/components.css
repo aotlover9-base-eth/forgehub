@@ -333,3 +333,41 @@
 .fh-danger-action {
   --md-text-button-label-text-color: var(--md-sys-color-error);
 }
+
+/* ---- Diff view: gutter symbol + tonal shift (never colour
+   alone, never red/green) */
+.fh-diff {
+  --fh-diff-add: var(--md-sys-color-primary-container);
+  --fh-diff-remove: var(--md-sys-color-surface-container-highest);
+  font-family: 'Roboto Mono', monospace;
+  font-size: var(--md-sys-typescale-body-medium-size);
+  border-radius: var(--md-sys-shape-corner-medium);
+  overflow: hidden;
+  background: var(--fh-code-bg);
+  padding: var(--fh-space-2) 0;
+}
+.fh-diff__row {
+  display: flex;
+  gap: var(--fh-space-2);
+  padding: 0 var(--fh-space-3);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.fh-diff__row--add {
+  background: var(--fh-diff-add);
+}
+.fh-diff__row--remove {
+  background: var(--fh-diff-remove);
+}
+.fh-diff__row--hunk {
+  color: var(--md-sys-color-on-surface-variant);
+}
+.fh-diff__gutter {
+  min-width: 1ch;
+  user-select: none;
+  font-weight: 700;
+}
+.fh-diff__text {
+  flex: 1;
+  min-width: 0;
+}

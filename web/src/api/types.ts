@@ -52,3 +52,29 @@ export interface SnippetPage {
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
 }
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: { message: string; line?: number; column?: number; path?: string }[];
+  hash?: string;
+  summary?: SnippetSummaryParsed;
+  secret_findings?: { kind: string; line: number }[];
+}
+
+export interface VersionSummary {
+  version: number;
+  hash: string;
+  short_hash: string;
+  message: string | null;
+  created_at: string;
+}
+
+export interface SnippetInput {
+  name: string;
+  description?: string;
+  visibility?: Visibility;
+  tags?: string[];
+  mode?: 'script' | 'steps';
+  body: string;
+  message?: string;
+}

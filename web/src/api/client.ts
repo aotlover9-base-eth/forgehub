@@ -43,6 +43,15 @@ export class ApiError extends Error {
   }
 }
 
+function parseJson(text: string): unknown {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 function parseRetryAfter(response: Response): number | null {
   const raw = response.headers.get('Retry-After');
   if (!raw) return null;
@@ -69,12 +78,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     return undefined as T;
   }
   const text = await response.text();
-  let parsed: unknown = null;
-  try {
-    parsed = text ? JSON.parse(text) : null;
-  } catch {
-    parsed = null;
-  }
+  const parsed: unknown = parseJson(text);
   if (!response.ok) {
     const body = parsed as ApiErrorBody | null;
     const code = body?.error?.code ?? 'http_error';
@@ -86,4 +90,32 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export function apiUrl(path: string): string {
   return `${BASE}${path}`;
+}
+
+/**
+ * Raw variant for endpoints whose error responses carry a
+ * useful body (snippet validation returns its result with a
+ * 422 when secrets are found). Returns the status and the
+ * parsed body; transport failures still throw ApiError(0).
+ */
+export async function apiRaw(
+  path: string,
+  init: RequestInit = {},
+): Promise<{ status: number; body: unknown }> {
+  const method = (init.method ?? 'GET').toUpperCase();
+  const headers = new Headers(init.headers);
+  if (init.body !== undefined && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (method !== 'GET' && csrfToken) {
+    headers.set('X-CSRF-Token', csrfToken);
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${BASE}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError(0, 'network', 'Network failure');
+  }
+  const text = await response.text();
+  return { status: response.status, body: parseJson(text) };
 }

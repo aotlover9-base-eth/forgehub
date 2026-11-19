@@ -1,6 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  RouterProvider,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import {
   AppShell,
   Button,
@@ -14,6 +21,8 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
+import EditorPage from './pages/EditorPage';
+import SnippetPage from './pages/SnippetPage';
 import DesignPage from './pages/DesignPage';
 
 const NAV_ITEMS: NavItem[] = [
@@ -24,13 +33,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 function Placeholder({ title }: { title: string }) {
-  return (
-    <EmptyState
-      icon="terminal"
-      title={title}
-      message="This screen arrives in a later step."
-    />
-  );
+  return <EmptyState icon="terminal" title={title} message="This screen arrives in a later step." />;
 }
 
 /** Gate for signed-in screens: waits for /me, then either
@@ -108,24 +111,7 @@ function Shell() {
         )
       }
     >
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <RequireAuth>
-              <DashboardPage />
-            </RequireAuth>
-          }
-        />
-        <Route path="/new" element={<Placeholder title="New snippet" />} />
-        <Route path="/explore" element={<Placeholder title="Explore" />} />
-        <Route path="/profile" element={<Placeholder title="Profile" />} />
-        {import.meta.env.DEV ? <Route path="/__design" element={<DesignPage />} /> : null}
-        <Route path="*" element={<Placeholder title="Not found" />} />
-      </Routes>
+      <Outlet />
       <ConfirmDialog
         open={helpOpen}
         headline="Keyboard shortcuts"
@@ -151,6 +137,47 @@ function Shell() {
   );
 }
 
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Shell />,
+    children: [
+      { index: true, element: <LandingPage /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'signup', element: <SignupPage /> },
+      {
+        path: 'dashboard',
+        element: (
+          <RequireAuth>
+            <DashboardPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'new',
+        element: (
+          <RequireAuth>
+            <EditorPage />
+          </RequireAuth>
+        ),
+      },
+      { path: 'explore', element: <Placeholder title="Explore" /> },
+      { path: 'profile', element: <Placeholder title="Profile" /> },
+      { path: ':owner/:name', element: <SnippetPage /> },
+      {
+        path: ':owner/:name/edit',
+        element: (
+          <RequireAuth>
+            <EditorPage />
+          </RequireAuth>
+        ),
+      },
+      ...(import.meta.env.DEV ? [{ path: '__design', element: <DesignPage /> }] : []),
+      { path: '*', element: <Placeholder title="Not found" /> },
+    ],
+  },
+]);
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000 } },
 });
@@ -159,9 +186,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <BrowserRouter>
-          <Shell />
-        </BrowserRouter>
+        <RouterProvider router={router} />
       </ToastProvider>
     </QueryClientProvider>
   );

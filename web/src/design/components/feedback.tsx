@@ -43,6 +43,37 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Standard dialog action row: Cancel + a confirm button
+ * (optionally danger-styled, optionally disabled). */
+export function DialogActions({
+  confirmLabel,
+  cancelLabel = 'Cancel',
+  danger = false,
+  confirmDisabled = false,
+  onConfirm,
+  onCancel,
+}: {
+  confirmLabel: string;
+  cancelLabel?: string;
+  danger?: boolean;
+  confirmDisabled?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <>
+      <Button variant="text" onClick={onCancel}>
+        {cancelLabel}
+      </Button>
+      <span className={danger ? 'fh-danger-action' : undefined}>
+        <Button variant="text" onClick={onConfirm} disabled={confirmDisabled}>
+          {confirmLabel}
+        </Button>
+      </span>
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Confirmation dialog (md-dialog). `danger` styles the confirm
 // action with the error colour — reserved for destructive
