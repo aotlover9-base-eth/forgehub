@@ -208,6 +208,39 @@ fn short_values_are_clean() {
 }
 
 #[test]
+fn code_shaped_assignments_are_clean() {
+    // Expressions assigned to secret-named variables are code, not
+    // literal secrets (found by dogfooding on the server sources).
+    assert_eq!(
+        scan("let secret_key = get(\"FORGEHUB_SECRET_KEY\");"),
+        [] as [forge_core::scan::Finding; 0]
+    );
+    assert_eq!(
+        scan("bucket.tokens = (bucket.tokens + elapsed * rate).min(cap);"),
+        [] as [forge_core::scan::Finding; 0]
+    );
+    assert_eq!(
+        scan("let ip_key = key_for(&headers, addr);"),
+        [] as [forge_core::scan::Finding; 0]
+    );
+}
+
+#[test]
+fn token_substring_names_are_clean() {
+    // `tokenize` merely contains the substring "token".
+    assert_eq!(
+        scan("content = '', tokenize = 'unicode61 remove_diacritics 2'"),
+        [] as [forge_core::scan::Finding; 0]
+    );
+}
+
+#[test]
+fn segmented_secret_names_still_detected() {
+    assert!(kinds("GITHUB_TOKEN=Zx9Qw8Er5Ty2").contains(&SecretKind::SecretAssignment));
+    assert!(kinds("AUTH_TOKEN=Zx9Qw8Er5Ty2").contains(&SecretKind::SecretAssignment));
+}
+
+#[test]
 fn redact_removes_token_but_keeps_line() {
     let token = "aB3".repeat(10);
     let dirty = format!("curl -H 'Authorization: Bearer {token}' https://x");

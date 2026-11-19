@@ -6,8 +6,8 @@ One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
 - [x] Step 2 — specs, ADRs, threat model, API contract (push still blocked: no GitHub auth / remote URL — see reports/report_Step1.md §9)
 - [x] Step 3 — forge-core shared library
 - [x] Step 4 — local CLI core (init, record, run, manage)
-- [x] Step 5 — local CLI parity (vars, stats, backup, doctor, alias) — 🛑 CHECKPOINT 1 reached 2026-11-19; awaiting CONTINUE — 🛑 CHECKPOINT 1
-- [ ] Step 6 — server foundation
+- [x] Step 5 — local CLI parity (vars, stats, backup, doctor, alias) — 🛑 CHECKPOINT 1 reached 2026-11-19; user replied CONTINUE with corrections, all applied in the amended step-5 commit
+- [x] Step 6 — server foundation (push still blocked: repo does not exist + no GitHub auth — see reports/report_Step6.md §9)
 - [ ] Step 7 — web account auth and sessions
 - [ ] Step 8 — API tokens and device-code login
 - [ ] Step 9 — snippet and version API

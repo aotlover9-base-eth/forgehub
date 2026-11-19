@@ -134,15 +134,24 @@ fn is_placeholder(value: &str) -> bool {
 
 fn is_secret_named(key: &str) -> bool {
     let k = key.to_lowercase();
-    k.contains("token")
-        || k.contains("secret")
+    k.contains("secret")
         || k.contains("password")
         || k.contains("passwd")
         || k.contains("api_key")
         || k.contains("apikey")
         || k.contains("api-key")
-        || k.contains("auth")
         || k.ends_with("_key")
+        // `token`/`auth` must be whole name segments: `tokenize`,
+        // `tokens` and `author` are not secret names.
+        || has_name_segment(&k, "token")
+        || has_name_segment(&k, "auth")
+}
+
+/// True when `segment` appears in `key` as a whole word, splitting
+/// on `_`, `-` and other non-alphanumeric separators.
+fn has_name_segment(key: &str, segment: &str) -> bool {
+    key.split(|c: char| !c.is_ascii_alphanumeric())
+        .any(|part| part == segment)
 }
 
 // Counts are bounded by the maximum line length (8,192 bytes), far
@@ -256,6 +265,12 @@ pub fn scan(text: &str) -> Vec<Finding> {
             let raw_value = &cap[3];
             let value = raw_value.trim_matches('"').trim_matches('\'');
             if is_placeholder(value) {
+                continue;
+            }
+            // Code-shaped values (`secret_key = get("…")`,
+            // `bucket.tokens = f(x, y)`) are expressions, not
+            // literal secrets — same rule as PasswordLiteral.
+            if value.contains(['(', ')', ',']) || value.contains("::") {
                 continue;
             }
             // Password assignments are already reported as

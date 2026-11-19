@@ -1,0 +1,13 @@
+//! `ForgeHub` server library: configuration, storage, repositories,
+//! and the HTTP layer. The binary in `main.rs` is a thin entry point
+//! over this library so tests can exercise everything in-process.
+
+#![forbid(unsafe_code)]
+
+pub mod config;
+pub mod db;
+pub mod error;
+pub mod http;
+pub mod ratelimit;
+pub mod repo;
+pub mod state;
