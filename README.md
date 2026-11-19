@@ -1,71 +1,103 @@
 # ForgeHub
 
-**Work in progress — Step 1 of 22 (bootstrap). Nothing user-facing works yet.**
+**Save a shell command once. Run it anywhere.**
 
-ForgeHub will be a cloud home for shell command snippets: a web app where you
-save commands and small shell scripts as text, and a fast Rust CLI (`forgehub`,
-aliased to `fg`) that fetches a snippet, shows exactly what it will run, asks
-`[y/N]`, and only then runs it.
+ForgeHub is a cloud home for shell command snippets: a web app
+and server for sharing them, plus a fast Rust CLI —
+`forgehub`, aliased to **`fg`** — that runs them with a safety
+model built for other people's code.
 
-```text
-fg ubuntu-setup
+```console
+$ fg ubuntu-setup
 ```
+
+That fetches the snippet, shows you **exactly** what will run —
+owner, version, content hash, every command numbered — and
+asks before executing anything. Your own snippets ask
+`[y/N]`; someone else's ask you to type `yes` the first time,
+and any later change shows a diff and asks again.
+
+![ForgeHub dashboard at desktop width](docs/screenshots/dashboard-expanded.png)
+
+## 60-second quickstart
+
+**CLI** (after installing, below):
+
+```console
+$ forgehub alias install     # adds the `fg` alias
+$ fg init
+$ fg record hello            # a capture shell opens: run `echo hello`, then `exit`
+$ fg hello                   # shows the commands, asks [y/N], runs
+```
+
+**Web + server**:
+
+```console
+$ git clone https://github.com/aotlover9-base-eth/forgehub.git
+$ cd forgehub && cp .env.example .env   # set FORGEHUB_SECRET_KEY
+$ docker compose up -d --build          # https via Caddy; docs/deploy.md
+```
+
+Then connect the CLI to your server:
+
+```console
+$ fg login                   # device-code flow in your browser
+$ fg push hello --public     # share it
+$ fg run alice/docker-setup  # anyone's public snippet, with the trust flow
+```
+
+## Install
+
+Checksum-verifying installer (short, commented — read it
+before running it, that's the ForgeHub way):
+
+```console
+$ curl -fsSL https://raw.githubusercontent.com/aotlover9-base-eth/forgehub/main/scripts/install.sh -o install.sh
+$ less install.sh
+$ sh install.sh
+```
+
+From source (Rust 1.x): `cargo install --path crates/forge-cli`.
+Server deployment: [docs/deploy.md](docs/deploy.md).
+
+## The safety model, in plain words
+
+- **Nothing runs unseen.** Every cloud run displays the full
+  command list first. There is no silent mode for other
+  people's snippets.
+- **Trust is pinned to content.** Approving a snippet approves
+  its exact hash. If the content changes, you see a diff and
+  approve again — `-y` never skips a first run or a change.
+- **No terminal, no run.** Without an interactive terminal,
+  unskippable confirmations fail closed (exit 2) instead of
+  guessing.
+- **Secrets are blocked, not leaked.** A scanner checks
+  snippets at record, push and web-save time and refuses
+  likely credentials — findings name the kind and line, never
+  the value.
+- **Passwords and tokens are hashed** (argon2id; SHA-256 at
+  rest), sessions are revocable, and there is **no telemetry**
+  and no third-party scripts or fonts in the web app.
+
+Full detail: [docs/security.md](docs/security.md) and the
+threat model in [docs/threat-model.md](docs/threat-model.md).
+
+## Documentation
+
+- [User guide](docs/user-guide.md) — web and CLI, start to finish
+- [CLI reference](docs/cli-reference.md) — every command and flag
+- [API](docs/api.md) + [OpenAPI spec](docs/openapi.yaml)
+- [Self-hosting](docs/self-hosting.md) · [Deploy](docs/deploy.md) · [Operations](docs/operations.md)
+- [Migrating from Forgenesis](docs/forgenesis-migration.md)
+- [FAQ](docs/faq.md) · [Known gaps](docs/known-gaps.md)
+- [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
 ## Status
 
-Feature-complete v0.1.0: CLI, server and web app are built and
-tested end to end. See `PROGRESS.md` for the step-by-step
-record and `CHANGELOG.md` for what shipped.
-
-## Install the CLI
-
-From a release (checksum-verifying installer — read it first,
-it is short and commented):
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/aotlover9-base-eth/forgehub/main/scripts/install.sh -o install.sh
-less install.sh   # review before running, always
-sh install.sh
-```
-
-From source (Rust 1.x):
-
-```sh
-cargo install --path crates/forge-cli
-forgehub alias install   # adds the `fg` alias
-```
-
-Deploying the server: `docs/deploy.md` (Docker + Caddy,
-Fly.io, or a bare binary).
-
-## Layout
-
-```text
-crates/forge-core     shared library (Step 3)
-crates/forge-cli      the `forgehub` binary (Steps 4-5, 11-13, 18)
-crates/forge-server   axum API + static web hosting + SQLite (Step 6 onward)
-web/                  React + TypeScript + Vite (design system in Step 14)
-docs/                 ADRs, specs, analysis
-reports/              report_Step1.md … report_Step22.md
-```
-
-## Building the skeleton
-
-```bash
-cargo test --workspace
-cargo run -p forge-cli -- --version
-cd web && npm install --legacy-peer-deps && npm run build
-```
-
-## Safety note
-
-ForgeHub runs remote text on your machine by design. That is why the product
-requires explicit confirmation, shows the full commands, owner, version and
-hash, requires typed `yes` for other people's snippets, shows a diff when a
-trusted snippet changes, and fails safe without a TTY. Those behaviours are
-specified in `agent.md` §10 and `roadmap.md`, and land in Step 13.
+v0.1.0 — feature-complete and audited. 22 build steps, one
+commit each; the record is in [PROGRESS.md](PROGRESS.md) and
+[reports/](reports/).
 
 ## Licence
 
-MIT — see `LICENSE`. Forgenesis, whose local features ForgeHub ports, is also
-MIT by the same author; see `docs/forgenesis-analysis.md`.
+MIT — see [LICENSE](LICENSE).

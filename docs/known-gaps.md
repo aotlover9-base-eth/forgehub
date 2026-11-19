@@ -31,11 +31,38 @@ Login throttling and API rate limits live in the memory of one
 server process. A multi-node deployment needs a shared store;
 single-node deployments (the v1 target) are exact.
 
-## Docker image not built in CI yet (Step 6)
+## Docker image not build-verified yet (Step 6, re-checked Step 21)
 
-The `Dockerfile` is maintained with the code but was not
-build-tested on the dev machine (no Docker available). Step 21's
-release pipeline is the latest point where it must be exercised.
+The `Dockerfile` and `docker-compose.yml` are maintained with
+the code and statically reviewed, but they have never been
+built: the development machine has no Docker, and CI does not
+build the image either. Everything inside the image (server
+binary, SPA build) is fully tested outside it, and
+`docs/deploy.md` lists the smoke checks for a first real
+`docker compose up --build`. Closing this gap = adding a
+docker-build job to CI or verifying on the first deployment
+host; it is the top post-v1 operations item.
+
+## Features deliberately absent in v0.1.0
+
+- **Organisations and teams.** Snippets belong to individual
+  users; there is no shared ownership, no org namespaces, no
+  roles. Forking is the collaboration primitive.
+- **OAuth / third-party login.** Username + password only; no
+  "Sign in with …" providers.
+- **Admin web UI.** Moderation is the operator CLI
+  (`forge-server admin …`) by design — no privileged web
+  surface exists to attack.
+- **OS keyring storage for CLI credentials.** Tokens live in
+  `~/.config/forgehub/credentials.toml` (directory 0700, file
+  0600, reads refuse looser permissions). Keyring integration
+  is a post-v1 hardening option.
+- **Windows depth.** The CLI builds and runs on Windows for
+  local library management, but executing snippets assumes a
+  POSIX shell and the `fg` alias is Unix-shell only.
+- **TUI cloud tabs are single-page.** The terminal UI loads
+  the first page (100) of Mine/Explore; the full `remote list`
+  command paginates completely.
 
 ## Unmaintained-but-sound dependencies (Step 19)
 

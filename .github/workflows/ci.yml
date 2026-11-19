@@ -5,9 +5,9 @@ on:
     branches: [main]
   pull_request:
 
-# Minimal permissions (Step 19): jobs read the repo; the
-# supply-chain job additionally writes check results for the
-# audit action.
+# Minimal permissions (Step 19): every job only reads the
+# repo (Step 22: the audit action that needed checks:write
+# was replaced by a direct cargo audit run).
 permissions:
   contents: read
 
@@ -87,19 +87,24 @@ jobs:
   supply-chain:
     name: Supply chain (deny, audit, npm audit)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: cargo deny (advisories, licences, bans, sources)
         uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2
         with:
           command: check
-      - name: cargo audit
-        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+      # cargo audit runs directly (Step 22): the audit-check
+      # action's check-run update call 404'd on the Step 21
+      # run and failed the job despite "No vulnerabilities
+      # were found". The binary's own exit code is the gate:
+      # it fails on vulnerabilities, not on the informational
+      # warnings that cargo deny already governs via deny.toml.
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tool: cargo-audit
+      - name: cargo audit
+        run: cargo audit
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
