@@ -15,7 +15,7 @@ One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
 - [x] Step 11 — CLI login, whoami, credentials
 - [x] Step 12 — CLI push, pull, remote list, fork
 - [x] Step 13 — run from cloud with safety UX (checkpoint overridden by the user 2026-11-19; see the report's Checkpoint review)
-- [ ] Step 14 — web design system (Material 3)
+- [x] Step 14 — web design system (Material 3)
 - [ ] Step 15 — web auth screens and dashboard
 - [ ] Step 16 — web snippet editor and detail pages
 - [ ] Step 17 — web explore, profiles, settings, device approval — 🛑 CHECKPOINT 3

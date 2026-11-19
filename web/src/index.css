@@ -1,7 +1,17 @@
-/* Placeholder styles for Step 1. The Material 3 token system
-   (seed #36618E, generated light/dark schemes, tokens only) is
-   implemented in Step 14 — no design system is built in Step 1. */
+@import './design/tokens.css';
+@import './design/fonts.css';
+@import './design/components.css';
+
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: 'Roboto Flex', system-ui, sans-serif;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+code,
+pre {
+  font-family: 'Roboto Mono', monospace;
 }
