@@ -21,6 +21,7 @@ the startup log shows the secret key only as set/unset + length.
 | `FORGEHUB_SESSION_IDLE_SECS` | `604800` | Session idle expiry (7 days) |
 | `FORGEHUB_SESSION_ABSOLUTE_SECS` | `2592000` | Session absolute expiry (30 days) |
 | `FORGEHUB_LOGIN_BACKOFF_BASE_MS` | `1000` | Login-throttle backoff base (doubles per failure, cap 300 s) |
+| `FORGEHUB_DEVICE_POLL_INTERVAL_SECS` | `5` | Minimum seconds between device-code polls |
 | `RUST_LOG` | `forge_server=info` | Log filter (tracing EnvFilter syntax) |
 
 ## Development

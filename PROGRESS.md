@@ -9,7 +9,7 @@ One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
 - [x] Step 5 — local CLI parity (vars, stats, backup, doctor, alias) — 🛑 CHECKPOINT 1 reached 2026-11-19; user replied CONTINUE with corrections, all applied in the amended step-5 commit
 - [x] Step 6 — server foundation (push still blocked: repo does not exist + no GitHub auth — see reports/report_Step6.md §9)
 - [x] Step 7 — web account auth and sessions
-- [ ] Step 8 — API tokens and device-code login
+- [x] Step 8 — API tokens and device-code login
 - [ ] Step 9 — snippet and version API
 - [ ] Step 10 — search, tags, stars, forks, profiles
 - [ ] Step 11 — CLI login, whoami, credentials

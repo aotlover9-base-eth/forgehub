@@ -170,6 +170,8 @@ pub fn build_router(state: AppState) -> Router {
         .route("/health", get(health))
         .route("/version", get(version))
         .merge(crate::auth::routes())
+        .merge(crate::tokens::routes())
+        .merge(crate::device::routes())
         .fallback(api_not_found);
     // Static web app (skipped with a warning when not built yet).
     let web_dir = state.config.web_dir.clone();

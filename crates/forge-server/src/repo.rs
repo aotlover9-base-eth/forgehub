@@ -251,6 +251,9 @@ pub trait TokenRepo: Send + Sync {
     async fn revoke_all_for_user(&self, user_id: i64, now: &str) -> RepoResult<u64>;
     /// A user's tokens, newest first.
     async fn list_for_user(&self, user_id: i64) -> RepoResult<Vec<TokenRow>>;
+    /// Count of a user's unrevoked tokens (the per-user limit is
+    /// enforced against this).
+    async fn count_active_for_user(&self, user_id: i64) -> RepoResult<i64>;
 }
 
 /// Device codes repository.
@@ -281,6 +284,11 @@ pub trait DeviceCodeRepo: Send + Sync {
     ) -> RepoResult<()>;
     /// Increment the failed-attempts counter.
     async fn record_attempt(&self, id: i64) -> RepoResult<()>;
+    /// Atomically move an approved code to `consumed`, recording
+    /// the minted token. Returns false when the code was not in
+    /// `approved` state (a racing poll already delivered it), so
+    /// the token is delivered exactly once.
+    async fn consume(&self, id: i64, token_id: i64) -> RepoResult<bool>;
 }
 
 /// Snippets repository (metadata + immutable versions + tags + stars).
@@ -632,6 +640,15 @@ impl TokenRepo for SqliteStore {
         .fetch_all(&self.pool)
         .await?)
     }
+
+    async fn count_active_for_user(&self, user_id: i64) -> RepoResult<i64> {
+        Ok(sqlx::query_scalar(
+            "SELECT COUNT(*) FROM api_tokens WHERE user_id = ?1 AND revoked_at IS NULL",
+        )
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await?)
+    }
 }
 
 // ------------------------------------------------------------ device codes
@@ -712,8 +729,19 @@ impl DeviceCodeRepo for SqliteStore {
             .await?;
         Ok(())
     }
-}
 
+    async fn consume(&self, id: i64, token_id: i64) -> RepoResult<bool> {
+        let res = sqlx::query(
+            "UPDATE device_codes SET status = 'consumed', token_id = ?2 \
+             WHERE id = ?1 AND status = 'approved'",
+        )
+        .bind(id)
+        .bind(token_id)
+        .execute(&self.pool)
+        .await?;
+        Ok(res.rows_affected() == 1)
+    }
+}
 // --------------------------------------------------------------- snippets
 
 /// The values one snippet contributes to the FTS index, if it is

@@ -90,7 +90,7 @@ fn dummy_hash() -> &'static str {
 // -------------------------------------------------------------- random
 
 /// `n` CSPRNG bytes, hex-encoded (2n chars).
-fn random_hex(n: usize) -> String {
+pub(crate) fn random_hex(n: usize) -> String {
     use std::fmt::Write;
     let mut buf = vec![0u8; n];
     OsRng.fill_bytes(&mut buf);
@@ -98,6 +98,26 @@ fn random_hex(n: usize) -> String {
         let _ = write!(s, "{b:02x}");
         s
     })
+}
+
+/// `n` characters drawn uniformly from `alphabet` with a CSPRNG
+/// (rejection sampling, so no modulo bias).
+pub(crate) fn random_from_alphabet(alphabet: &[u8], n: usize) -> String {
+    let limit = 256 - (256 % alphabet.len());
+    let mut out = String::with_capacity(n);
+    let mut buf = [0u8; 64];
+    while out.len() < n {
+        OsRng.fill_bytes(&mut buf);
+        for b in buf {
+            if (b as usize) < limit {
+                out.push(alphabet[(b as usize) % alphabet.len()] as char);
+                if out.len() == n {
+                    break;
+                }
+            }
+        }
+    }
+    out
 }
 
 /// SHA-256 hex of a string (session ids and, later, tokens).
@@ -430,11 +450,11 @@ impl LoginThrottle {
 /// The session cookie name (openapi `cookieSession`).
 pub const SESSION_COOKIE: &str = "forgehub_session";
 
-fn fmt_ts(dt: chrono::DateTime<chrono::Utc>) -> String {
+pub(crate) fn fmt_ts(dt: chrono::DateTime<chrono::Utc>) -> String {
     dt.format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
-fn parse_iso(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+pub(crate) fn parse_iso(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
     chrono::DateTime::parse_from_rfc3339(s)
         .ok()
         .map(|d| d.with_timezone(&chrono::Utc))
@@ -512,20 +532,50 @@ async fn start_session(
     Ok((row, session_cookie(state, &id)))
 }
 
-/// The authenticated principal (cookie session this step; bearer
-/// tokens join in Step 8 — see ADR 0005).
+/// How the caller authenticated (ADR 0005): a browser cookie
+/// session, or a bearer API token (Step 8).
+#[derive(Debug, Clone)]
+pub enum AuthKind {
+    /// Cookie session.
+    Session(SessionRow),
+    /// Bearer API token.
+    Token(crate::repo::TokenRow),
+}
+
+impl AuthKind {
+    /// The session row, when cookie-authenticated.
+    #[must_use]
+    pub fn session(&self) -> Option<&SessionRow> {
+        match self {
+            Self::Session(row) => Some(row),
+            Self::Token(_) => None,
+        }
+    }
+
+    /// Scope check: sessions act with the user's full authority;
+    /// tokens are limited to their scopes (`write` implies `read`,
+    /// normalised at creation).
+    #[must_use]
+    pub fn has_scope(&self, scope: &str) -> bool {
+        match self {
+            Self::Session(_) => true,
+            Self::Token(row) => row.scopes.split_whitespace().any(|s| s == scope),
+        }
+    }
+}
+
+/// The authenticated principal.
 #[derive(Debug, Clone)]
 pub struct AuthContext {
     /// The authenticated user.
     pub user: UserRow,
-    /// The session behind the cookie.
-    pub session: SessionRow,
+    /// Session or token.
+    pub kind: AuthKind,
 }
 
-/// Resolve the session cookie to an [`AuthContext`], enforcing
-/// absolute + idle expiry and account state. Expired sessions are
-/// deleted on sight; `last_used_at` is touched at most once a
-/// minute.
+/// Resolve the session cookie, enforcing absolute + idle expiry
+/// and account state. Expired sessions are deleted on sight;
+/// `last_used_at` is touched at most once a minute.
 async fn resolve_session(state: &AppState, headers: &HeaderMap) -> Option<AuthContext> {
     let raw = cookie_value(headers, SESSION_COOKIE)?;
     let id_hash = sha256_hex(raw);
@@ -548,7 +598,67 @@ async fn resolve_session(state: &AppState, headers: &HeaderMap) -> Option<AuthCo
     {
         let _ = state.repos.sessions.touch(&id_hash, &now_iso()).await;
     }
-    Some(AuthContext { user, session })
+    Some(AuthContext {
+        user,
+        kind: AuthKind::Session(session),
+    })
+}
+
+/// Resolve an `Authorization: Bearer fgh_…` header: hash the
+/// presented token, look it up, enforce revocation/expiry and
+/// account state, and touch `last_used_at` at most once a minute.
+/// A revoked token is rejected on the very next request — there is
+/// no cache.
+async fn resolve_token(state: &AppState, headers: &HeaderMap) -> Option<AuthContext> {
+    let header = headers.get(header::AUTHORIZATION)?.to_str().ok()?;
+    let presented = header.strip_prefix("Bearer ")?;
+    if !presented.starts_with("fgh_") {
+        return None;
+    }
+    let token = state
+        .repos
+        .tokens
+        .by_hash(&sha256_hex(presented))
+        .await
+        .ok()??;
+    if token.revoked_at.is_some() {
+        return None;
+    }
+    let now = chrono::Utc::now();
+    if token
+        .expires_at
+        .as_deref()
+        .and_then(parse_iso)
+        .is_some_and(|e| e <= now)
+    {
+        return None;
+    }
+    let user = state.repos.users.by_id(token.user_id).await.ok()??;
+    if user.deleted_at.is_some() || user.disabled_at.is_some() {
+        return None;
+    }
+    let use_is_stale = token
+        .last_used_at
+        .as_deref()
+        .and_then(parse_iso)
+        .is_none_or(|last| now - last > chrono::Duration::seconds(60));
+    if use_is_stale {
+        let _ = state.repos.tokens.touch(token.id, &now_iso()).await;
+    }
+    Some(AuthContext {
+        user,
+        kind: AuthKind::Token(token),
+    })
+}
+
+/// Resolve whichever credential the request carries. A bearer
+/// header, when present, wins over the cookie (explicit beats
+/// ambient).
+async fn resolve_auth(state: &AppState, headers: &HeaderMap) -> Option<AuthContext> {
+    if headers.contains_key(header::AUTHORIZATION) {
+        return resolve_token(state, headers).await;
+    }
+    resolve_session(state, headers).await
 }
 
 /// Verify the CSRF defence for a cookie-authenticated mutation:
@@ -598,11 +708,11 @@ impl FromRequestParts<AppState> for CurrentUser {
         parts: &mut axum::http::request::Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        Ok(Self(resolve_session(state, &parts.headers).await))
+        Ok(Self(resolve_auth(state, &parts.headers).await))
     }
 }
 
-/// Required authentication (cookie or, from Step 8, bearer).
+/// Required authentication (cookie session or bearer token).
 /// Rejects 401 `unauthorized`.
 pub struct RequireUser(pub AuthContext);
 
@@ -613,7 +723,7 @@ impl FromRequestParts<AppState> for RequireUser {
         parts: &mut axum::http::request::Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        resolve_session(state, &parts.headers)
+        resolve_auth(state, &parts.headers)
             .await
             .map(RequireUser)
             .ok_or_else(|| ApiError::unauthorized("Authentication required"))
@@ -622,10 +732,15 @@ impl FromRequestParts<AppState> for RequireUser {
 
 /// Required *cookie-session* authentication: account mutations
 /// (logout, password change, account deletion, token management)
-/// are never available to bearer tokens (ADR 0005). This step only
-/// has cookie auth, so it resolves exactly like [`RequireUser`];
-/// Step 8 keeps bearer contexts out here.
-pub struct RequireSession(pub AuthContext);
+/// are never available to bearer tokens (ADR 0005, T-ACCT-3).
+/// Bearer-authenticated requests get 403 `session_required`;
+/// unauthenticated ones 401.
+pub struct RequireSession {
+    /// The authenticated user.
+    pub user: UserRow,
+    /// The session behind the cookie.
+    pub session: SessionRow,
+}
 
 impl FromRequestParts<AppState> for RequireSession {
     type Rejection = ApiError;
@@ -634,16 +749,24 @@ impl FromRequestParts<AppState> for RequireSession {
         parts: &mut axum::http::request::Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        resolve_session(state, &parts.headers)
-            .await
-            .map(RequireSession)
-            .ok_or_else(|| ApiError::unauthorized("Authentication required"))
+        match resolve_auth(state, &parts.headers).await {
+            Some(AuthContext {
+                user,
+                kind: AuthKind::Session(session),
+            }) => Ok(Self { user, session }),
+            Some(_) => Err(ApiError::new(
+                StatusCode::FORBIDDEN,
+                "session_required",
+                "This operation requires a web session, not an API token",
+            )),
+            None => Err(ApiError::unauthorized("Authentication required")),
+        }
     }
 }
 
 // -------------------------------------------------------------- handlers
 
-fn body<T>(result: Result<Json<T>, JsonRejection>) -> Result<T, ApiError> {
+pub(crate) fn body<T>(result: Result<Json<T>, JsonRejection>) -> Result<T, ApiError> {
     result
         .map(|Json(v)| v)
         .map_err(|e| ApiError::validation(format!("Invalid request body: {}", e.body_text())))
@@ -816,7 +939,7 @@ async fn login(
 
 async fn logout(
     State(state): State<AppState>,
-    RequireSession(ctx): RequireSession,
+    ctx: RequireSession,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
     verify_csrf(&headers, &ctx.session)?;
@@ -828,7 +951,7 @@ async fn logout(
 
 async fn logout_all(
     State(state): State<AppState>,
-    RequireSession(ctx): RequireSession,
+    ctx: RequireSession,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
     verify_csrf(&headers, &ctx.session)?;
@@ -839,7 +962,7 @@ async fn logout_all(
 }
 
 async fn get_me(RequireUser(ctx): RequireUser) -> Response {
-    Json(me_json(&ctx.user, Some(&ctx.session))).into_response()
+    Json(me_json(&ctx.user, ctx.kind.session())).into_response()
 }
 
 #[derive(Deserialize)]
@@ -854,7 +977,7 @@ struct PatchMeRequest {
 async fn patch_me(
     State(state): State<AppState>,
     ClientIp(ip): ClientIp,
-    RequireSession(ctx): RequireSession,
+    ctx: RequireSession,
     headers: HeaderMap,
     result: Result<Json<PatchMeRequest>, JsonRejection>,
 ) -> Result<Response, ApiError> {
@@ -949,7 +1072,7 @@ struct DeleteMeRequest {
 
 async fn delete_me(
     State(state): State<AppState>,
-    RequireSession(ctx): RequireSession,
+    ctx: RequireSession,
     headers: HeaderMap,
     result: Result<Json<DeleteMeRequest>, JsonRejection>,
 ) -> Result<Response, ApiError> {

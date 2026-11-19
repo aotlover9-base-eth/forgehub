@@ -57,6 +57,8 @@ pub struct Config {
     pub session_absolute_secs: u64,
     /// Base delay for login-throttle backoff (`FORGEHUB_LOGIN_BACKOFF_BASE_MS`, default 1000).
     pub login_backoff_base_ms: u64,
+    /// Minimum seconds between device-code polls (`FORGEHUB_DEVICE_POLL_INTERVAL_SECS`, default 5).
+    pub device_poll_interval_secs: u64,
 }
 
 fn env_var(key: &str) -> Option<String> {
@@ -118,6 +120,17 @@ fn session_settings(get: &dyn Fn(&str) -> Option<String>) -> Result<(u64, u64, u
         1000,
     )?;
     Ok((idle, absolute, backoff_ms))
+}
+
+/// Device-flow poll interval (`FORGEHUB_DEVICE_POLL_INTERVAL_SECS`).
+fn device_poll_interval(get: &dyn Fn(&str) -> Option<String>) -> Result<u64> {
+    parse_or(
+        "FORGEHUB_DEVICE_POLL_INTERVAL_SECS",
+        get("FORGEHUB_DEVICE_POLL_INTERVAL_SECS")
+            .as_deref()
+            .unwrap_or_default(),
+        5,
+    )
 }
 
 impl Config {
@@ -202,6 +215,7 @@ impl Config {
         }
         let (session_idle_secs, session_absolute_secs, login_backoff_base_ms) =
             session_settings(get)?;
+        let device_poll_interval_secs = device_poll_interval(get)?;
         Ok(Self {
             env,
             bind,
@@ -216,6 +230,7 @@ impl Config {
             session_idle_secs,
             session_absolute_secs,
             login_backoff_base_ms,
+            device_poll_interval_secs,
         })
     }
 

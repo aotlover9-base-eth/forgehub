@@ -8,7 +8,6 @@ use forge_server::http::build_router;
 use forge_server::repo::Repos;
 use forge_server::state::AppState;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
 fn init_tracing(env: Env) {
@@ -64,14 +63,7 @@ async fn main() -> Result<()> {
     let pool = forge_server::db::connect(&config.database_url).await?;
     forge_server::db::migrate(&pool).await?;
     tracing::info!("database ready and migrations applied");
-    let state = AppState {
-        login_throttle: Arc::new(forge_server::auth::LoginThrottle::new(
-            std::time::Duration::from_millis(config.login_backoff_base_ms),
-        )),
-        config: Arc::new(config.clone()),
-        repos: Arc::new(Repos::sqlite(pool.clone())),
-        pool,
-    };
+    let state = AppState::new(config.clone(), Repos::sqlite(pool.clone()), pool);
     let app = build_router(state);
     let listener = tokio::net::TcpListener::bind(config.bind).await?;
     tracing::info!("listening on http://{}", config.bind);

@@ -6,7 +6,6 @@ use forge_server::http::{apply_api_layers, build_router, CSP};
 use forge_server::repo::Repos;
 use forge_server::state::AppState;
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 struct TestServer {
@@ -43,14 +42,7 @@ async fn start(extra: &[(&str, &str)]) -> TestServer {
         .await
         .unwrap();
     forge_server::db::migrate(&pool).await.unwrap();
-    let state = AppState {
-        login_throttle: Arc::new(forge_server::auth::LoginThrottle::new(
-            std::time::Duration::from_millis(50),
-        )),
-        config: Arc::new(config),
-        repos: Arc::new(Repos::sqlite(pool.clone())),
-        pool,
-    };
+    let state = AppState::new(config, Repos::sqlite(pool.clone()), pool);
     let app = build_router(state);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -194,14 +186,7 @@ async fn body_limit_rejects_oversized_payloads() {
     let pool = forge_server::db::connect(&config.database_url)
         .await
         .unwrap();
-    let state = AppState {
-        login_throttle: Arc::new(forge_server::auth::LoginThrottle::new(
-            std::time::Duration::from_millis(50),
-        )),
-        config: Arc::new(config),
-        repos: Arc::new(Repos::sqlite(pool.clone())),
-        pool,
-    };
+    let state = AppState::new(config, Repos::sqlite(pool.clone()), pool);
     let echo = axum::Router::new().route(
         "/echo",
         axum::routing::post(|body: String| async move { body }),
