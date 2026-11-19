@@ -1,0 +1,1107 @@
+openapi: 3.1.0
+info:
+  title: ForgeHub API
+  version: 1.0.0
+  description: >
+    API for ForgeHub, a cloud home for text-only shell command snippets.
+    All endpoints are under /api/v1. Errors use the envelope in
+    components.schemas.Error. Pagination uses limit + opaque cursor.
+    Rate-limit headers (RateLimit-Limit, RateLimit-Remaining,
+    RateLimit-Reset, Retry-After where applicable) are sent on every
+    response. Snippet bodies are text only, at most 64 KiB; there is no
+    file-upload endpoint anywhere in this API.
+servers:
+  - url: /api/v1
+security: []
+tags:
+  - name: meta
+  - name: auth
+  - name: tokens
+  - name: device
+  - name: snippets
+  - name: discovery
+  - name: users
+paths:
+  /health:
+    get:
+      tags: [meta]
+      summary: Health check (includes a database check)
+      operationId: health
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  db: { type: string, enum: [ok] }
+        '503': { $ref: '#/components/responses/Error' }
+  /version:
+    get:
+      tags: [meta]
+      summary: Server version
+      operationId: version
+      responses:
+        '200':
+          description: Version information
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version]
+                properties:
+                  version: { type: string, example: 0.1.0 }
+                  git_sha: { type: string }
+  /auth/signup:
+    post:
+      tags: [auth]
+      summary: Create an account (rate-limited; disabled when FORGEHUB_ALLOW_SIGNUP=false)
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { $ref: '#/components/schemas/Username' }
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, minLength: 10, maxLength: 256 }
+      responses:
+        '201':
+          description: Account created and session cookie set
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Log in with email or username and password (rate-limited, generic failures)
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password]
+              properties:
+                identifier: { type: string, maxLength: 254, description: Email address or username }
+                password: { type: string, maxLength: 256 }
+      responses:
+        '200':
+          description: Logged in; session rotated and cookie set
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Log out the current session
+      operationId: logout
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      responses:
+        '204': { description: Logged out }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /auth/logout-all:
+    post:
+      tags: [auth]
+      summary: Revoke every session for the current user
+      operationId: logoutAll
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      responses:
+        '204': { description: All sessions revoked }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /me:
+    get:
+      tags: [auth]
+      summary: Current user (cookie session or bearer token)
+      operationId: getMe
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      responses:
+        '200':
+          description: The current user, including the CSRF token for cookie sessions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [auth]
+      summary: Update display name or bio, or change password (cookie session only)
+      operationId: patchMe
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: { type: [string, 'null'], maxLength: 80 }
+                bio: { type: [string, 'null'], maxLength: 280 }
+                current_password: { type: string, maxLength: 256, description: Required when new_password is present }
+                new_password: { type: string, minLength: 10, maxLength: 256, description: Changing the password revokes all other sessions }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [auth]
+      summary: Delete the current account (cookie session only; soft delete, then purge)
+      operationId: deleteMe
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { $ref: '#/components/schemas/Username', description: Must equal the current username (typed confirmation) }
+                password: { type: string, maxLength: 256 }
+      responses:
+        '204': { description: Account scheduled for deletion; sessions and tokens revoked }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /me/snippets:
+    get:
+      tags: [auth]
+      summary: The current user's snippets (paginated)
+      operationId: mySnippets
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - name: visibility
+          in: query
+          schema: { $ref: '#/components/schemas/Visibility' }
+        - name: tag
+          in: query
+          schema: { $ref: '#/components/schemas/Tag' }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [updated, created, name], default: updated }
+      responses:
+        '200':
+          description: Page of snippets
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SnippetPage' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/stars:
+    get:
+      tags: [auth]
+      summary: Snippets starred by the current user (paginated)
+      operationId: myStars
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of snippets
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SnippetPage' }
+        '401': { $ref: '#/components/responses/Error' }
+  /tokens:
+    get:
+      tags: [tokens]
+      summary: List the current user's API tokens (cookie session only; hashes never returned)
+      operationId: listTokens
+      security: [{ cookieSession: [] }]
+      responses:
+        '200':
+          description: Tokens (metadata only)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tokens]
+                properties:
+                  tokens:
+                    type: array
+                    items: { $ref: '#/components/schemas/ApiToken' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [tokens]
+      summary: Create an API token (cookie session only; plaintext returned once)
+      operationId: createToken
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scopes]
+              properties:
+                name: { type: string, maxLength: 80 }
+                scopes:
+                  type: array
+                  items: { type: string, enum: [read, write] }
+                  minItems: 1
+                expires_in_days: { type: integer, minimum: 1, maximum: 365 }
+      responses:
+        '201':
+          description: Token created; token is the plaintext, shown only here
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiToken' }
+                  - type: object
+                    required: [token]
+                    properties:
+                      token: { type: string, example: fgh_exampleplaintextneverstored }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /tokens/{id}:
+    delete:
+      tags: [tokens]
+      summary: Revoke an API token (cookie session only)
+      operationId: revokeToken
+      security: [{ cookieSession: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Token revoked }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /auth/device/code:
+    post:
+      tags: [device]
+      summary: Start the device-code flow (rate-limited)
+      operationId: deviceCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [client_name]
+              properties:
+                client_name: { type: string, maxLength: 80, example: 'forgehub CLI on my-laptop' }
+      responses:
+        '200':
+          description: Device and user codes issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval]
+                properties:
+                  device_code: { type: string, description: High-entropy; stored hashed server-side }
+                  user_code: { type: string, example: ABCD-EFGH }
+                  verification_uri: { type: string, format: uri }
+                  verification_uri_complete: { type: string, format: uri }
+                  expires_in: { type: integer, example: 600 }
+                  interval: { type: integer, example: 5 }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/device/token:
+    post:
+      tags: [device]
+      summary: Poll for a device-code result
+      operationId: deviceToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_code]
+              properties:
+                device_code: { type: string }
+      responses:
+        '200':
+          description: >
+            Either a pending status or, once approved, the access token.
+            error is one of authorization_pending, slow_down, access_denied,
+            expired_token when status is pending or denied or expired.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [pending, approved, denied, expired] }
+                  error: { type: string, enum: [authorization_pending, slow_down, access_denied, expired_token] }
+                  access_token: { type: string }
+                  token_type: { type: string, enum: [Bearer] }
+                  scopes:
+                    type: array
+                    items: { type: string, enum: [read, write] }
+        '400': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/device/lookup:
+    get:
+      tags: [device]
+      summary: Look up a user code before approval (cookie session; rate-limited)
+      operationId: deviceLookup
+      security: [{ cookieSession: [] }]
+      parameters:
+        - name: user_code
+          in: query
+          required: true
+          schema: { type: string, example: ABCD-EFGH }
+      responses:
+        '200':
+          description: What approving this code would grant
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [client_name, scopes, expires_at]
+                properties:
+                  client_name: { type: string }
+                  scopes:
+                    type: array
+                    items: { type: string, enum: [read, write] }
+                  expires_at: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/device/approve:
+    post:
+      tags: [device]
+      summary: Approve a device code (cookie session + CSRF; explicit user action only)
+      operationId: deviceApprove
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_code]
+              properties:
+                user_code: { type: string, example: ABCD-EFGH }
+      responses:
+        '204': { description: Approved; a CLI token was created for the user }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '410': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/device/deny:
+    post:
+      tags: [device]
+      summary: Deny a device code (cookie session + CSRF)
+      operationId: deviceDeny
+      security: [{ cookieSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_code]
+              properties:
+                user_code: { type: string, example: ABCD-EFGH }
+      responses:
+        '204': { description: Denied }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /snippets/validate:
+    post:
+      tags: [snippets]
+      summary: Validate a forge file without persisting it (auth optional)
+      operationId: validateSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }, {}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SnippetInput' }
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationResult' }
+        '422':
+          description: Secret-scan findings block the snippet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationResult' }
+  /snippets:
+    post:
+      tags: [snippets]
+      summary: Create a snippet (version 1). Requires the write scope.
+      operationId: createSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfOptional' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SnippetInput' }
+      responses:
+        '201':
+          description: Created snippet at version 1
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snippet' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+    get:
+      tags: [snippets]
+      summary: Get a snippet (latest or a pinned version). Private snippets return 404 to non-owners.
+      operationId: getSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }, {}]
+      parameters:
+        - name: version
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: intent
+          in: query
+          schema: { type: string, enum: [run], description: When run and the snippet is public and the caller is not the owner, pull_count is incremented (deduplicated per IP and snippet per hour) }
+      responses:
+        '200':
+          description: Snippet with body and parsed summary
+          headers:
+            ETag: { description: 'The content hash, for If-None-Match', schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snippet' }
+        '304': { description: Not modified (If-None-Match matched the content hash) }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      tags: [snippets]
+      summary: Create a new immutable version (owner only, write scope). Identical hash returns 200 with unchanged true.
+      operationId: putSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/CsrfOptional' }
+        - name: If-Match
+          in: header
+          required: true
+          schema: { type: string, description: The latest version number the caller based this update on, as a quoted integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: '#/components/schemas/SnippetInput' }
+                - type: object
+                  properties:
+                    message: { type: string, maxLength: 200 }
+      responses:
+        '200':
+          description: New version created, or unchanged true when the hash equals the latest version
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Snippet' }
+                  - type: object
+                    properties:
+                      unchanged: { type: boolean }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '412': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [snippets]
+      summary: Update metadata only (description, visibility, tags). Owner only; creates no version.
+      operationId: patchSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfOptional' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description: { type: string, maxLength: 280 }
+                visibility: { $ref: '#/components/schemas/Visibility' }
+                tags:
+                  type: array
+                  items: { $ref: '#/components/schemas/Tag' }
+                  maxItems: 20
+                name: { $ref: '#/components/schemas/SnippetName', description: Rename; creates a 30-day redirect from the old name }
+      responses:
+        '200':
+          description: Updated snippet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snippet' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [snippets]
+      summary: Soft-delete a snippet (owner only). Purged after 30 days.
+      operationId: deleteSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfOptional' }]
+      responses:
+        '204': { description: Soft-deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}/versions:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+    get:
+      tags: [snippets]
+      summary: List versions (metadata only). Private snippets return 404 to non-owners.
+      operationId: listVersions
+      security: [{ cookieSession: [] }, { bearerToken: [] }, {}]
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of version summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [versions]
+                properties:
+                  versions:
+                    type: array
+                    items: { $ref: '#/components/schemas/VersionSummary' }
+                  next_cursor: { type: [string, 'null'] }
+        '404': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}/versions/{version}:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+      - name: version
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    get:
+      tags: [snippets]
+      summary: Get one version in full
+      operationId: getVersion
+      security: [{ cookieSession: [] }, { bearerToken: [] }, {}]
+      responses:
+        '200':
+          description: The version
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snippet' }
+        '404': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}/diff:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+    get:
+      tags: [snippets]
+      summary: Unified diff between two versions (size-limited)
+      operationId: diffVersions
+      security: [{ cookieSession: [] }, { bearerToken: [] }, {}]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: to
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Unified diff as text
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [from, to, diff]
+                properties:
+                  from: { type: integer }
+                  to: { type: integer }
+                  diff: { type: string }
+        '404': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}/raw:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+    get:
+      tags: [snippets]
+      summary: Raw body of the latest version as text/plain with nosniff
+      operationId: getRaw
+      security: [{ cookieSession: [] }, { bearerToken: [] }, {}]
+      parameters:
+        - name: version
+          in: query
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: The raw forge-file body
+          content:
+            text/plain:
+              schema: { type: string }
+        '404': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}/star:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+    put:
+      tags: [snippets]
+      summary: Star a public or unlisted snippet
+      operationId: starSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfOptional' }]
+      responses:
+        '204': { description: Starred }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [snippets]
+      summary: Remove a star
+      operationId: unstarSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfOptional' }]
+      responses:
+        '204': { description: Star removed }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}/fork:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+    post:
+      tags: [snippets]
+      summary: Fork the latest version into the caller's account as a private snippet
+      operationId: forkSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfOptional' }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { $ref: '#/components/schemas/SnippetName', description: Name in the caller's account; defaults to the source name }
+      responses:
+        '201':
+          description: The fork
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snippet' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}/report:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+    post:
+      tags: [snippets]
+      summary: Report a snippet for admin review (rate-limited)
+      operationId: reportSnippet
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfOptional' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '204': { description: Report recorded }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /search:
+    get:
+      tags: [discovery]
+      summary: Search public snippets (FTS5; rate-limited)
+      operationId: search
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 200 }
+        - name: tag
+          in: query
+          schema: { $ref: '#/components/schemas/Tag' }
+        - name: owner
+          in: query
+          schema: { $ref: '#/components/schemas/Username' }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [relevance, stars, updated], default: relevance }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of search results with plain-text highlight ranges
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchPage' }
+        '429': { $ref: '#/components/responses/Error' }
+  /explore:
+    get:
+      tags: [discovery]
+      summary: Explore public snippets (recent and popular; cached 60 s)
+      operationId: explore
+      parameters:
+        - name: feed
+          in: query
+          schema: { type: string, enum: [recent, popular], default: recent }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of snippets
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SnippetPage' }
+  /tags:
+    get:
+      tags: [discovery]
+      summary: Popular tags on public snippets
+      operationId: popularTags
+      responses:
+        '200':
+          description: Tags with public snippet counts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tags]
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      required: [tag, count]
+                      properties:
+                        tag: { $ref: '#/components/schemas/Tag' }
+                        count: { type: integer }
+  /users/{username}:
+    parameters:
+      - name: username
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Username' }
+    get:
+      tags: [users]
+      summary: Public profile (never includes email)
+      operationId: getUser
+      responses:
+        '200':
+          description: Public profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicProfile' }
+        '404': { $ref: '#/components/responses/Error' }
+  /users/{username}/snippets:
+    parameters:
+      - name: username
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Username' }
+    get:
+      tags: [users]
+      summary: A user's public snippets (paginated)
+      operationId: userSnippets
+      parameters:
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of public snippets
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SnippetPage' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: forgehub_session
+      description: HttpOnly, SameSite=Lax session cookie; the id is stored hashed server-side. Mutating requests also need the CSRF header.
+    bearerToken:
+      type: http
+      scheme: bearer
+      description: Personal API token of the form fgh_ plus 32 random bytes, base62. Stored hashed server-side.
+  parameters:
+    Csrf:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema: { type: string }
+      description: Per-session CSRF token, returned by GET /me. Required on cookie-authenticated mutations.
+    CsrfOptional:
+      name: X-CSRF-Token
+      in: header
+      required: false
+      schema: { type: string }
+      description: Required when the request is cookie-authenticated; not applicable to bearer-token requests.
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string, description: Opaque pagination cursor from a previous response }
+    Owner:
+      name: owner
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Username' }
+    Name:
+      name: name
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/SnippetName' }
+  headers:
+    SetCookie:
+      description: forgehub_session cookie; HttpOnly, SameSite=Lax, Secure in production, Path=/.
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error envelope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: snippet_not_found, description: Stable machine-readable code }
+            message: { type: string, example: Snippet not found }
+            details: { type: object, additionalProperties: true }
+    Username:
+      type: string
+      pattern: '^[a-z0-9][a-z0-9-]{1,38}$'
+      description: Lowercase ASCII; no consecutive hyphens; not a reserved word (see spec-snippet-format section 8)
+    SnippetName:
+      type: string
+      pattern: '^[a-z0-9][a-z0-9._-]{0,63}$'
+      description: No dot-dot, does not end with a dot, not a reserved word
+    Tag:
+      type: string
+      pattern: '^[a-z0-9][a-z0-9-]{0,29}$'
+    Visibility:
+      type: string
+      enum: [private, unlisted, public]
+      default: private
+    Me:
+      type: object
+      required: [username, email, created_at]
+      properties:
+        username: { $ref: '#/components/schemas/Username' }
+        email: { type: string, format: email }
+        display_name: { type: [string, 'null'] }
+        bio: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+        csrf_token: { type: string, description: Present for cookie sessions; send as X-CSRF-Token on mutations }
+    PublicProfile:
+      type: object
+      required: [username, created_at, public_snippet_count]
+      properties:
+        username: { $ref: '#/components/schemas/Username' }
+        display_name: { type: [string, 'null'] }
+        bio: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+        public_snippet_count: { type: integer }
+    ApiToken:
+      type: object
+      required: [id, name, prefix, scopes, created_at]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        prefix: { type: string, description: First 8 characters after fgh_, for display only }
+        scopes:
+          type: array
+          items: { type: string, enum: [read, write] }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: [string, 'null'], format: date-time }
+        expires_at: { type: [string, 'null'], format: date-time }
+        revoked_at: { type: [string, 'null'], format: date-time }
+    SnippetInput:
+      type: object
+      required: [name, body]
+      properties:
+        name: { $ref: '#/components/schemas/SnippetName' }
+        description: { type: string, maxLength: 280 }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+        tags:
+          type: array
+          items: { $ref: '#/components/schemas/Tag' }
+          maxItems: 20
+        mode: { type: string, enum: [script, steps] }
+        body: { type: string, maxLength: 65536, description: Either a forge-file YAML document, or raw script text which the server wraps as script mode }
+    SnippetSummaryParsed:
+      type: object
+      properties:
+        mode: { type: string, enum: [script, steps] }
+        steps_count: { type: integer }
+        variables:
+          type: array
+          items: { type: string }
+        uses_sudo: { type: boolean }
+        lint_warnings:
+          type: array
+          items:
+            type: object
+            required: [kind, line, message]
+            properties:
+              kind: { type: string }
+              line: { type: integer }
+              message: { type: string }
+    Snippet:
+      type: object
+      required: [owner, name, description, visibility, tags, version, hash, body, created_at, updated_at]
+      properties:
+        owner: { $ref: '#/components/schemas/Username' }
+        name: { $ref: '#/components/schemas/SnippetName' }
+        description: { type: string }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+        tags:
+          type: array
+          items: { $ref: '#/components/schemas/Tag' }
+        version: { type: integer, minimum: 1 }
+        hash: { type: string, pattern: '^[0-9a-f]{64}$' }
+        short_hash: { type: string, example: '9f2c1a7e' }
+        body: { type: string }
+        message: { type: [string, 'null'] }
+        summary: { $ref: '#/components/schemas/SnippetSummaryParsed' }
+        star_count: { type: integer }
+        fork_count: { type: integer }
+        pull_count: { type: integer }
+        forked_from:
+          type: [object, 'null']
+          properties:
+            owner: { $ref: '#/components/schemas/Username' }
+            name: { $ref: '#/components/schemas/SnippetName' }
+            version: { type: integer }
+            hash: { type: string }
+        starred_by_me: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    VersionSummary:
+      type: object
+      required: [version, hash, created_at]
+      properties:
+        version: { type: integer }
+        hash: { type: string }
+        short_hash: { type: string }
+        message: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+    SnippetPage:
+      type: object
+      required: [snippets]
+      properties:
+        snippets:
+          type: array
+          items: { $ref: '#/components/schemas/Snippet' }
+        next_cursor: { type: [string, 'null'] }
+    SearchPage:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            required: [snippet, highlights]
+            properties:
+              snippet: { $ref: '#/components/schemas/Snippet' }
+              highlights:
+                type: array
+                description: Plain-text ranges into fields; never HTML
+                items:
+                  type: object
+                  required: [field, start, end]
+                  properties:
+                    field: { type: string, enum: [name, description, tags, body] }
+                    start: { type: integer }
+                    end: { type: integer }
+        next_cursor: { type: [string, 'null'] }
+    ValidationResult:
+      type: object
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [message]
+            properties:
+              message: { type: string }
+              line: { type: integer }
+              column: { type: integer }
+              path: { type: string }
+        hash: { type: string, description: Content hash when the document parses }
+        summary: { $ref: '#/components/schemas/SnippetSummaryParsed' }
+        secret_findings:
+          type: array
+          description: Line and kind only; the secret value is never returned
+          items:
+            type: object
+            required: [kind, line]
+            properties:
+              kind: { type: string }
+              line: { type: integer }
