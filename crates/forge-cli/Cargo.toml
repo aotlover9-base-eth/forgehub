@@ -16,7 +16,7 @@ anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 clap_complete = { version = "4", features = ["unstable-dynamic"] }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
-forge-core = { path = "../forge-core" }
+forge-core = { version = "0.1.0", path = "../forge-core" }
 regex = "1"
 # TUI (Step 18): ratatui rendering over crossterm; only the
 # `ui` command constructs them, so other commands pay nothing.
@@ -28,7 +28,7 @@ crossterm = "0.28"
 # dependency. Proxy env vars (HTTP_PROXY/HTTPS_PROXY/NO_PROXY) are
 # honoured by reqwest's default system-proxy behaviour.
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.41", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
@@ -40,7 +40,7 @@ clap_mangen = "0.3.4"
 # Integration tests drive the real server in-process (Step 11).
 axum = "0.8"
 clap_mangen = "0.3.4"
-forge-server = { path = "../forge-server" }
+forge-server = { version = "0.1.0", path = "../forge-server" }
 tempfile = "3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 

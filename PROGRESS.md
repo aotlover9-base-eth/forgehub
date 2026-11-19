@@ -20,7 +20,7 @@ One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
 - [x] Step 16 — web snippet editor and detail pages
 - [x] Step 17 — web explore, profiles, settings, device approval — 🛑 CHECKPOINT 3
 - [x] Step 18 — CLI TUI, offline mode, completions, polish
-- [ ] Step 19 — security hardening pass
+- [x] Step 19 — security hardening pass
 - [ ] Step 20 — end-to-end tests and performance pass — 🛑 CHECKPOINT 4
 - [ ] Step 21 — packaging, installer, release pipeline
 - [ ] Step 22 — docs, final audit, v0.1.0

@@ -29,6 +29,41 @@
 | T-ABUSE-1 | Spam / abuse content (Repudiation / DoS) | Mass public snippets, abusive content | Report endpoint (rate-limited); admin CLI to hide snippets and ban users (Step 10); hidden content returns 404 publicly; signup can be closed (`FORGEHUB_ALLOW_SIGNUP=false`) | 6, 10 |
 | T-PRIV-1 | Tracking / pull-count misuse (Information disclosure) | Popularity numbers become per-user tracking | `pull_count` is an aggregate counter only, deduplicated per IP+snippet per hour, with **no per-user pull history stored**; no telemetry anywhere (agent.md R7) | 10 |
 
+## Step 19 verification log (2026-11-19)
+
+Every row was attacked against the running system (local only). Evidence
+lives in `crates/forge-server/tests/security.rs`, `crates/forge-cli/tests/step18.rs`,
+the unit/property suites, and `reports/report_Step19.md`.
+
+| ID | Attack attempted | Result |
+|----|------------------|--------|
+| T-EXEC-1 | Reviewed the run path end to end | Card shows owner/version/hash + every command numbered; typed `yes` for third parties; `-y` matrix unit-tested (Steps 13/18 suites green) |
+| T-EXEC-2 | Hash-change flow re-tested | Changed hash → diff + re-confirm; `-y` never bypasses (Step 13 tests); the diff display itself was found **unescaped** — fixed this step (see T-EXEC-3) |
+| T-EXEC-3 | ANSI/CR/bidi/zero-width payloads in names, descriptions, bodies, diffs — at every display site (`show`, card, `diff`, `pull`, `remote`, TUI) | **Three holes found and fixed:** the changed-hash diff in the confirmation card, `fg diff` human output, and all TUI rendering (ratatui `TestBackend` test proves no raw ESC/bidi reaches the frame). `escape_display` extended to bidi isolates U+2066–2069, U+061C, U+180E, U+00AD |
+| T-EXEC-4 | Lookalike names | Names/usernames are ASCII-lowercase by validation on both tiers; card always shows the exact owner; suggestions never auto-run (Step 13) |
+| T-ACCT-1 | Credential stuffing simulation; X-Forwarded-For rotation to reset the throttle | Throttle keys on the socket address (ConnectInfo), never XFF — rotating XFF does not buy attempts; 6th attempt is 429 even with the correct password (`security.rs`). Generic failures + dummy hash (Step 7 tests) |
+| T-ACCT-2 | Session fixation (planted cookie at login); cookie-flag audit in prod mode | Login always issues a fresh id (test); prod cookies carry `Secure; HttpOnly; SameSite=Lax; Path=/` (test) |
+| T-ACCT-3 | Forged bearer tokens; token scope abuse | Forged/malformed tokens → generic 401 (test); tokens cannot manage tokens or change password (`session_required` 403, Step 8/17 tests); CLI never prints tokens; credential-file permission checks (Step 11) |
+| T-ACCT-4 | Device-code guessing / approval confusion | Lookup lockout per IP (Step 8 tests); approval page shows client name + plain-language scope, never auto-approves (Step 17); poll `slow_down` enforced (Step 8) |
+| T-WEB-1 | XSS payloads in every field; highlight injection | React text rendering everywhere, highlights as byte ranges (Step 16/17 tests incl. hostile content); CSP enforced `script-src 'self'` verified live by header script |
+| T-WEB-2 | CSRF: missing token, another session's token, mismatched Origin | All rejected 403 (tests, incl. two new cross-session/Origin cases in `security.rs`) |
+| T-WEB-3 | Private-snippet probing on read/versions/diff/raw/star/fork | Uniform 404 (Step 9/10 tests); hidden-by-admin snippets also 404 and leave explore (live admin smoke, Step 19) |
+| T-WEB-4 | Signup/login enumeration | Generic errors; username-taken is the documented exception (Step 7) |
+| T-DOS-1 | 300 KiB request body; quota checks | Rejected by the 256 KiB limit — the rejection surfaced as **400, fixed to 413 `body_too_large`** this step (test). Quotas enforced (Step 9/10) |
+| T-DOS-2 | Billion-laughs YAML, 200-deep nesting, hostile FTS queries (`OR`/`NEAR`/unbalanced quotes/10k chars/`DROP TABLE` string) | All rejected or handled without 500 (new forge-core bomb tests; `security.rs` search tests). Anchors/aliases/tags rejected pre-parse; depth ≤ 16 |
+| T-DOS-3 | Scanner/lints on hostile input | Bounded patterns over ≤ 64 KiB; proptest no-panic properties (parser, scanner, lints) green |
+| T-SECRET-1 | Pushing snippets with planted secrets | Scanner refuses at record/push; server 422 with kind+line only (Steps 3/9/12 tests); findings never contain values (corpus tests) |
+| T-SUPPLY-1 | Installer/release chain | Prepared in Step 21; this step: CI actions pinned to commit SHAs, minimal workflow permissions, `cargo deny`/`cargo audit`/`npm audit` jobs added |
+| T-SUPPLY-2 | Dependency audit | **Real CVE found and fixed:** SQLite WAL page-cache flaw (CVE-2026-119375) via bundled `libsqlite3-sys` 0.30.1 → upgraded rusqlite 0.41 + sqlx 0.9, unifying on libsqlite3-sys 0.39.1 (SQLite 3.54.1). `cargo deny check` green (advisories/licenses/bans/sources); three unmaintained-crate ignores documented in `deny.toml` + known-gaps. `npm audit --omit=dev` runs in CI (this sandbox's npm audit endpoint is policy-blocked; recorded in the Step 19 report) |
+| T-LOCAL-1 | Local state attacks | Temp script dir/file 0700 with drop-guard cleanup (Step 4); credential perms enforced on read (Step 11); backup/restore never touches credentials and verifies hashes before writing (Step 5); `doctor` checks home hygiene |
+| T-ABUSE-1 | Spam/abuse handling | Report endpoint deduped + rate-limited (Step 10); admin hide/ban/list-reports exercised live this step (hide → 404 + explore removal; ban → login 401, sessions/tokens revoked) |
+| T-PRIV-1 | Pull-count tracking review | Aggregate counter only, IP-hash hourly dedup, no per-user history stored (Step 10); no telemetry anywhere |
+
+Additional Step 19 hardening landed with the verification: retention purge
+now also runs every 6 h in-process (was startup-only), and the CLI warns at
+login (and in `doctor`) when a registry is plain `http://` to a non-loopback
+host.
+
 ## Out of scope / accepted risks (honest list)
 
 - A user who reads a malicious snippet, understands it, and still confirms **will** run it. That is the product working as designed; the mitigations are visibility and consent, not prevention.

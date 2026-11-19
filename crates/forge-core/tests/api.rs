@@ -69,3 +69,49 @@ fn deeply_repeated_input_is_bounded() {
     let bomb = "name: x\nsteps: &a [echo]\ndescription: *a\n";
     assert!(Snippet::from_yaml(bomb).is_err());
 }
+
+#[test]
+fn billion_laughs_is_rejected_before_expansion() {
+    // Classic YAML billion-laughs: nested anchors each doubling
+    // the previous. Anchors are rejected by the pre-parse scan,
+    // so this returns an error immediately, unexpanded.
+    let mut bomb = String::from("name: x\nsteps:\n  - echo hi\ndescription: ");
+    bomb.push_str("\"lol\"");
+    let mut prev = "lol".to_string();
+    for i in 1..=9 {
+        bomb = bomb.replace(
+            &format!("\"{prev}\""),
+            &format!("&a{i} [\"{prev}\",\"{prev}\",\"{prev}\",\"{prev}\",\"{prev}\",\"{prev}\",\"{prev}\",\"{prev}\",\"{prev}\"]"),
+        );
+        prev = format!("a{i}");
+    }
+    let started = std::time::Instant::now();
+    assert!(Snippet::from_yaml(&bomb).is_err());
+    assert!(started.elapsed() < std::time::Duration::from_secs(2));
+}
+
+#[test]
+fn extreme_nesting_is_rejected() {
+    // 200 levels of flow-sequence nesting in a steps item:
+    // rejected (depth cap 16 / type validation), never a stack
+    // overflow or a hang.
+    let mut inner = String::from("echo");
+    for _ in 0..200 {
+        inner = format!("[{inner}]");
+    }
+    let yaml = format!("name: x\nsteps: {inner}\n");
+    let started = std::time::Instant::now();
+    assert!(Snippet::from_yaml(&yaml).is_err());
+    assert!(started.elapsed() < std::time::Duration::from_secs(2));
+}
+
+#[test]
+fn null_bytes_and_invalid_utf8_never_panic() {
+    let mut bytes = b"name: x\nsteps: [echo]\n".to_vec();
+    bytes.push(0);
+    bytes.extend_from_slice(&[0xff, 0xfe, 0x00, 0x01]);
+    let _ = Snippet::from_bytes(&bytes);
+    let text = String::from_utf8_lossy(&bytes).into_owned();
+    let _ = forge_core::scan::scan(&text);
+    let _ = forge_core::lint::lint(&text);
+}

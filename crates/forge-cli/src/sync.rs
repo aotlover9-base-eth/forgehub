@@ -877,7 +877,13 @@ pub fn cmd_diff(
     {
         println!("{owner}/{remote_name} and local `{name}` are identical.");
     } else {
-        print!("{unified}");
+        // Human output escapes every line: the remote body is
+        // untrusted text and a raw diff would let ANSI escapes
+        // hide lines in the terminal (Step 19, T-EXEC-3). The
+        // --json form above is safe by JSON encoding.
+        for line in unified.lines() {
+            println!("{}", escape_display(line));
+        }
     }
     Ok(0)
 }

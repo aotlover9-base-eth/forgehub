@@ -46,6 +46,21 @@ async fn shutdown_signal() {
     tracing::info!("shutdown signal received; draining connections");
 }
 
+/// One retention purge pass (Step 9 policy, Step 19 schedule).
+async fn purge_retention(state: &AppState) -> Result<()> {
+    let now = chrono::Utc::now();
+    let before = forge_server::auth::fmt_ts(now - chrono::Duration::days(30));
+    let purged = state
+        .repos
+        .snippets
+        .purge_deleted(&before, &forge_server::db::now_iso())
+        .await?;
+    if purged > 0 {
+        tracing::info!(purged, "purged expired snippets and rename redirects");
+    }
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = Config::from_env()?;
@@ -74,17 +89,21 @@ async fn main() -> Result<()> {
     let state = AppState::new(config.clone(), Repos::sqlite(pool.clone()), pool);
     // Retention: hard-delete snippets soft-deleted over 30 days
     // ago and drop expired rename redirects (Step 9 policy).
+    // Runs once at startup and then every 6 hours (Step 19: a
+    // long-lived server must not wait for a restart to purge).
+    purge_retention(&state).await?;
     {
-        let now = chrono::Utc::now();
-        let before = forge_server::auth::fmt_ts(now - chrono::Duration::days(30));
-        let purged = state
-            .repos
-            .snippets
-            .purge_deleted(&before, &forge_server::db::now_iso())
-            .await?;
-        if purged > 0 {
-            tracing::info!(purged, "purged expired snippets and rename redirects");
-        }
+        let state = state.clone();
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_hours(6));
+            tick.tick().await; // consume the immediate first tick
+            loop {
+                tick.tick().await;
+                if let Err(e) = purge_retention(&state).await {
+                    tracing::warn!(error = %e, "periodic retention purge failed");
+                }
+            }
+        });
     }
     let app = build_router(state);
     let listener = tokio::net::TcpListener::bind(config.bind).await?;

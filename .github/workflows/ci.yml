@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+# Minimal permissions (Step 19): jobs read the repo; the
+# supply-chain job additionally writes check results for the
+# audit action.
 permissions:
   contents: read
 
@@ -13,11 +16,14 @@ jobs:
     name: Rust (fmt, clippy, test)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # Actions are pinned to commit SHAs (Step 19, T-SUPPLY);
+      # the trailing comment is the human-readable version.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
         with:
+          toolchain: stable
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
       - name: Format
         run: cargo fmt --all --check
       - name: Clippy
@@ -32,8 +38,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           # Vitest 5's worker pool does not start on Node 20
           # ("Failed to start forks worker … reading 'bind'",
@@ -52,3 +58,30 @@ jobs:
         run: npm test -- --run
       - name: Build
         run: npm run build
+
+  supply-chain:
+    name: Supply chain (deny, audit, npm audit)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: cargo deny (advisories, licences, bans, sources)
+        uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2
+        with:
+          command: check
+      - name: cargo audit
+        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: npm audit (production deps)
+        working-directory: web
+        run: |
+          npm ci --legacy-peer-deps
+          npm audit --omit=dev

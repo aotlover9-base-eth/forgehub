@@ -1001,6 +1001,15 @@ fn cloud_checks(store: &Store) -> Vec<Check> {
         }
     };
     let mut out = Vec::new();
+    if crate::cloud::registry_is_insecure(&registry) {
+        out.push(check(
+            "registry transport",
+            "warn",
+            format!(
+                "registry {registry} uses plain http:// to a non-loopback host; tokens cross the network unencrypted — prefer https://"
+            ),
+        ));
+    }
     let client =
         match crate::cloud::ApiClient::with_timeout(&registry, std::time::Duration::from_secs(3)) {
             Ok(c) => c,

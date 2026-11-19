@@ -195,6 +195,25 @@ fn update_check_latest_when_fake_github_matches() {
 }
 
 #[test]
+fn login_warns_about_plain_http_registries() {
+    // Step 19: before any credential is sent, a non-loopback
+    // http:// registry earns a clear stderr warning. The host
+    // does not resolve, so login itself fails — the warning
+    // must already have been printed.
+    let dir = tempfile::tempdir().unwrap();
+    let out = run(
+        forgehub(dir.path()).args(["login", "--registry", "http://forgehub.invalid"]),
+        "",
+    );
+    assert!(!out.status.success());
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    assert!(
+        stderr.contains("plain http://"),
+        "missing insecure-registry warning: {stderr}"
+    );
+}
+
+#[test]
 fn offline_flag_fails_cloud_commands_fast_with_a_clear_message() {
     let dir = tempfile::tempdir().unwrap();
     // `status` needs a cloud session; with --offline it must

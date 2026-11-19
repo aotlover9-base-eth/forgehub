@@ -577,7 +577,7 @@ fn draw_main(
             frame.render_widget(Paragraph::new("Loading…"), cols[0]);
         } else if let Some(error) = &data.error {
             frame.render_widget(
-                Paragraph::new(error.clone())
+                Paragraph::new(crate::cmds::escape_display(error))
                     .style(Style::default().fg(palette.error))
                     .wrap(Wrap { trim: false }),
                 cols[0],
@@ -593,9 +593,9 @@ fn draw_main(
                         item.name.clone()
                     };
                     ListItem::new(Line::from(vec![
-                        Span::raw(label),
+                        Span::raw(crate::cmds::escape_display(&label)),
                         Span::styled(
-                            format!("  {}", item.description),
+                            format!("  {}", crate::cmds::escape_display(&item.description)),
                             Style::default().fg(palette.dim),
                         ),
                     ]))
@@ -640,24 +640,28 @@ fn draw_detail(
         Some(item) => {
             let mut lines: Vec<Line> = vec![
                 Line::from(Span::styled(
-                    item.reference(),
+                    crate::cmds::escape_display(&item.reference()),
                     Style::default().add_modifier(Modifier::BOLD),
                 )),
                 Line::from(Span::styled(
-                    if item.owner.is_some() {
+                    crate::cmds::escape_display(&if item.owner.is_some() {
                         format!(
                             "{} · v{} · {}",
                             item.description, item.version, item.visibility
                         )
                     } else {
                         format!("{} · local", item.description)
-                    },
+                    }),
                     Style::default().fg(palette.dim),
                 )),
                 Line::raw(""),
             ];
             for (i, cmd) in item.commands.iter().enumerate() {
-                lines.push(Line::from(format!("{:>2}. {}", i + 1, cmd)));
+                lines.push(Line::from(format!(
+                    "{:>2}. {}",
+                    i + 1,
+                    crate::cmds::escape_display(cmd)
+                )));
             }
             if item.commands.is_empty() {
                 lines.push(Line::from(Span::styled(
@@ -856,5 +860,30 @@ mod tests {
         let mut state = state_with(vec![]);
         assert!(state.handle(Key::Enter).is_none());
         assert!(state.current().is_none());
+    }
+
+    #[test]
+    fn rendered_output_neutralises_hostile_text() {
+        // Step 19 (T-EXEC-3): names/descriptions/commands are
+        // untrusted text rendered into a terminal buffer — the
+        // rendered frame must contain no raw ESC or bidi
+        // controls anywhere.
+        let mut hostile = item("evil", "desc \u{1b}[31m red \u{202e}flip");
+        hostile.commands = vec!["echo \u{1b}[2K\rhidden".to_string()];
+        let state = state_with(vec![hostile]);
+        let palette = Palette::detect();
+        let backend = ratatui::backend::TestBackend::new(80, 24);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        terminal
+            .draw(|frame| draw(frame, &state, &palette))
+            .unwrap();
+        let buffer = terminal.backend().buffer().clone();
+        let mut text = String::new();
+        for cell in buffer.content() {
+            text.push_str(cell.symbol());
+        }
+        assert!(!text.contains('\u{1b}'), "frame leaked raw ESC");
+        assert!(!text.contains('\u{202e}'), "frame leaked bidi override");
+        assert!(text.contains("hidden"), "command text should stay visible");
     }
 }

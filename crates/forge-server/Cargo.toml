@@ -21,13 +21,13 @@ argon2 = "0.5"
 async-trait = "0.1"
 axum = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-forge-core = { path = "../forge-core" }
+forge-core = { version = "0.1.0", path = "../forge-core" }
 serde = { version = "1", features = ["derive"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 serde_json = "1"
 sha2 = "0.10"
 similar = "2"
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.5", features = ["timeout", "util"] }
@@ -37,9 +37,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-forge-core = { path = "../forge-core" }
+forge-core = { version = "0.1.0", path = "../forge-core" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "gzip"] }
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite"] }
 tempfile = "3"
 
 [lints]

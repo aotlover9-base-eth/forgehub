@@ -1,27 +1,62 @@
-# cargo-deny configuration (draft for Step 1; enforced from Step 19)
+# cargo-deny configuration (drafted Step 1; enforced from Step 19)
 # Docs: https://embarkstudios.github.io/cargo-deny/
 
 [advisories]
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-yanked = "warn"
-ignore = []
+yanked = "deny"
+ignore = [
+    # Note: RUSTSEC-2026-0459 (SQLite WAL page-cache,
+    # CVE-2026-119375) is NOT ignored — Step 19 upgraded
+    # rusqlite to 0.41 and sqlx to 0.9 so the whole graph
+    # unified on libsqlite3-sys 0.39.1 (SQLite 3.54.1,
+    # patched). The vulnerable 0.30.x is gone from the tree.
+    #
+    # RUSTSEC-2026-0543: chrono is unmaintained (no known
+    # vulnerability). ForgeHub uses it only to format/parse
+    # UTC timestamps. Migration to `time`/`jiff` is recorded
+    # in docs/known-gaps.md for post-v1.
+    "RUSTSEC-2026-0543",
+    # RUSTSEC-2024-0449: unsafe-libyaml (via serde_yaml 0.9) is
+    # unmaintained. It parses only size-capped (<= 64 KiB),
+    # pre-scanned forge files (anchors/aliases/tags rejected,
+    # depth <= 16). Replacing the YAML stack would change the
+    # canonical-format implementation; post-v1 evaluation is
+    # in docs/known-gaps.md.
+    "RUSTSEC-2024-0449",
+    # RUSTSEC-2024-0436: paste is unmaintained; it is a
+    # proc-macro (compile-time only) pulled in by ratatui.
+    "RUSTSEC-2024-0436",
+]
 
 [licenses]
-allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib", "MIT-0"]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "MIT-0",
+    # webpki-roots ships the Mozilla root certificate list as
+    # data; CDLA-Permissive-2.0 is a permissive data licence.
+    "CDLA-Permissive-2.0",
+]
 confidence-threshold = 0.8
 exceptions = []
 
 [bans]
 multiple-versions = "warn"
-wildcards = "warn"
+wildcards = "deny"
 highlight = "all"
 workspace-default-features = "allow"
 external-default-features = "allow"
 
 [sources]
-unknown-registry = "warn"
-unknown-git = "warn"
+unknown-registry = "deny"
+unknown-git = "deny"
 required-git-spec = "tag"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = []

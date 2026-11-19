@@ -730,6 +730,40 @@ fn finish_login(
 }
 
 /// `fg login [--registry URL] [--token]`.
+/// True when a registry URL sends credentials unencrypted to
+/// a non-loopback host (Step 19): `http://` anywhere except
+/// localhost / 127.0.0.0/8 / `::1`.
+#[must_use]
+pub fn registry_is_insecure(registry: &str) -> bool {
+    let Some(rest) = registry.strip_prefix("http://") else {
+        return false;
+    };
+    let host = if let Some(v6) = rest.strip_prefix('[') {
+        // IPv6 literal: host is everything up to ']'.
+        v6.split(']').next().unwrap_or_default().to_string()
+    } else {
+        rest.split(['/', ':', '?', '#'])
+            .next()
+            .unwrap_or_default()
+            .to_string()
+    }
+    .to_ascii_lowercase();
+    !(host == "localhost"
+        || host == "::1"
+        || host.starts_with("127.")
+        || host.ends_with(".localhost"))
+}
+
+/// Warn (stderr, so `--json` stdout stays clean) before a
+/// credential crosses an insecure registry URL.
+pub fn warn_if_insecure_registry(registry: &str) {
+    if registry_is_insecure(registry) {
+        eprintln!(
+            "forgehub: warning: registry {registry} uses plain http:// — your token will cross the network unencrypted.\n  fix: use the https:// address of the registry (loopback http:// is fine for local dev)"
+        );
+    }
+}
+
 pub fn cmd_login(
     store: &Store,
     stdin: &mut impl BufRead,
@@ -738,6 +772,7 @@ pub fn cmd_login(
     json: bool,
 ) -> Result<i32> {
     let registry = resolve_registry(store, registry_flag)?.ok_or_else(no_registry_error)?;
+    warn_if_insecure_registry(&registry);
     let client = ApiClient::new(&registry)?;
     let entry = if token_flag {
         // Token from stdin only — never argv, where it would land
@@ -962,6 +997,17 @@ pub fn cmd_logout(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn insecure_registry_detection() {
+        assert!(registry_is_insecure("http://forgehub.example.com"));
+        assert!(registry_is_insecure("http://192.168.1.10:8080"));
+        assert!(!registry_is_insecure("https://forgehub.example.com"));
+        assert!(!registry_is_insecure("http://127.0.0.1:8080"));
+        assert!(!registry_is_insecure("http://localhost:8080"));
+        assert!(!registry_is_insecure("http://[::1]:8080"));
+        assert!(!registry_is_insecure("http://dev.localhost:8080"));
+    }
 
     #[test]
     fn registry_normalisation() {

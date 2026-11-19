@@ -26,6 +26,10 @@ pub fn escape_display(text: &str) -> String {
             '\u{200b}'..='\u{200f}'
             | '\u{202a}'..='\u{202e}'
             | '\u{2060}'..='\u{2064}'
+            | '\u{2066}'..='\u{2069}'
+            | '\u{61c}'
+            | '\u{180e}'
+            | '\u{ad}'
             | '\u{feff}' => {}
             c if c.is_control() => out.push('\u{fffd}'),
             c => out.push(c),
@@ -775,6 +779,18 @@ mod tests {
         assert!(!clean.contains('\u{1b}'));
         assert!(!clean.contains('\u{202e}'));
         assert!(clean.contains("\\e"));
+    }
+
+    #[test]
+    fn escape_drops_isolates_and_other_invisibles() {
+        // Step 19 extension: bidi isolates (U+2066–2069), the
+        // Arabic letter mark, Mongolian vowel separator and
+        // the soft hyphen are all dropped; CR becomes visible.
+        let dirty = "a\u{2066}b\u{2069}c\u{61c}d\u{180e}e\u{ad}f\rg";
+        let clean = escape_display(dirty);
+        assert_eq!(clean, "abcdef\\rg");
+        assert!(!clean.contains('\u{7f}'));
+        assert_eq!(escape_display("x\u{7f}y"), "x\u{fffd}y");
     }
 
     #[test]

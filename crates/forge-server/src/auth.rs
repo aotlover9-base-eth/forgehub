@@ -770,9 +770,21 @@ impl FromRequestParts<AppState> for RequireSession {
 // -------------------------------------------------------------- handlers
 
 pub(crate) fn body<T>(result: Result<Json<T>, JsonRejection>) -> Result<T, ApiError> {
-    result
-        .map(|Json(v)| v)
-        .map_err(|e| ApiError::validation(format!("Invalid request body: {}", e.body_text())))
+    result.map(|Json(v)| v).map_err(|e| {
+        // Step 19: a body that exceeds the request size limit
+        // is 413 Payload Too Large (code body_too_large, the
+        // same shape the snippet endpoints use), not a 400
+        // validation error.
+        if matches!(e, JsonRejection::BytesRejection(_)) {
+            ApiError::new(
+                axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+                "body_too_large",
+                "Request body exceeds the size limit",
+            )
+        } else {
+            ApiError::validation(format!("Invalid request body: {}", e.body_text()))
+        }
+    })
 }
 
 fn me_json(user: &UserRow, session: Option<&SessionRow>) -> serde_json::Value {

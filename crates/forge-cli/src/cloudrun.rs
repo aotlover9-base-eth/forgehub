@@ -345,7 +345,11 @@ pub fn render_card(fetched: &Fetched, own: bool, changed: bool, diff: Option<&st
         );
         if let Some(diff) = diff {
             for line in diff.lines() {
-                let _ = writeln!(out, "  {line}");
+                // The diff is attacker-controlled text at the
+                // most security-critical display in the product:
+                // escape it like every other command line
+                // (Step 19, T-EXEC-3).
+                let _ = writeln!(out, "  {}", escape_display(line));
             }
         }
     }
@@ -928,6 +932,34 @@ mod tests {
         assert_eq!(edit_distance("hllo", "hello"), 1);
         assert_eq!(edit_distance("xyz", "hello"), 5);
         assert_eq!(edit_distance("", "ab"), 2);
+    }
+
+    #[test]
+    fn changed_diff_in_card_is_escaped() {
+        // Step 19 (T-EXEC-3): the changed-hash diff is the one
+        // display an attacker most wants to corrupt — a hostile
+        // added line must not smuggle raw ANSI/bidi into it.
+        let snippet =
+            forge_core::Snippet::from_yaml("name: tool\nmode: script\nscript: |\n  echo hi\n")
+                .unwrap();
+        let fetched = Fetched {
+            owner: "mallory".into(),
+            name: "tool".into(),
+            version: 2,
+            hash: "h2".into(),
+            visibility: "public".into(),
+            body: String::new(),
+            snippet,
+            star_count: 0,
+            pull_count: 0,
+            from_cache: false,
+        };
+        let diff = "+echo safe\n+\u{1b}[2K\rhidden-evil \u{202e}cmd";
+        let card = render_card(&fetched, false, true, Some(diff));
+        assert!(!card.contains('\u{1b}'), "card leaked raw ESC:\n{card}");
+        assert!(!card.contains('\u{202e}'));
+        assert!(card.contains("\\e"));
+        assert!(card.contains("hidden-evil"));
     }
 
     #[test]
