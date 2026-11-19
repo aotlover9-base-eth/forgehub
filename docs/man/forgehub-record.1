@@ -1,0 +1,31 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH record 1  "record " 
+.SH NAME
+record \- Record a shell session as a snippet
+.SH SYNOPSIS
+\fBrecord\fR [\fB\-\-description\fR] [\fB\-\-tags\fR] [\fB\-\-force\fR] [\fB\-\-push\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fINAME\fR] 
+.SH DESCRIPTION
+Record a shell session as a snippet
+.SH OPTIONS
+.TP
+\fB\-\-description\fR \fI<DESCRIPTION>\fR
+Short description
+.TP
+\fB\-\-tags\fR \fI<TAGS>\fR
+Comma\-separated tags
+.TP
+\fB\-\-force\fR
+Overwrite an existing snippet with the same name
+.TP
+\fB\-\-push\fR
+After saving, offer to push to the cloud (when logged in)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+[\fINAME\fR]
+Name for the snippet (prompted when omitted)
+.SH EXTRA
+Examples:
+  fg record ubuntu\-setup \-\-description \*(AqBase packages\*(Aq \-\-tags ubuntu,setup

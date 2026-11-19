@@ -1,0 +1,23 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH alias 1  "alias " 
+.SH NAME
+alias \- Manage the `fg` shell alias (install|uninstall|show)
+.SH SYNOPSIS
+\fBalias\fR [\fB\-\-shell\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIACTION\fR> 
+.SH DESCRIPTION
+Manage the `fg` shell alias (install|uninstall|show)
+.SH OPTIONS
+.TP
+\fB\-\-shell\fR \fI<SHELL>\fR
+Shell to manage (bash, zsh or fish; default: $SHELL or bash)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIACTION\fR>
+install, uninstall or show
+.SH EXTRA
+Examples:
+  fg alias install
+  fg alias show

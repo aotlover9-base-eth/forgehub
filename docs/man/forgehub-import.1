@@ -1,0 +1,29 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH import 1  "import " 
+.SH NAME
+import \- Import snippet file(s) (`ForgeHub` or Forgenesis format)
+.SH SYNOPSIS
+\fBimport\fR [\fB\-\-from\-forgenesis\fR] [\fB\-\-name\fR] [\fB\-\-force\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fIFILE\fR] 
+.SH DESCRIPTION
+Import snippet file(s) (`ForgeHub` or Forgenesis format)
+.SH OPTIONS
+.TP
+\fB\-\-from\-forgenesis\fR
+Import from the Forgenesis workflows directory instead ($`FORGENESIS_HOME/workflows` or ~/.forgenesis/workflows)
+.TP
+\fB\-\-name\fR \fI<NAME>\fR
+Save under a different name (single file only)
+.TP
+\fB\-\-force\fR
+Overwrite existing snippets with the same name
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+[\fIFILE\fR]
+A snippet file, or a directory of snippet files. Optional with \-\-from\-forgenesis
+.SH EXTRA
+Examples:
+  fg import snippets.yaml
+  fg import \-\-from\-forgenesis

@@ -1,0 +1,32 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH pull 1  "pull " 
+.SH NAME
+pull \- Pull a cloud snippet into the local library
+.SH SYNOPSIS
+\fBpull\fR [\fB\-\-as\fR] [\fB\-\-version\fR] [\fB\-\-force\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIREFERENCE\fR> 
+.SH DESCRIPTION
+Pull a cloud snippet into the local library
+.SH OPTIONS
+.TP
+\fB\-\-as\fR \fI<AS_NAME>\fR
+Save under a different local name
+.TP
+\fB\-\-version\fR \fI<VERSION>\fR
+Pull a specific version instead of the latest
+.TP
+\fB\-\-force\fR
+Overwrite an existing local snippet without asking
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIREFERENCE\fR>
+`owner/name`, or a bare name for your own snippet
+.SH EXTRA
+Examples:
+  fg pull alice/deploy
+  fg pull ubuntu\-setup \-\-force

@@ -1,0 +1,19 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH edit 1  "edit " 
+.SH NAME
+edit \- Edit a snippet in $EDITOR; invalid edits are rolled back
+.SH SYNOPSIS
+\fBedit\fR [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> 
+.SH DESCRIPTION
+Edit a snippet in $EDITOR; invalid edits are rolled back
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Snippet name
+.SH EXTRA
+Examples:
+  fg edit ubuntu\-setup

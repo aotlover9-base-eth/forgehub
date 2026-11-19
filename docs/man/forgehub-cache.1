@@ -1,0 +1,27 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH cache 1  "cache " 
+.SH NAME
+cache \- Inspect and manage the cloud run cache
+.SH SYNOPSIS
+\fBcache\fR [\fB\-h\fR|\fB\-\-help\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Inspect and manage the cloud run cache
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH SUBCOMMANDS
+.TP
+cache\-list(1)
+List cached cloud snippets with sizes
+.TP
+cache\-clear(1)
+Remove every cached snippet
+.TP
+cache\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH EXTRA
+Examples:
+  fg cache list
+  fg cache clear

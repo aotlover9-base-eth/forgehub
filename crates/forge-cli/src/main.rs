@@ -10,6 +10,7 @@
 
 mod analyze;
 mod backup;
+mod cache;
 mod cloud;
 mod cloudrun;
 mod cmds;
@@ -22,6 +23,8 @@ mod runner;
 mod store;
 mod sync;
 mod trust;
+mod tui;
+mod update;
 
 use clap::{Parser, Subcommand};
 use clap_complete::engine::{ArgValueCompleter, CompletionCandidate};
@@ -103,6 +106,16 @@ struct Cli {
     #[arg(long, short = 'y', global = true)]
     yes: bool,
 
+    /// Verbose request logging to stderr (method, status,
+    /// timing; tokens are never printed).
+    #[arg(long, short = 'v', global = true, action = clap::ArgAction::Count)]
+    verbose: u8,
+
+    /// Offline mode: cloud commands fail fast with an offline
+    /// message; local commands and `run --offline` still work.
+    #[arg(long, global = true)]
+    offline: bool,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -110,8 +123,12 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// Create the `ForgeHub` home and config.
+    #[command(after_help = "Examples:\n  fg init")]
     Init,
     /// Record a shell session as a snippet.
+    #[command(
+        after_help = "Examples:\n  fg record ubuntu-setup --description 'Base packages' --tags ubuntu,setup"
+    )]
     Record {
         /// Name for the snippet (prompted when omitted).
         name: Option<String>,
@@ -129,6 +146,9 @@ enum Command {
         push: bool,
     },
     /// Run a snippet by name.
+    #[command(after_help = "Examples:\n  fg run ubuntu-setup
+  fg ubuntu-setup            (shorthand)
+  fg alice/deploy --dry-run")]
     Run {
         /// Snippet name, or `owner/name` / `name@version` for a
         /// cloud snippet (Step 13).
@@ -151,6 +171,8 @@ enum Command {
         assignments: Vec<String>,
     },
     /// List local snippets.
+    #[command(after_help = "Examples:\n  fg list --long
+  fg list --tag ubuntu")]
     List {
         /// Only show snippets with this tag.
         #[arg(long)]
@@ -160,17 +182,20 @@ enum Command {
         long: bool,
     },
     /// Show a snippet (card + numbered commands).
+    #[command(after_help = "Examples:\n  fg show ubuntu-setup")]
     Show {
         /// Snippet name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
     },
     /// Search local snippets (name, description, tags, commands).
+    #[command(after_help = "Examples:\n  fg search docker")]
     Search {
         /// Search text.
         query: String,
     },
     /// Add or remove tags: fg tag <name> add|remove <tag>…
+    #[command(after_help = "Examples:\n  fg tag ubuntu-setup add ubuntu base")]
     Tag {
         /// Snippet name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
@@ -181,6 +206,7 @@ enum Command {
         tags: Vec<String>,
     },
     /// Rename a local snippet.
+    #[command(after_help = "Examples:\n  fg rename old-name new-name")]
     Rename {
         /// Current name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
@@ -189,18 +215,21 @@ enum Command {
         new: String,
     },
     /// Delete a local snippet.
+    #[command(after_help = "Examples:\n  fg delete ubuntu-setup")]
     Delete {
         /// Snippet name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
     },
     /// Edit a snippet in $EDITOR; invalid edits are rolled back.
+    #[command(after_help = "Examples:\n  fg edit ubuntu-setup")]
     Edit {
         /// Snippet name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
     },
     /// Turn repeated literals into variables.
+    #[command(after_help = "Examples:\n  fg parameterize deploy --literal eu-west-1 --as region")]
     Parameterize {
         /// Snippet name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
@@ -213,6 +242,7 @@ enum Command {
         as_names: Vec<String>,
     },
     /// Duplicate a local snippet under a new name.
+    #[command(after_help = "Examples:\n  fg clone ubuntu-setup laptop-setup")]
     Clone {
         /// Existing name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
@@ -221,6 +251,8 @@ enum Command {
         new: String,
     },
     /// Import snippet file(s) (`ForgeHub` or Forgenesis format).
+    #[command(after_help = "Examples:\n  fg import snippets.yaml
+  fg import --from-forgenesis")]
     Import {
         /// A snippet file, or a directory of snippet files.
         /// Optional with --from-forgenesis.
@@ -237,6 +269,7 @@ enum Command {
         force: bool,
     },
     /// Export a snippet as YAML (to stdout or a file).
+    #[command(after_help = "Examples:\n  fg export ubuntu-setup --out ubuntu-setup.yaml")]
     Export {
         /// Snippet name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
@@ -246,6 +279,7 @@ enum Command {
         out: Option<std::path::PathBuf>,
     },
     /// Mine shell history for repeated command sequences.
+    #[command(after_help = "Examples:\n  fg analyze --dry")]
     Analyze {
         /// Minimum repetitions before a sequence is reported.
         #[arg(long)]
@@ -264,6 +298,7 @@ enum Command {
         file: Option<std::path::PathBuf>,
     },
     /// Show run statistics from history.db.
+    #[command(after_help = "Examples:\n  fg stats")]
     Stats {
         /// Maximum number of snippets in the ranking.
         #[arg(long, default_value_t = 10)]
@@ -273,6 +308,8 @@ enum Command {
         explain: bool,
     },
     /// Write a backup archive (default: backups/forgehub-backup-<timestamp>.tar).
+    #[command(after_help = "Examples:\n  fg backup
+  fg backup --out ~/forgehub-backup.tar")]
     Backup {
         /// Back up only this snippet (plus the config).
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
@@ -282,6 +319,7 @@ enum Command {
         out: Option<String>,
     },
     /// Restore snippets from a backup archive.
+    #[command(after_help = "Examples:\n  fg restore ~/forgehub-backup.tar")]
     Restore {
         /// Backup file (default: the newest in the backups directory).
         file: Option<std::path::PathBuf>,
@@ -293,6 +331,8 @@ enum Command {
         force: bool,
     },
     /// Log in to a `ForgeHub` server (device-code flow in the browser).
+    #[command(after_help = "Examples:\n  fg login
+  fg login --registry https://forgehub.example.com")]
     Login {
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
@@ -302,6 +342,7 @@ enum Command {
         token: bool,
     },
     /// Log out: delete the stored credential for a registry.
+    #[command(after_help = "Examples:\n  fg logout --revoke")]
     Logout {
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
@@ -311,12 +352,15 @@ enum Command {
         revoke: bool,
     },
     /// Show the current login (username, registry, token, scopes).
+    #[command(after_help = "Examples:\n  fg whoami")]
     Whoami {
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
         registry: Option<String>,
     },
     /// Push a local snippet to the cloud (create or new version).
+    #[command(after_help = "Examples:\n  fg push ubuntu-setup --public
+  fg push --all")]
     Push {
         /// Local snippet name (omit with --all).
         name: Option<String>,
@@ -343,6 +387,8 @@ enum Command {
         registry: Option<String>,
     },
     /// Pull a cloud snippet into the local library.
+    #[command(after_help = "Examples:\n  fg pull alice/deploy
+  fg pull ubuntu-setup --force")]
     Pull {
         /// `owner/name`, or a bare name for your own snippet.
         reference: String,
@@ -360,6 +406,8 @@ enum Command {
         registry: Option<String>,
     },
     /// Compare local snippets with the cloud (ahead/behind/diverged).
+    #[command(after_help = "Examples:\n  fg status
+  fg status ubuntu-setup")]
     Status {
         /// Only this snippet (default: everything tracked).
         name: Option<String>,
@@ -368,6 +416,7 @@ enum Command {
         registry: Option<String>,
     },
     /// Unified diff of a local snippet against the cloud latest.
+    #[command(after_help = "Examples:\n  fg diff ubuntu-setup")]
     Diff {
         /// Local snippet name.
         name: String,
@@ -376,6 +425,7 @@ enum Command {
         registry: Option<String>,
     },
     /// Fork someone's snippet into your account (server-side).
+    #[command(after_help = "Examples:\n  fg fork alice/deploy --as my-deploy")]
     Fork {
         /// `owner/name` of the snippet to fork.
         reference: String,
@@ -387,6 +437,9 @@ enum Command {
         registry: Option<String>,
     },
     /// Inspect and manage your cloud snippets.
+    #[command(after_help = "Examples:\n  fg remote list
+  fg remote search docker
+  fg remote list --stars")]
     Remote {
         #[command(subcommand)]
         action: RemoteCommand,
@@ -395,6 +448,8 @@ enum Command {
     /// `trust list`, `trust revoke <owner/name>`, or approve an
     /// exact snippet directly: `trust <owner/name@hash>`.
     #[command(args_conflicts_with_subcommands = true)]
+    #[command(after_help = "Examples:\n  fg trust list
+  fg trust alice/deploy@3")]
     Trust {
         #[command(subcommand)]
         action: Option<TrustCommand>,
@@ -403,11 +458,15 @@ enum Command {
         reference: Option<String>,
     },
     /// Check the environment and library health.
+    #[command(after_help = "Examples:\n  fg doctor
+  fg doctor alias")]
     Doctor {
         /// Only run checks for this topic (e.g. alias, rust, python).
         topic: Option<String>,
     },
     /// Manage the `fg` shell alias (install|uninstall|show).
+    #[command(after_help = "Examples:\n  fg alias install
+  fg alias show")]
     Alias {
         /// install, uninstall or show.
         action: String,
@@ -416,10 +475,41 @@ enum Command {
         shell: Option<String>,
     },
     /// Print shell completions (dynamic: local snippet names included).
+    #[command(after_help = "Examples:\n  fg completions bash")]
     Completions {
         /// Shell: bash, zsh, fish, powershell or elvish.
         shell: clap_complete::Shell,
     },
+    /// Browse snippets in a terminal UI (Local · Mine · Explore).
+    #[command(after_help = "Examples:\n  fg ui")]
+    Ui,
+    /// Inspect and manage the cloud run cache.
+    #[command(after_help = "Examples:\n  fg cache list
+  fg cache clear")]
+    Cache {
+        #[command(subcommand)]
+        action: CacheCommand,
+    },
+    /// Check whether a newer `ForgeHub` is available (never
+    /// downloads or replaces anything).
+    #[command(after_help = "Examples:\n  fg update --check")]
+    Update {
+        /// Only check; there is no self-update mode.
+        #[arg(long)]
+        check: bool,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+}
+
+/// Subcommands of `cache` (Step 18).
+#[derive(Subcommand)]
+enum CacheCommand {
+    /// List cached cloud snippets with sizes.
+    List,
+    /// Remove every cached snippet.
+    Clear,
 }
 
 /// Subcommands of `trust` (Step 13).
@@ -695,6 +785,82 @@ fn dispatch_cloud(
     })
 }
 
+/// `forgehub ui` (Step 18): browse in the TUI, then execute
+/// the chosen action through the normal command functions —
+/// the run/trust confirmation path is the CLI's own.
+fn dispatch_ui(
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+    yes: bool,
+    json: bool,
+) -> anyhow::Result<i32> {
+    let Some(action) = tui::run_ui(store)? else {
+        return Ok(0);
+    };
+    let dry = matches!(action, tui::Action::DryRun(_));
+    match action {
+        tui::Action::Run(item) | tui::Action::DryRun(item) => cmds::cmd_run(
+            store,
+            stdin,
+            &cmds::RunArgs {
+                name: item.reference(),
+                assignments: Vec::new(),
+                yes,
+                dry_run: dry,
+                json,
+                step: false,
+                no_cache: false,
+                offline: false,
+            },
+        ),
+        tui::Action::Push(item) => {
+            if item.owner.is_some() {
+                return Err(exit::CliError::failure(format!(
+                    "forgehub: `{}` is a cloud snippet\n  what: push uploads a local snippet\n  fix: pull it first (l), edit locally, then push",
+                    item.reference()
+                ))
+                .into());
+            }
+            sync::cmd_push(
+                store,
+                stdin,
+                Some(&item.name),
+                false,
+                None,
+                None,
+                None,
+                None,
+                json,
+            )
+        }
+        tui::Action::Pull(item) => sync::cmd_pull(
+            store,
+            stdin,
+            &item.reference(),
+            None,
+            None,
+            false,
+            yes,
+            None,
+            json,
+        ),
+        tui::Action::Fork(item) => {
+            sync::cmd_fork(store, stdin, &item.reference(), None, None, json)
+        }
+        tui::Action::Star(item) => sync::cmd_star(store, stdin, &item.reference(), None, json),
+        tui::Action::Edit(item) => {
+            if item.owner.is_some() && store.load(&item.name).is_err() {
+                return Err(exit::CliError::failure(format!(
+                    "forgehub: `{}` is not downloaded yet\n  what: edit works on local snippets\n  fix: pull it first (l), then edit",
+                    item.reference()
+                ))
+                .into());
+            }
+            cmds::cmd_edit(store, &item.name)
+        }
+    }
+}
+
 /// The `remote …` subcommands (Step 12).
 fn dispatch_remote(
     action: &RemoteCommand,
@@ -777,6 +943,14 @@ fn dispatch_manage(
     stdin: &mut impl BufRead,
 ) -> Option<anyhow::Result<i32>> {
     Some(match &cli.command {
+        Command::Ui => dispatch_ui(store, stdin, cli.yes, cli.json),
+        Command::Cache { action } => Ok(match action {
+            CacheCommand::List => cache::cmd_cache_list(store, cli.json),
+            CacheCommand::Clear => cache::cmd_cache_clear(store, cli.json),
+        }),
+        Command::Update { registry, .. } => {
+            update::cmd_update_check(store, registry.as_deref(), cli.json)
+        }
         Command::Import {
             file,
             from_forgenesis,
@@ -832,6 +1006,8 @@ fn dispatch_manage(
 }
 
 fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
+    cloud::VERBOSE.store(cli.verbose > 0, std::sync::atomic::Ordering::Relaxed);
+    cloud::OFFLINE.store(cli.offline, std::sync::atomic::Ordering::Relaxed);
     let store = store::Store::open()?;
     if let Some(result) = dispatch_cloud(&cli, &store, stdin) {
         return result;
@@ -918,13 +1094,54 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
         | Command::Restore { .. }
         | Command::Doctor { .. }
         | Command::Alias { .. }
+        | Command::Ui
+        | Command::Cache { .. }
+        | Command::Update { .. }
         | Command::Completions { .. } => {
             unreachable!("handled by dispatch_cloud / dispatch_manage")
         }
     }
 }
 
+/// Render man pages for the whole command tree into `dir`
+/// (Step 18): `forgehub --gen-man docs/man`. Hidden from help;
+/// used by the docs/release jobs.
+fn gen_man(dir: &str) -> std::io::Result<()> {
+    fn render(cmd: &clap::Command, prefix: &str, dir: &std::path::Path) -> std::io::Result<()> {
+        let man = clap_mangen::Man::new(cmd.clone());
+        let file = dir.join(format!("{prefix}.1"));
+        let mut buf: Vec<u8> = Vec::new();
+        man.render(&mut buf)?;
+        std::fs::write(&file, buf)?;
+        for sub in cmd.get_subcommands() {
+            if sub.get_name() != "help" {
+                render(sub, &format!("{prefix}-{}", sub.get_name()), dir)?;
+            }
+        }
+        Ok(())
+    }
+    let dir_path = std::path::PathBuf::from(dir);
+    std::fs::create_dir_all(&dir_path)?;
+    render(
+        &<Cli as clap::CommandFactory>::command(),
+        "forgehub",
+        &dir_path,
+    )
+}
+
 fn main() -> ExitCode {
+    // Man-page generation hook (docs tooling, not a user command).
+    let cli_args: Vec<String> = std::env::args().collect();
+    if let Some(pos) = cli_args.iter().position(|a| a == "--gen-man") {
+        let dir = cli_args.get(pos + 1).map_or("docs/man", String::as_str);
+        match gen_man(dir) {
+            Ok(()) => return ExitCode::from(0),
+            Err(e) => {
+                eprintln!("forgehub: --gen-man failed: {e}");
+                return ExitCode::from(1);
+            }
+        }
+    }
     // Dynamic shell completion (clap_complete env protocol). When
     // COMPLETE is set by a shell integration this handles the request
     // and exits; otherwise it returns immediately.

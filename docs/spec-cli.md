@@ -31,6 +31,10 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
   - `doctor`: `{ "checks": [{ "name", "level": "ok|warn|fail", "detail" }], "ok": bool }`.
   - `whoami`: `{ "username", "registry", "token_name", "token_prefix", "scopes", "expires_at" }` — never the token itself.
   - `push`/`pull`/`fork`: `{ "owner", "name", "version", "hash", "url" }`.
+  - `status`: `{ "snippets": [{ "name", "owner", "state", "local_version", "remote_version" }] }` (states per §5).
+  - `cache list`: `{ "entries": [{ "owner", "name", "version", "bytes", "modified" }], "total_bytes", "cap_bytes" }`; `cache clear`: `{ "cleared_entries", "freed_bytes", "files_removed" }`.
+  - `trust list`: `{ "trusted": [{ "owner", "name", "hash", "version", "runs" }] }`.
+  - `update --check`: `{ "current", "latest", "update_available", "source" }` (`source` only when an update is available).
   - Errors with `--json`: `{ "error": { "code", "message" } }` on stderr, exit code unchanged.
 - Errors (human) follow **what failed → why → how to fix**, one line each, on stderr.
 

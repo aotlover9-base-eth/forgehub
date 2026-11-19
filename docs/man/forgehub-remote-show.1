@@ -1,0 +1,19 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH show 1  "show " 
+.SH NAME
+show \- Show one cloud snippet in full
+.SH SYNOPSIS
+\fBshow\fR [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIREFERENCE\fR> 
+.SH DESCRIPTION
+Show one cloud snippet in full
+.SH OPTIONS
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIREFERENCE\fR>
+`owner/name`, or a bare name for your own snippet

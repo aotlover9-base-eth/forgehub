@@ -21,6 +21,10 @@ pub struct Config {
     /// Ask before running (the confirmation card). Default true.
     #[serde(default = "default_true")]
     pub confirm_before_run: bool,
+    /// Run-cache size cap in MiB (Step 18); oldest entries are
+    /// evicted (LRU) when the cache grows past it.
+    #[serde(default = "default_cache_max_mb")]
+    pub cache_max_mb: u64,
     /// Logged-in username (Step 11+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
@@ -44,6 +48,10 @@ pub struct Config {
     /// command, or a `prefix*` pattern).
     #[serde(default = "default_ignores")]
     pub ignore_commands: Vec<String>,
+}
+
+fn default_cache_max_mb() -> u64 {
+    100
 }
 
 fn default_true() -> bool {
@@ -125,6 +133,7 @@ impl Default for Config {
             default_shell: None,
             editor: None,
             confirm_before_run: true,
+            cache_max_mb: default_cache_max_mb(),
             username: None,
             server: None,
             human_overhead_seconds: default_overhead(),
@@ -158,6 +167,13 @@ impl Store {
             }
         };
         Ok(Self { root })
+    }
+
+    /// A store rooted at an explicit directory (tests).
+    #[cfg(test)]
+    #[must_use]
+    pub fn from_root(root: PathBuf) -> Self {
+        Self { root }
     }
 
     /// The `ForgeHub` home directory.

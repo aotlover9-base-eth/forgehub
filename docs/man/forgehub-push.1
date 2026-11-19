@@ -1,0 +1,41 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH push 1  "push " 
+.SH NAME
+push \- Push a local snippet to the cloud (create or new version)
+.SH SYNOPSIS
+\fBpush\fR [\fB\-\-all\fR] [\fB\-\-public\fR] [\fB\-\-unlisted\fR] [\fB\-\-private\fR] [\fB\-m\fR|\fB\-\-message\fR] [\fB\-\-as\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fINAME\fR] 
+.SH DESCRIPTION
+Push a local snippet to the cloud (create or new version)
+.SH OPTIONS
+.TP
+\fB\-\-all\fR
+Push every local snippet and print a summary
+.TP
+\fB\-\-public\fR
+Make the snippet public
+.TP
+\fB\-\-unlisted\fR
+Make the snippet unlisted
+.TP
+\fB\-\-private\fR
+Make the snippet private (the default for new snippets)
+.TP
+\fB\-m\fR, \fB\-\-message\fR \fI<MESSAGE>\fR
+Version message for the push
+.TP
+\fB\-\-as\fR \fI<AS_NAME>\fR
+Push under a different remote name
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+[\fINAME\fR]
+Local snippet name (omit with \-\-all)
+.SH EXTRA
+Examples:
+  fg push ubuntu\-setup \-\-public
+  fg push \-\-all

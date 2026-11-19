@@ -1,0 +1,23 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH list 1  "list " 
+.SH NAME
+list \- List local snippets
+.SH SYNOPSIS
+\fBlist\fR [\fB\-\-tag\fR] [\fB\-\-long\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+List local snippets
+.SH OPTIONS
+.TP
+\fB\-\-tag\fR \fI<TAG>\fR
+Only show snippets with this tag
+.TP
+\fB\-\-long\fR
+Show mode, shell and hash for each snippet
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH EXTRA
+Examples:
+  fg list \-\-long
+  fg list \-\-tag ubuntu

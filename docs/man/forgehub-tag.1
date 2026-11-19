@@ -1,0 +1,25 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH tag 1  "tag " 
+.SH NAME
+tag \- Add or remove tags: fg tag <name> add|remove <tag>…
+.SH SYNOPSIS
+\fBtag\fR [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> <\fIACTION\fR> [\fITAGS\fR] 
+.SH DESCRIPTION
+Add or remove tags: fg tag <name> add|remove <tag>…
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Snippet name
+.TP
+<\fIACTION\fR>
+`add` or `remove`
+.TP
+[\fITAGS\fR]
+Tags to add or remove
+.SH EXTRA
+Examples:
+  fg tag ubuntu\-setup add ubuntu base

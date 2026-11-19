@@ -50,6 +50,12 @@ pub fn session(
     stdin: &mut impl BufRead,
     registry_flag: Option<&str>,
 ) -> Result<Session> {
+    if crate::cloud::offline() {
+        return Err(CliError::failure(
+            "forgehub: offline mode\n  what: --offline was given, so no network requests are made\n  fix: drop --offline to use cloud commands; local commands and `run --offline` still work",
+        )
+        .into());
+    }
     let Some((registry, entry)) = active_credential(store, stdin, registry_flag)? else {
         return Err(CliError::auth(
             "forgehub: not logged in\n  what: cloud commands need a stored credential\n  fix: forgehub login",
@@ -1285,6 +1291,37 @@ pub fn after_record_push(
             Ok(0)
         }
     }
+}
+
+/// Star a cloud snippet (idempotent PUT). Used by the TUI's
+/// `s` key (Step 18); prints a one-line confirmation.
+pub fn cmd_star(
+    store: &Store,
+    stdin: &mut impl BufRead,
+    reference: &str,
+    registry_flag: Option<&str>,
+    json: bool,
+) -> Result<i32> {
+    let sess = session(store, stdin, registry_flag)?;
+    let (owner, name) = parse_reference(reference, &sess.username);
+    sess.client
+        .request(
+            "PUT",
+            &format!("/snippets/{owner}/{name}/star"),
+            None,
+            Some(&sess.entry.token),
+            &[],
+        )
+        .map_err(|e| api_fail(&e, &sess.entry.token))?;
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({ "owner": owner, "name": name, "starred": true })
+        );
+    } else {
+        println!("Starred {owner}/{name}. See them with `fg remote list --stars`.");
+    }
+    Ok(0)
 }
 
 #[cfg(test)]

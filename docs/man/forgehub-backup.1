@@ -1,0 +1,23 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH backup 1  "backup " 
+.SH NAME
+backup \- Write a backup archive (default: backups/forgehub\-backup\-<timestamp>.tar)
+.SH SYNOPSIS
+\fBbackup\fR [\fB\-o\fR|\fB\-\-out\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fINAME\fR] 
+.SH DESCRIPTION
+Write a backup archive (default: backups/forgehub\-backup\-<timestamp>.tar)
+.SH OPTIONS
+.TP
+\fB\-o\fR, \fB\-\-out\fR \fI<OUT>\fR
+Output file instead of the default location
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+[\fINAME\fR]
+Back up only this snippet (plus the config)
+.SH EXTRA
+Examples:
+  fg backup
+  fg backup \-\-out ~/forgehub\-backup.tar

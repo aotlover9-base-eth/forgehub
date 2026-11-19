@@ -1,0 +1,22 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH visibility 1  "visibility " 
+.SH NAME
+visibility \- Change a snippet\*(Aqs visibility: public|unlisted|private
+.SH SYNOPSIS
+\fBvisibility\fR [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> <\fIVISIBILITY\fR> 
+.SH DESCRIPTION
+Change a snippet\*(Aqs visibility: public|unlisted|private
+.SH OPTIONS
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Snippet name
+.TP
+<\fIVISIBILITY\fR>
+The new visibility

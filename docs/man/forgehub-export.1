@@ -1,0 +1,22 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH export 1  "export " 
+.SH NAME
+export \- Export a snippet as YAML (to stdout or a file)
+.SH SYNOPSIS
+\fBexport\fR [\fB\-o\fR|\fB\-\-out\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> 
+.SH DESCRIPTION
+Export a snippet as YAML (to stdout or a file)
+.SH OPTIONS
+.TP
+\fB\-o\fR, \fB\-\-out\fR \fI<OUT>\fR
+Write to this file instead of stdout
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Snippet name
+.SH EXTRA
+Examples:
+  fg export ubuntu\-setup \-\-out ubuntu\-setup.yaml

@@ -1,0 +1,23 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH status 1  "status " 
+.SH NAME
+status \- Compare local snippets with the cloud (ahead/behind/diverged)
+.SH SYNOPSIS
+\fBstatus\fR [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fINAME\fR] 
+.SH DESCRIPTION
+Compare local snippets with the cloud (ahead/behind/diverged)
+.SH OPTIONS
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+[\fINAME\fR]
+Only this snippet (default: everything tracked)
+.SH EXTRA
+Examples:
+  fg status
+  fg status ubuntu\-setup

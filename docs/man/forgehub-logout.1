@@ -1,0 +1,22 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH logout 1  "logout " 
+.SH NAME
+logout \- Log out: delete the stored credential for a registry
+.SH SYNOPSIS
+\fBlogout\fR [\fB\-\-registry\fR] [\fB\-\-revoke\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+Log out: delete the stored credential for a registry
+.SH OPTIONS
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-\-revoke\fR
+Also revoke the token server\-side
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH EXTRA
+Examples:
+  fg logout \-\-revoke

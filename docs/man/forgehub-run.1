@@ -1,0 +1,36 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH run 1  "run " 
+.SH NAME
+run \- Run a snippet by name
+.SH SYNOPSIS
+\fBrun\fR [\fB\-\-dry\-run\fR] [\fB\-\-step\fR] [\fB\-\-no\-cache\fR] [\fB\-\-offline\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> [\fIKEY=value\fR] 
+.SH DESCRIPTION
+Run a snippet by name
+.SH OPTIONS
+.TP
+\fB\-\-dry\-run\fR
+Print the plan and execute nothing (alias: \-\-dry)
+.TP
+\fB\-\-step\fR
+Confirm each step before running it (steps mode)
+.TP
+\fB\-\-no\-cache\fR
+Do not write fetched snippets to the run cache
+.TP
+\fB\-\-offline\fR
+Run from the local cache only; never fetch
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Snippet name, or `owner/name` / `name@version` for a cloud snippet (Step 13)
+.TP
+[\fIKEY=value\fR]
+KEY=value variable assignments
+.SH EXTRA
+Examples:
+  fg run ubuntu\-setup
+  fg ubuntu\-setup            (shorthand)
+  fg alice/deploy \-\-dry\-run

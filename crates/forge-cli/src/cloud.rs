@@ -258,6 +258,24 @@ pub fn save_credentials(creds: &CredFile) -> Result<()> {
 // HTTP client
 // ---------------------------------------------------------------------------
 
+/// Set by `--verbose` (Step 18): every request logs one line
+/// to stderr (registry base, status, duration). Tokens are
+/// never part of a URL and are never logged.
+pub static VERBOSE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Set by the global `--offline` flag (Step 18): cloud
+/// commands fail fast with an offline message instead of
+/// attempting network I/O.
+pub static OFFLINE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn verbose() -> bool {
+    VERBOSE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+pub fn offline() -> bool {
+    OFFLINE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// A `ForgeHub` API error in the server's envelope shape.
 #[derive(Debug)]
 pub struct ApiFailure {
@@ -317,6 +335,7 @@ impl ApiClient {
         &self,
         req: reqwest::blocking::RequestBuilder,
     ) -> Result<(u16, Value, reqwest::header::HeaderMap), ApiFailure> {
+        let started = std::time::Instant::now();
         let resp = req.send().map_err(|e| ApiFailure {
             status: 0,
             code: "network_error".into(),
@@ -325,6 +344,13 @@ impl ApiClient {
             retry_after: None,
         })?;
         let status = resp.status().as_u16();
+        if verbose() {
+            eprintln!(
+                "  → {} responded {status} in {} ms",
+                self.base,
+                started.elapsed().as_millis()
+            );
+        }
         let headers = resp.headers().clone();
         let retry_after = headers
             .get(reqwest::header::RETRY_AFTER)

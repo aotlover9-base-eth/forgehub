@@ -200,6 +200,10 @@ pub struct CachedSnippet {
     pub body: String,
 }
 
+pub fn cache_body_path(store: &Store, owner: &str, name: &str, version: i64) -> PathBuf {
+    body_path(store, owner, name, version)
+}
+
 fn body_path(store: &Store, owner: &str, name: &str, version: i64) -> PathBuf {
     store
         .cache_dir()
@@ -235,6 +239,13 @@ pub fn cache_put(
         serde_json::to_string(&pointer)?,
     )
     .with_context(|| "writing cache pointer".to_string())?;
+    // Keep the cache under its configured cap (Step 18 LRU);
+    // eviction failures never fail the run that wrote the entry.
+    let cap = store
+        .load_config()
+        .map_or(100, |c| c.cache_max_mb)
+        .saturating_mul(1_048_576);
+    crate::cache::evict_lru(store, cap);
     Ok(())
 }
 

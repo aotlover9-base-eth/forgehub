@@ -1,0 +1,31 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH analyze 1  "analyze " 
+.SH NAME
+analyze \- Mine shell history for repeated command sequences
+.SH SYNOPSIS
+\fBanalyze\fR [\fB\-\-min\-count\fR] [\fB\-\-limit\fR] [\fB\-\-max\-len\fR] [\fB\-\-dry\fR] [\fB\-\-file\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+Mine shell history for repeated command sequences
+.SH OPTIONS
+.TP
+\fB\-\-min\-count\fR \fI<MIN_COUNT>\fR
+Minimum repetitions before a sequence is reported
+.TP
+\fB\-\-limit\fR \fI<LIMIT>\fR [default: 10]
+Maximum number of candidates to show
+.TP
+\fB\-\-max\-len\fR \fI<MAX_LEN>\fR
+Longest command sequence to look for
+.TP
+\fB\-\-dry\fR
+Print candidates only; create nothing
+.TP
+\fB\-\-file\fR \fI<FILE>\fR
+Read this history file instead of auto\-detecting one
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH EXTRA
+Examples:
+  fg analyze \-\-dry

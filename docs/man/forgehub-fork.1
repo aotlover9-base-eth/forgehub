@@ -1,0 +1,25 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH fork 1  "fork " 
+.SH NAME
+fork \- Fork someone\*(Aqs snippet into your account (server\-side)
+.SH SYNOPSIS
+\fBfork\fR [\fB\-\-as\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIREFERENCE\fR> 
+.SH DESCRIPTION
+Fork someone\*(Aqs snippet into your account (server\-side)
+.SH OPTIONS
+.TP
+\fB\-\-as\fR \fI<AS_NAME>\fR
+Name for the fork (default: the source name)
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIREFERENCE\fR>
+`owner/name` of the snippet to fork
+.SH EXTRA
+Examples:
+  fg fork alice/deploy \-\-as my\-deploy

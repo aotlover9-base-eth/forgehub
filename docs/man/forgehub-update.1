@@ -1,0 +1,22 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH update 1  "update " 
+.SH NAME
+update \- Check whether a newer `ForgeHub` is available (never downloads or replaces anything)
+.SH SYNOPSIS
+\fBupdate\fR [\fB\-\-check\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+Check whether a newer `ForgeHub` is available (never downloads or replaces anything)
+.SH OPTIONS
+.TP
+\fB\-\-check\fR
+Only check; there is no self\-update mode
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH EXTRA
+Examples:
+  fg update \-\-check

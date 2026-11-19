@@ -1,0 +1,25 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH restore 1  "restore " 
+.SH NAME
+restore \- Restore snippets from a backup archive
+.SH SYNOPSIS
+\fBrestore\fR [\fB\-\-config\fR] [\fB\-\-force\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fIFILE\fR] 
+.SH DESCRIPTION
+Restore snippets from a backup archive
+.SH OPTIONS
+.TP
+\fB\-\-config\fR
+Also restore config.yaml from the archive
+.TP
+\fB\-\-force\fR
+Overwrite without asking (same as \-y)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+[\fIFILE\fR]
+Backup file (default: the newest in the backups directory)
+.SH EXTRA
+Examples:
+  fg restore ~/forgehub\-backup.tar

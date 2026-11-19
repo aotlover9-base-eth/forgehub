@@ -1,0 +1,19 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH whoami 1  "whoami " 
+.SH NAME
+whoami \- Show the current login (username, registry, token, scopes)
+.SH SYNOPSIS
+\fBwhoami\fR [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+Show the current login (username, registry, token, scopes)
+.SH OPTIONS
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH EXTRA
+Examples:
+  fg whoami

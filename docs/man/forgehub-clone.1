@@ -1,0 +1,22 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH clone 1  "clone " 
+.SH NAME
+clone \- Duplicate a local snippet under a new name
+.SH SYNOPSIS
+\fBclone\fR [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> <\fINEW\fR> 
+.SH DESCRIPTION
+Duplicate a local snippet under a new name
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Existing name
+.TP
+<\fINEW\fR>
+New name
+.SH EXTRA
+Examples:
+  fg clone ubuntu\-setup laptop\-setup

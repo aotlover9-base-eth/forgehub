@@ -1,0 +1,25 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH parameterize 1  "parameterize " 
+.SH NAME
+parameterize \- Turn repeated literals into variables
+.SH SYNOPSIS
+\fBparameterize\fR [\fB\-\-literal\fR] [\fB\-\-as\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> 
+.SH DESCRIPTION
+Turn repeated literals into variables
+.SH OPTIONS
+.TP
+\fB\-\-literal\fR \fI<TEXT>\fR
+A literal to parameterize (repeat with \-\-as; pairs apply directly)
+.TP
+\fB\-\-as\fR \fI<NAME>\fR
+Variable name for the preceding \-\-literal
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Snippet name
+.SH EXTRA
+Examples:
+  fg parameterize deploy \-\-literal eu\-west\-1 \-\-as region

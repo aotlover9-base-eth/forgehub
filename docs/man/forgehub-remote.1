@@ -1,0 +1,37 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH remote 1  "remote " 
+.SH NAME
+remote \- Inspect and manage your cloud snippets
+.SH SYNOPSIS
+\fBremote\fR [\fB\-h\fR|\fB\-\-help\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Inspect and manage your cloud snippets
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH SUBCOMMANDS
+.TP
+remote\-list(1)
+List your cloud snippets (or your stars with \-\-stars)
+.TP
+remote\-show(1)
+Show one cloud snippet in full
+.TP
+remote\-delete(1)
+Delete one of your cloud snippets (soft\-delete, 30\-day undo)
+.TP
+remote\-visibility(1)
+Change a snippet\*(Aqs visibility: public|unlisted|private
+.TP
+remote\-search(1)
+Search public snippets on the registry
+.TP
+remote\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH EXTRA
+Examples:
+  fg remote list
+  fg remote search docker
+  fg remote list \-\-stars

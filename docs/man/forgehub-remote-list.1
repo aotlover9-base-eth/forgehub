@@ -1,0 +1,19 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH list 1  "list " 
+.SH NAME
+list \- List your cloud snippets (or your stars with \-\-stars)
+.SH SYNOPSIS
+\fBlist\fR [\fB\-\-stars\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+List your cloud snippets (or your stars with \-\-stars)
+.SH OPTIONS
+.TP
+\fB\-\-stars\fR
+List snippets you have starred instead
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help

@@ -1,0 +1,19 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH delete 1  "delete " 
+.SH NAME
+delete \- Delete one of your cloud snippets (soft\-delete, 30\-day undo)
+.SH SYNOPSIS
+\fBdelete\fR [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> 
+.SH DESCRIPTION
+Delete one of your cloud snippets (soft\-delete, 30\-day undo)
+.SH OPTIONS
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Snippet name

@@ -1,0 +1,136 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH forgehub 1  "forgehub 0.1.0" 
+.SH NAME
+forgehub \- ForgeHub — a cloud home for shell command snippets
+.SH SYNOPSIS
+\fBforgehub\fR [\fB\-\-json\fR] [\fB\-y\fR|\fB\-\-yes\fR] [\fB\-v\fR|\fB\-\-verbose\fR]... [\fB\-\-offline\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Save shell command snippets once, run them anywhere with `fg <name>`. Local commands work fully offline; cloud commands (login, push, pull, fork) sync with your ForgeHub server.
+.SH OPTIONS
+.TP
+\fB\-\-json\fR
+Print machine\-readable JSON instead of human output
+.TP
+\fB\-y\fR, \fB\-\-yes\fR
+Skip confirmation prompts (never bypasses hash\-change or third\-party trust prompts; see spec\-cli §7)
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+Verbose request logging to stderr (method, status, timing; tokens are never printed)
+.TP
+\fB\-\-offline\fR
+Offline mode: cloud commands fail fast with an offline message; local commands and `run \-\-offline` still work
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help (see a summary with \*(Aq\-h\*(Aq)
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version
+.SH SUBCOMMANDS
+.TP
+forgehub\-init(1)
+Create the `ForgeHub` home and config
+.TP
+forgehub\-record(1)
+Record a shell session as a snippet
+.TP
+forgehub\-run(1)
+Run a snippet by name
+.TP
+forgehub\-list(1)
+List local snippets
+.TP
+forgehub\-show(1)
+Show a snippet (card + numbered commands)
+.TP
+forgehub\-search(1)
+Search local snippets (name, description, tags, commands)
+.TP
+forgehub\-tag(1)
+Add or remove tags: fg tag <name> add|remove <tag>…
+.TP
+forgehub\-rename(1)
+Rename a local snippet
+.TP
+forgehub\-delete(1)
+Delete a local snippet
+.TP
+forgehub\-edit(1)
+Edit a snippet in $EDITOR; invalid edits are rolled back
+.TP
+forgehub\-parameterize(1)
+Turn repeated literals into variables
+.TP
+forgehub\-clone(1)
+Duplicate a local snippet under a new name
+.TP
+forgehub\-import(1)
+Import snippet file(s) (`ForgeHub` or Forgenesis format)
+.TP
+forgehub\-export(1)
+Export a snippet as YAML (to stdout or a file)
+.TP
+forgehub\-analyze(1)
+Mine shell history for repeated command sequences
+.TP
+forgehub\-stats(1)
+Show run statistics from history.db
+.TP
+forgehub\-backup(1)
+Write a backup archive (default: backups/forgehub\-backup\-<timestamp>.tar)
+.TP
+forgehub\-restore(1)
+Restore snippets from a backup archive
+.TP
+forgehub\-login(1)
+Log in to a `ForgeHub` server (device\-code flow in the browser)
+.TP
+forgehub\-logout(1)
+Log out: delete the stored credential for a registry
+.TP
+forgehub\-whoami(1)
+Show the current login (username, registry, token, scopes)
+.TP
+forgehub\-push(1)
+Push a local snippet to the cloud (create or new version)
+.TP
+forgehub\-pull(1)
+Pull a cloud snippet into the local library
+.TP
+forgehub\-status(1)
+Compare local snippets with the cloud (ahead/behind/diverged)
+.TP
+forgehub\-diff(1)
+Unified diff of a local snippet against the cloud latest
+.TP
+forgehub\-fork(1)
+Fork someone\*(Aqs snippet into your account (server\-side)
+.TP
+forgehub\-remote(1)
+Inspect and manage your cloud snippets
+.TP
+forgehub\-trust(1)
+Manage execution trust for cloud snippets (Step 13): `trust list`, `trust revoke <owner/name>`, or approve an exact snippet directly: `trust <owner/name@hash>`
+.TP
+forgehub\-doctor(1)
+Check the environment and library health
+.TP
+forgehub\-alias(1)
+Manage the `fg` shell alias (install|uninstall|show)
+.TP
+forgehub\-completions(1)
+Print shell completions (dynamic: local snippet names included)
+.TP
+forgehub\-ui(1)
+Browse snippets in a terminal UI (Local · Mine · Explore)
+.TP
+forgehub\-cache(1)
+Inspect and manage the cloud run cache
+.TP
+forgehub\-update(1)
+Check whether a newer `ForgeHub` is available (never downloads or replaces anything)
+.TP
+forgehub\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH VERSION
+v0.1.0
