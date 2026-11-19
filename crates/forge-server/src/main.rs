@@ -65,6 +65,9 @@ async fn main() -> Result<()> {
     forge_server::db::migrate(&pool).await?;
     tracing::info!("database ready and migrations applied");
     let state = AppState {
+        login_throttle: Arc::new(forge_server::auth::LoginThrottle::new(
+            std::time::Duration::from_millis(config.login_backoff_base_ms),
+        )),
         config: Arc::new(config.clone()),
         repos: Arc::new(Repos::sqlite(pool.clone())),
         pool,

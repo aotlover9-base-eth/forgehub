@@ -198,6 +198,17 @@ pub trait UserRepo: Send + Sync {
     async fn by_username(&self, username: &str) -> RepoResult<Option<UserRow>>;
     /// By email (case-insensitive).
     async fn by_email(&self, email: &str) -> RepoResult<Option<UserRow>>;
+    /// Set display name and bio (already-resolved final values).
+    async fn update_profile(
+        &self,
+        id: i64,
+        display_name: Option<&str>,
+        bio: Option<&str>,
+    ) -> RepoResult<()>;
+    /// Replace the password hash.
+    async fn set_password_hash(&self, id: i64, password_hash: &str) -> RepoResult<()>;
+    /// Soft-delete the account (sets `deleted_at`).
+    async fn soft_delete(&self, id: i64, now: &str) -> RepoResult<()>;
 }
 
 /// Sessions repository.
@@ -236,6 +247,8 @@ pub trait TokenRepo: Send + Sync {
     async fn touch(&self, id: i64, now: &str) -> RepoResult<()>;
     /// Revoke a token.
     async fn revoke(&self, id: i64, now: &str) -> RepoResult<()>;
+    /// Revoke all of a user's tokens (account deletion).
+    async fn revoke_all_for_user(&self, user_id: i64, now: &str) -> RepoResult<u64>;
     /// A user's tokens, newest first.
     async fn list_for_user(&self, user_id: i64) -> RepoResult<Vec<TokenRow>>;
 }
@@ -452,6 +465,39 @@ impl UserRepo for SqliteStore {
                 .await?,
         )
     }
+
+    async fn update_profile(
+        &self,
+        id: i64,
+        display_name: Option<&str>,
+        bio: Option<&str>,
+    ) -> RepoResult<()> {
+        sqlx::query("UPDATE users SET display_name = ?2, bio = ?3 WHERE id = ?1")
+            .bind(id)
+            .bind(display_name)
+            .bind(bio)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn set_password_hash(&self, id: i64, password_hash: &str) -> RepoResult<()> {
+        sqlx::query("UPDATE users SET password_hash = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(password_hash)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn soft_delete(&self, id: i64, now: &str) -> RepoResult<()> {
+        sqlx::query("UPDATE users SET deleted_at = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
 }
 
 // --------------------------------------------------------------- sessions
@@ -565,6 +611,17 @@ impl TokenRepo for SqliteStore {
             .execute(&self.pool)
             .await?;
         Ok(())
+    }
+
+    async fn revoke_all_for_user(&self, user_id: i64, now: &str) -> RepoResult<u64> {
+        let res = sqlx::query(
+            "UPDATE api_tokens SET revoked_at = ?2 WHERE user_id = ?1 AND revoked_at IS NULL",
+        )
+        .bind(user_id)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        Ok(res.rows_affected())
     }
 
     async fn list_for_user(&self, user_id: i64) -> RepoResult<Vec<TokenRow>> {

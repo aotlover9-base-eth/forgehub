@@ -18,6 +18,9 @@ the startup log shows the secret key only as set/unset + length.
 | `FORGEHUB_BODY_LIMIT_KIB` | `256` | Max API request body |
 | `FORGEHUB_RATE_LIMIT_PER_MINUTE` | `600` | Per-token (else per-IP) request budget |
 | `FORGEHUB_REQUEST_TIMEOUT_SECS` | `30` | API request timeout |
+| `FORGEHUB_SESSION_IDLE_SECS` | `604800` | Session idle expiry (7 days) |
+| `FORGEHUB_SESSION_ABSOLUTE_SECS` | `2592000` | Session absolute expiry (30 days) |
+| `FORGEHUB_LOGIN_BACKOFF_BASE_MS` | `1000` | Login-throttle backoff base (doubles per failure, cap 300 s) |
 | `RUST_LOG` | `forge_server=info` | Log filter (tracing EnvFilter syntax) |
 
 ## Development

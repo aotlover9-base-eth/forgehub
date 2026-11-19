@@ -16,8 +16,9 @@ pub struct ApiError {
     /// Human-readable message (safe to show; never contains secrets
     /// or SQL details).
     pub message: String,
-    /// Optional structured details.
-    pub details: Option<serde_json::Value>,
+    /// Optional structured details (boxed: `serde_json::Value` is
+    /// 72 bytes, and this error type is returned by every handler).
+    pub details: Option<Box<serde_json::Value>>,
 }
 
 #[derive(Serialize)]
@@ -93,7 +94,7 @@ impl ApiError {
     /// Attach structured details.
     #[must_use]
     pub fn with_details(mut self, details: serde_json::Value) -> Self {
-        self.details = Some(details);
+        self.details = Some(Box::new(details));
         self
     }
 }
@@ -118,7 +119,7 @@ impl IntoResponse for ApiError {
             error: Body {
                 code: &self.code,
                 message: &self.message,
-                details: self.details.clone(),
+                details: self.details.as_deref().cloned(),
             },
         };
         (self.status, axum::Json(body)).into_response()

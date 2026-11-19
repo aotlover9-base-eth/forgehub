@@ -51,6 +51,12 @@ pub struct Config {
     pub rate_limit_per_minute: u32,
     /// API request timeout (`FORGEHUB_REQUEST_TIMEOUT_SECS`).
     pub request_timeout_secs: u64,
+    /// Session idle expiry (`FORGEHUB_SESSION_IDLE_SECS`, default 7 days).
+    pub session_idle_secs: u64,
+    /// Session absolute expiry (`FORGEHUB_SESSION_ABSOLUTE_SECS`, default 30 days).
+    pub session_absolute_secs: u64,
+    /// Base delay for login-throttle backoff (`FORGEHUB_LOGIN_BACKOFF_BASE_MS`, default 1000).
+    pub login_backoff_base_ms: u64,
 }
 
 fn env_var(key: &str) -> Option<String> {
@@ -76,6 +82,42 @@ where
         .trim()
         .parse::<T>()
         .map_err(|e| anyhow::anyhow!("{key} is invalid: {e}"))
+}
+
+/// Session lifetimes and the login-throttle base, parsed together
+/// because the absolute lifetime must cover the idle lifetime.
+/// Returns `(idle_secs, absolute_secs, backoff_base_ms)`.
+///
+/// # Errors
+/// On invalid values or `absolute < idle`.
+fn session_settings(get: &dyn Fn(&str) -> Option<String>) -> Result<(u64, u64, u64)> {
+    let idle: u64 = parse_or(
+        "FORGEHUB_SESSION_IDLE_SECS",
+        get("FORGEHUB_SESSION_IDLE_SECS")
+            .as_deref()
+            .unwrap_or_default(),
+        7 * 24 * 3600,
+    )?;
+    let absolute: u64 = parse_or(
+        "FORGEHUB_SESSION_ABSOLUTE_SECS",
+        get("FORGEHUB_SESSION_ABSOLUTE_SECS")
+            .as_deref()
+            .unwrap_or_default(),
+        30 * 24 * 3600,
+    )?;
+    if idle == 0 || absolute < idle {
+        bail!(
+            "FORGEHUB_SESSION_ABSOLUTE_SECS must be >= FORGEHUB_SESSION_IDLE_SECS (and idle at least 1)"
+        );
+    }
+    let backoff_ms: u64 = parse_or(
+        "FORGEHUB_LOGIN_BACKOFF_BASE_MS",
+        get("FORGEHUB_LOGIN_BACKOFF_BASE_MS")
+            .as_deref()
+            .unwrap_or_default(),
+        1000,
+    )?;
+    Ok((idle, absolute, backoff_ms))
 }
 
 impl Config {
@@ -158,6 +200,8 @@ impl Config {
         if request_timeout_secs == 0 {
             bail!("FORGEHUB_REQUEST_TIMEOUT_SECS must be at least 1");
         }
+        let (session_idle_secs, session_absolute_secs, login_backoff_base_ms) =
+            session_settings(get)?;
         Ok(Self {
             env,
             bind,
@@ -169,6 +213,9 @@ impl Config {
             body_limit_bytes: body_limit_kib * 1024,
             rate_limit_per_minute,
             request_timeout_secs,
+            session_idle_secs,
+            session_absolute_secs,
+            login_backoff_base_ms,
         })
     }
 
@@ -181,7 +228,7 @@ impl Config {
             None => "not set".to_string(),
         };
         format!(
-            "env={} bind={} base_url={} database={} secret_key={} allow_signup={} web_dir={} body_limit={}KiB rate_limit={}/min timeout={}s",
+            "env={} bind={} base_url={} database={} secret_key={} allow_signup={} web_dir={} body_limit={}KiB rate_limit={}/min timeout={}s session_idle={}s session_absolute={}s",
             self.env.as_str(),
             self.bind,
             self.base_url,
@@ -192,6 +239,8 @@ impl Config {
             self.body_limit_bytes / 1024,
             self.rate_limit_per_minute,
             self.request_timeout_secs,
+            self.session_idle_secs,
+            self.session_absolute_secs,
         )
     }
 

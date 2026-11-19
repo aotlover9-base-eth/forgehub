@@ -44,6 +44,9 @@ async fn start(extra: &[(&str, &str)]) -> TestServer {
         .unwrap();
     forge_server::db::migrate(&pool).await.unwrap();
     let state = AppState {
+        login_throttle: Arc::new(forge_server::auth::LoginThrottle::new(
+            std::time::Duration::from_millis(50),
+        )),
         config: Arc::new(config),
         repos: Arc::new(Repos::sqlite(pool.clone())),
         pool,
@@ -192,6 +195,9 @@ async fn body_limit_rejects_oversized_payloads() {
         .await
         .unwrap();
     let state = AppState {
+        login_throttle: Arc::new(forge_server::auth::LoginThrottle::new(
+            std::time::Duration::from_millis(50),
+        )),
         config: Arc::new(config),
         repos: Arc::new(Repos::sqlite(pool.clone())),
         pool,
