@@ -267,6 +267,12 @@ pub struct ApiFailure {
     pub code: String,
     /// Human message from the envelope.
     pub message: String,
+    /// Structured details from the envelope, when present (e.g.
+    /// secret findings on a 422, `latest_version` on a 412).
+    /// Boxed to keep the error type small.
+    pub details: Option<Box<Value>>,
+    /// `Retry-After` seconds on a 429, when the server sent it.
+    pub retry_after: Option<u64>,
 }
 
 impl std::fmt::Display for ApiFailure {
@@ -315,22 +321,59 @@ impl ApiClient {
             status: 0,
             code: "network_error".into(),
             message: format!("cannot reach {}: {e}", self.base),
+            details: None,
+            retry_after: None,
         })?;
         let status = resp.status().as_u16();
         let headers = resp.headers().clone();
+        let retry_after = headers
+            .get(reqwest::header::RETRY_AFTER)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse::<u64>().ok());
         let body: Value = resp.json().unwrap_or(Value::Null);
         if status >= 400 {
             let (code, message) = match (&body["error"]["code"], &body["error"]["message"]) {
                 (Value::String(c), Value::String(m)) => (c.clone(), m.clone()),
                 _ => (String::new(), format!("server returned HTTP {status}")),
             };
+            let details = body["error"].get("details").cloned().map(Box::new);
             return Err(ApiFailure {
                 status,
                 code,
                 message,
+                details,
+                retry_after,
             });
         }
         Ok((status, body, headers))
+    }
+
+    /// A request with extra headers (e.g. `If-Match` on PUT).
+    /// Never retried.
+    pub fn request(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<&Value>,
+        token: Option<&str>,
+        extra_headers: &[(&str, &str)],
+    ) -> Result<(u16, Value, reqwest::header::HeaderMap), ApiFailure> {
+        let mut req = match method {
+            "PUT" => self.http.put(self.url(path)),
+            "PATCH" => self.http.patch(self.url(path)),
+            "DELETE" => self.http.delete(self.url(path)),
+            _ => self.http.post(self.url(path)),
+        };
+        if let Some(b) = body {
+            req = req.json(b);
+        }
+        if let Some(t) = token {
+            req = req.bearer_auth(t);
+        }
+        for (k, v) in extra_headers {
+            req = req.header(*k, *v);
+        }
+        self.send(req)
     }
 
     /// GET with retries (transport errors and 502/503/504, twice,
@@ -714,7 +757,7 @@ pub fn cmd_login(
 /// Which credential a command should use, after resolution:
 /// (registry, entry). `FORGEHUB_TOKEN` wins over the file and is
 /// never stored.
-fn active_credential(
+pub(crate) fn active_credential(
     store: &Store,
     stdin: &mut impl BufRead,
     registry_flag: Option<&str>,

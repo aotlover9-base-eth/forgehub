@@ -294,6 +294,40 @@ impl Store {
         Ok(path)
     }
 
+    /// Path of the cloud provenance sidecar for a local snippet
+    /// (Step 12): `<name>.meta.json` next to the snippet file.
+    pub fn meta_path(&self, name: &str) -> Result<PathBuf> {
+        forge_core::names::validate_snippet_name(name)?;
+        Ok(self.snippets_dir().join(format!("{name}.meta.json")))
+    }
+
+    /// Read the provenance sidecar text, when one exists.
+    #[must_use]
+    pub fn read_meta(&self, name: &str) -> Option<String> {
+        let path = self.meta_path(name).ok()?;
+        std::fs::read_to_string(path).ok()
+    }
+
+    /// Write the provenance sidecar (atomically, like snippets).
+    pub fn write_meta(&self, name: &str, json: &str) -> Result<()> {
+        self.ensure_dirs()?;
+        let path = self.meta_path(name)?;
+        let tmp = self
+            .tmp_dir()
+            .join(format!(".meta-{}-{}.tmp", name, std::process::id()));
+        std::fs::write(&tmp, json).with_context(|| format!("writing {}", tmp.display()))?;
+        std::fs::rename(&tmp, &path)
+            .with_context(|| format!("moving {} into place", path.display()))?;
+        Ok(())
+    }
+
+    /// Remove the provenance sidecar, when one exists.
+    pub fn remove_meta(&self, name: &str) {
+        if let Ok(path) = self.meta_path(name) {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+
     /// All local snippets, sorted by name. Files that fail to parse are
     /// reported on stderr and skipped (one bad file must not break the
     /// whole library listing).

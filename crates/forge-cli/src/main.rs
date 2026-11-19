@@ -19,6 +19,7 @@ mod prompt;
 mod record;
 mod runner;
 mod store;
+mod sync;
 
 use clap::{Parser, Subcommand};
 use clap_complete::engine::{ArgValueCompleter, CompletionCandidate};
@@ -121,6 +122,9 @@ enum Command {
         /// Overwrite an existing snippet with the same name.
         #[arg(long)]
         force: bool,
+        /// After saving, offer to push to the cloud (when logged in).
+        #[arg(long)]
+        push: bool,
     },
     /// Run a snippet by name.
     Run {
@@ -300,6 +304,81 @@ enum Command {
         #[arg(long)]
         registry: Option<String>,
     },
+    /// Push a local snippet to the cloud (create or new version).
+    Push {
+        /// Local snippet name (omit with --all).
+        name: Option<String>,
+        /// Push every local snippet and print a summary.
+        #[arg(long)]
+        all: bool,
+        /// Make the snippet public.
+        #[arg(long, conflicts_with_all = ["unlisted", "private"])]
+        public: bool,
+        /// Make the snippet unlisted.
+        #[arg(long, conflicts_with = "private")]
+        unlisted: bool,
+        /// Make the snippet private (the default for new snippets).
+        #[arg(long)]
+        private: bool,
+        /// Version message for the push.
+        #[arg(short = 'm', long)]
+        message: Option<String>,
+        /// Push under a different remote name.
+        #[arg(long = "as")]
+        as_name: Option<String>,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Pull a cloud snippet into the local library.
+    Pull {
+        /// `owner/name`, or a bare name for your own snippet.
+        reference: String,
+        /// Save under a different local name.
+        #[arg(long = "as")]
+        as_name: Option<String>,
+        /// Pull a specific version instead of the latest.
+        #[arg(long)]
+        version: Option<i64>,
+        /// Overwrite an existing local snippet without asking.
+        #[arg(long)]
+        force: bool,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Compare local snippets with the cloud (ahead/behind/diverged).
+    Status {
+        /// Only this snippet (default: everything tracked).
+        name: Option<String>,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Unified diff of a local snippet against the cloud latest.
+    Diff {
+        /// Local snippet name.
+        name: String,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Fork someone's snippet into your account (server-side).
+    Fork {
+        /// `owner/name` of the snippet to fork.
+        reference: String,
+        /// Name for the fork (default: the source name).
+        #[arg(long = "as")]
+        as_name: Option<String>,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Inspect and manage your cloud snippets.
+    Remote {
+        #[command(subcommand)]
+        action: RemoteCommand,
+    },
     /// Check the environment and library health.
     Doctor {
         /// Only run checks for this topic (e.g. alias, rust, python).
@@ -317,6 +396,54 @@ enum Command {
     Completions {
         /// Shell: bash, zsh, fish, powershell or elvish.
         shell: clap_complete::Shell,
+    },
+}
+
+/// Subcommands of `remote` (Step 12).
+#[derive(Subcommand)]
+enum RemoteCommand {
+    /// List your cloud snippets (or your stars with --stars).
+    List {
+        /// List snippets you have starred instead.
+        #[arg(long)]
+        stars: bool,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Show one cloud snippet in full.
+    Show {
+        /// `owner/name`, or a bare name for your own snippet.
+        reference: String,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Delete one of your cloud snippets (soft-delete, 30-day undo).
+    Delete {
+        /// Snippet name.
+        name: String,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Change a snippet's visibility: public|unlisted|private.
+    Visibility {
+        /// Snippet name.
+        name: String,
+        /// The new visibility.
+        visibility: String,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Search public snippets on the registry.
+    Search {
+        /// Search text.
+        query: String,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
     },
 }
 
@@ -419,8 +546,239 @@ fn dispatch_parameterize(
     parity::cmd_parameterize(store, stdin, name, yes, json, &pairs)
 }
 
+/// The cloud commands (Steps 11–12), dispatched separately so
+/// `run_cli` stays a flat local-command match. Returns `None`
+/// for local commands.
+fn dispatch_cloud(
+    cli: &Cli,
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+) -> Option<anyhow::Result<i32>> {
+    let json = cli.json;
+    let yes = cli.yes;
+    Some(match &cli.command {
+        Command::Login { registry, token } => {
+            cloud::cmd_login(store, stdin, registry.as_deref(), *token, json)
+        }
+        Command::Logout { registry, revoke } => {
+            cloud::cmd_logout(store, stdin, registry.as_deref(), *revoke, json)
+        }
+        Command::Whoami { registry } => cloud::cmd_whoami(store, stdin, registry.as_deref(), json),
+        Command::Push {
+            name,
+            all,
+            public,
+            unlisted,
+            private,
+            message,
+            as_name,
+            registry,
+        } => {
+            let visibility = if *public {
+                Some("public")
+            } else if *unlisted {
+                Some("unlisted")
+            } else if *private {
+                Some("private")
+            } else {
+                None
+            };
+            sync::cmd_push(
+                store,
+                stdin,
+                name.as_deref(),
+                *all,
+                visibility,
+                message.as_deref(),
+                as_name.as_deref(),
+                registry.as_deref(),
+                json,
+            )
+        }
+        Command::Pull {
+            reference,
+            as_name,
+            version,
+            force,
+            registry,
+        } => sync::cmd_pull(
+            store,
+            stdin,
+            reference,
+            as_name.as_deref(),
+            *version,
+            *force,
+            yes,
+            registry.as_deref(),
+            json,
+        ),
+        Command::Status { name, registry } => {
+            sync::cmd_status(store, stdin, name.as_deref(), registry.as_deref(), json)
+        }
+        Command::Diff { name, registry } => {
+            sync::cmd_diff(store, stdin, name, registry.as_deref(), json)
+        }
+        Command::Fork {
+            reference,
+            as_name,
+            registry,
+        } => sync::cmd_fork(
+            store,
+            stdin,
+            reference,
+            as_name.as_deref(),
+            registry.as_deref(),
+            json,
+        ),
+        Command::Remote { action } => dispatch_remote(action, store, stdin, yes, json),
+        _ => return None,
+    })
+}
+
+/// The `remote …` subcommands (Step 12).
+fn dispatch_remote(
+    action: &RemoteCommand,
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+    yes: bool,
+    json: bool,
+) -> anyhow::Result<i32> {
+    match action {
+        RemoteCommand::List { stars, registry } => {
+            sync::cmd_remote_list(store, stdin, *stars, registry.as_deref(), json)
+        }
+        RemoteCommand::Show {
+            reference,
+            registry,
+        } => sync::cmd_remote_show(store, stdin, reference, registry.as_deref(), json),
+        RemoteCommand::Delete { name, registry } => {
+            sync::cmd_remote_delete(store, stdin, name, yes, registry.as_deref(), json)
+        }
+        RemoteCommand::Visibility {
+            name,
+            visibility,
+            registry,
+        } => sync::cmd_remote_visibility(
+            store,
+            stdin,
+            name,
+            visibility,
+            yes,
+            registry.as_deref(),
+            json,
+        ),
+        RemoteCommand::Search { query, registry } => {
+            sync::cmd_remote_search(store, stdin, query, registry.as_deref(), json)
+        }
+    }
+}
+
+/// Arguments for `record`, bundled to keep the dispatch flat.
+#[allow(clippy::struct_excessive_bools)]
+struct RecordArgs {
+    name: Option<String>,
+    description: Option<String>,
+    tags: Vec<String>,
+    force: bool,
+    push: bool,
+    yes: bool,
+    json: bool,
+}
+
+/// `record`, including the Step 12 `--push` hook.
+fn dispatch_record(
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+    args: RecordArgs,
+) -> anyhow::Result<i32> {
+    let (code, saved) = cmds::cmd_record_inner(
+        store,
+        stdin,
+        args.name,
+        args.description.as_deref(),
+        &args.tags,
+        args.force,
+    )?;
+    if args.push && code == 0 {
+        if let Some(saved_name) = saved {
+            return sync::after_record_push(store, stdin, &saved_name, args.yes, args.json);
+        }
+    }
+    Ok(code)
+}
+
+/// The management commands (import/export/analyze/stats/
+/// backup/restore/doctor/alias/completions), dispatched
+/// separately like the cloud commands. Returns `None` for the
+/// core local commands.
+fn dispatch_manage(
+    cli: &Cli,
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+) -> Option<anyhow::Result<i32>> {
+    Some(match &cli.command {
+        Command::Import {
+            file,
+            from_forgenesis,
+            name,
+            force,
+        } => dispatch_import(
+            store,
+            file.clone(),
+            *from_forgenesis,
+            name.as_deref(),
+            *force,
+            cli.json,
+        ),
+        Command::Export { name, out } => parity::cmd_export(store, name, out.as_ref()),
+        Command::Analyze {
+            min_count,
+            limit,
+            max_len,
+            dry,
+            file,
+        } => parity::cmd_analyze(
+            store,
+            stdin,
+            &parity::AnalyzeArgs {
+                file: file.clone(),
+                min_count: *min_count,
+                max_len: *max_len,
+                limit: *limit,
+                dry: *dry,
+            },
+            cli.yes,
+            cli.json,
+        ),
+        Command::Stats { limit, explain } => parity::cmd_stats(store, *limit, *explain, cli.json),
+        Command::Backup { name, out } => {
+            backup::cmd_backup(store, name.as_deref(), out.as_deref()).map(|_| 0)
+        }
+        Command::Restore {
+            file,
+            config,
+            force,
+        } => dispatch_restore(store, stdin, file.clone(), *config, *force, cli.yes),
+        Command::Doctor { topic } => parity::cmd_doctor(store, topic.as_deref(), cli.json),
+        Command::Alias { action, shell } => {
+            parity::cmd_alias(stdin, action, shell.as_deref(), cli.yes, cli.json)
+        }
+        Command::Completions { shell } => (|| {
+            println!("{}", completions_snippet(*shell)?);
+            Ok(0)
+        })(),
+        _ => return None,
+    })
+}
+
 fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
     let store = store::Store::open()?;
+    if let Some(result) = dispatch_cloud(&cli, &store, stdin) {
+        return result;
+    }
+    if let Some(result) = dispatch_manage(&cli, &store, stdin) {
+        return result;
+    }
     match cli.command {
         Command::Init => cmds::cmd_init(&store, cli.json),
         Command::Record {
@@ -428,7 +786,20 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
             description,
             tags,
             force,
-        } => cmds::cmd_record(&store, stdin, name, description.as_deref(), &tags, force),
+            push,
+        } => dispatch_record(
+            &store,
+            stdin,
+            RecordArgs {
+                name,
+                description,
+                tags,
+                force,
+                push,
+                yes: cli.yes,
+                json: cli.json,
+            },
+        ),
         Command::Run {
             name,
             dry_run,
@@ -459,64 +830,27 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
             as_names,
         } => dispatch_parameterize(&store, stdin, &name, literals, as_names, cli.yes, cli.json),
         Command::Clone { name, new } => parity::cmd_clone(&store, &name, &new, cli.json),
-        Command::Import {
-            file,
-            from_forgenesis,
-            name,
-            force,
-        } => dispatch_import(
-            &store,
-            file,
-            from_forgenesis,
-            name.as_deref(),
-            force,
-            cli.json,
-        ),
-        Command::Export { name, out } => parity::cmd_export(&store, &name, out.as_ref()),
-        Command::Analyze {
-            min_count,
-            limit,
-            max_len,
-            dry,
-            file,
-        } => parity::cmd_analyze(
-            &store,
-            stdin,
-            &parity::AnalyzeArgs {
-                file,
-                min_count,
-                max_len,
-                limit,
-                dry,
-            },
-            cli.yes,
-            cli.json,
-        ),
-        Command::Stats { limit, explain } => parity::cmd_stats(&store, limit, explain, cli.json),
-        Command::Backup { name, out } => {
-            backup::cmd_backup(&store, name.as_deref(), out.as_deref()).map(|_| 0)
-        }
-        Command::Restore {
-            file,
-            config,
-            force,
-        } => dispatch_restore(&store, stdin, file, config, force, cli.yes),
-        Command::Login { registry, token } => {
-            cloud::cmd_login(&store, stdin, registry.as_deref(), token, cli.json)
-        }
-        Command::Logout { registry, revoke } => {
-            cloud::cmd_logout(&store, stdin, registry.as_deref(), revoke, cli.json)
-        }
-        Command::Whoami { registry } => {
-            cloud::cmd_whoami(&store, stdin, registry.as_deref(), cli.json)
-        }
-        Command::Doctor { topic } => parity::cmd_doctor(&store, topic.as_deref(), cli.json),
-        Command::Alias { action, shell } => {
-            parity::cmd_alias(stdin, &action, shell.as_deref(), cli.yes, cli.json)
-        }
-        Command::Completions { shell } => {
-            println!("{}", completions_snippet(shell)?);
-            Ok(0)
+        // Cloud and management commands never reach this match:
+        // dispatch_cloud / dispatch_manage handled them above.
+        Command::Login { .. }
+        | Command::Logout { .. }
+        | Command::Whoami { .. }
+        | Command::Push { .. }
+        | Command::Pull { .. }
+        | Command::Status { .. }
+        | Command::Diff { .. }
+        | Command::Fork { .. }
+        | Command::Remote { .. }
+        | Command::Import { .. }
+        | Command::Export { .. }
+        | Command::Analyze { .. }
+        | Command::Stats { .. }
+        | Command::Backup { .. }
+        | Command::Restore { .. }
+        | Command::Doctor { .. }
+        | Command::Alias { .. }
+        | Command::Completions { .. } => {
+            unreachable!("handled by dispatch_cloud / dispatch_manage")
         }
     }
 }

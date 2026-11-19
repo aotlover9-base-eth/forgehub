@@ -66,14 +66,16 @@ pub fn cmd_init(store: &Store, json: bool) -> Result<i32> {
 }
 
 /// `fg record` — capture a shell session and save it as a snippet.
-pub fn cmd_record(
+/// Record a session; also returns the saved snippet's name
+/// (Step 12's `record --push` hook needs it).
+pub fn cmd_record_inner(
     store: &Store,
     stdin: &mut impl BufRead,
     name: Option<String>,
     description: Option<&str>,
     tags: &[String],
     force: bool,
-) -> Result<i32> {
+) -> Result<(i32, Option<String>)> {
     let config = store.load_config()?;
     let shell = config
         .default_shell
@@ -83,7 +85,7 @@ pub fn cmd_record(
     let commands = record::capture_session(store, &shell)?;
     if commands.is_empty() {
         eprintln!("forgehub: nothing was recorded; no snippet saved");
-        return Ok(1);
+        return Ok((1, None));
     }
     let is_tty = crate::prompt::stdin_is_tty();
     let commands = record::scan_and_maybe_redact(&commands, stdin, is_tty)?;
@@ -115,7 +117,7 @@ pub fn cmd_record(
         commands.len(),
         path.display()
     );
-    Ok(0)
+    Ok((0, Some(name)))
 }
 
 /// The confirmation card / dry-run plan for a snippet about to run.
