@@ -179,6 +179,7 @@ BOB_TOKEN="$(api -b "$WORK/bob.jar" -H "X-CSRF-Token: $BOB_CSRF" -H 'Content-Typ
     -d '{"name":"e2e","scopes":["read","write"]}' "$BASE/api/v1/tokens" \
     | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')"
 [ -n "$BOB_TOKEN" ] || fail "token creation returned no token"
+# shellcheck disable=SC2216 # fg is this script's CLI function, not the shell builtin
 printf '%s' "$BOB_TOKEN" | fg "$BOB" login --token > /dev/null
 fg "$BOB" whoami | grep -q "bobe2e" || fail "bob whoami failed"
 

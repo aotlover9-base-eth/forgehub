@@ -13,8 +13,30 @@ fg ubuntu-setup
 
 ## Status
 
-- [x] Step 1: monorepo skeleton (Cargo workspace + Vite/React/TypeScript web), CI skeleton, Forgenesis analysis
-- [ ] Everything else: see `PROGRESS.md` and `roadmap.md`
+Feature-complete v0.1.0: CLI, server and web app are built and
+tested end to end. See `PROGRESS.md` for the step-by-step
+record and `CHANGELOG.md` for what shipped.
+
+## Install the CLI
+
+From a release (checksum-verifying installer — read it first,
+it is short and commented):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/aotlover9-base-eth/forgehub/main/scripts/install.sh -o install.sh
+less install.sh   # review before running, always
+sh install.sh
+```
+
+From source (Rust 1.x):
+
+```sh
+cargo install --path crates/forge-cli
+forgehub alias install   # adds the `fg` alias
+```
+
+Deploying the server: `docs/deploy.md` (Docker + Caddy,
+Fly.io, or a bare binary).
 
 ## Layout
 

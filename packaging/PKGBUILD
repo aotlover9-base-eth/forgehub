@@ -1,0 +1,28 @@
+# AUR PKGBUILD TEMPLATE (Step 21) — not published.
+# Maintainer: Aotlover9
+# To publish: create the AUR package `forgehub-bin`, replace
+# the sha256sums with the values from the release SHA256SUMS,
+# generate .SRCINFO (`makepkg --printsrcinfo`), and push to
+# the AUR git remote. This is a -bin package: it repackages
+# the official release tarball (which install.sh also uses).
+pkgname=forgehub-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Cloud home for shell command snippets (CLI: forgehub / fg)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/aotlover9-base-eth/forgehub"
+license=('MIT')
+provides=('forgehub')
+conflicts=('forgehub')
+source_x86_64=("https://github.com/aotlover9-base-eth/forgehub/releases/download/v$pkgver/forgehub-v$pkgver-x86_64-unknown-linux-musl.tar.gz")
+source_aarch64=("https://github.com/aotlover9-base-eth/forgehub/releases/download/v$pkgver/forgehub-v$pkgver-aarch64-unknown-linux-musl.tar.gz")
+sha256sums_x86_64=('REPLACE_WITH_SHA256_FROM_RELEASE_SHA256SUMS')
+sha256sums_aarch64=('REPLACE_WITH_SHA256_FROM_RELEASE_SHA256SUMS')
+
+package() {
+  local dir
+  dir=$(find "$srcdir" -maxdepth 1 -type d -name 'forgehub-*' | head -n 1)
+  install -Dm755 "$dir/forgehub" "$pkgdir/usr/bin/forgehub"
+  install -Dm644 "$dir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$dir/README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

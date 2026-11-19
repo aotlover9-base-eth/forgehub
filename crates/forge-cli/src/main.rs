@@ -88,10 +88,22 @@ fn complete_snippet_name(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> 
         .collect()
 }
 
+/// Long `--version` output (Step 21): version, source commit
+/// and build date, e.g. `forgehub 0.1.0 (91deb5f0abcd, built 2026-11-19)`.
+const LONG_VERSION: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " (",
+    env!("FORGEHUB_BUILD_SHA"),
+    ", built ",
+    env!("FORGEHUB_BUILD_DATE"),
+    ")"
+);
+
 #[derive(Parser)]
 #[command(
     name = "forgehub",
     version,
+    long_version = LONG_VERSION,
     about = "ForgeHub — a cloud home for shell command snippets",
     long_about = "Save shell command snippets once, run them anywhere with `fg <name>`. \
                   Local commands work fully offline; cloud commands (login, push, pull, fork) sync with your ForgeHub server."

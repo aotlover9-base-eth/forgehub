@@ -48,10 +48,13 @@ async fn health(State(state): State<AppState>) -> Response {
 }
 
 async fn version() -> Response {
+    // Runtime override wins (deployments can stamp the exact
+    // image revision); otherwise the commit embedded at build
+    // time (Step 21); "dev" for unstamped local builds.
     let git_sha = std::env::var("FORGEHUB_GIT_SHA")
         .ok()
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| "dev".to_string());
+        .unwrap_or_else(|| env!("FORGEHUB_BUILD_SHA").to_string());
     Json(json!({ "version": env!("CARGO_PKG_VERSION"), "git_sha": git_sha })).into_response()
 }
 

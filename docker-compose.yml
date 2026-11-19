@@ -1,0 +1,52 @@
+# ForgeHub on one host: the server plus Caddy for automatic
+# HTTPS. Usage:
+#   cp .env.example .env   # edit: domain, secret, prod
+#   docker compose up -d
+# See docs/deploy.md for the full walkthrough.
+
+services:
+  forgehub:
+    build:
+      context: .
+      args:
+        GIT_SHA: ${GIT_SHA:-compose}
+    image: forgehub:latest
+    restart: unless-stopped
+    environment:
+      FORGEHUB_ENV: prod
+      FORGEHUB_BIND: 0.0.0.0:8080
+      FORGEHUB_BASE_URL: https://${FORGEHUB_DOMAIN:-localhost}
+      FORGEHUB_DATABASE_URL: <redacted>
+      FORGEHUB_WEB_DIR: /srv/web
+      FORGEHUB_SECRET_KEY: ${FORGEHUB_SECRET_KEY:?set FORGEHUB_SECRET_KEY in .env (32+ random bytes)}
+      FORGEHUB_ALLOW_SIGNUP: ${FORGEHUB_ALLOW_SIGNUP:-true}
+    volumes:
+      - forgehub-data:/data
+    # Not published on the host: Caddy is the only way in.
+    expose:
+      - "8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - forgehub
+    environment:
+      FORGEHUB_DOMAIN: ${FORGEHUB_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  forgehub-data:
+  caddy-data:
+  caddy-config:

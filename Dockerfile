@@ -15,9 +15,18 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY docs ./docs
 COPY README.md LICENSE ./
+# Stamp the image with its source revision (Step 21):
+# /api/v1/version reports it; the build also embeds the
+# checkout's own git sha when built from a clone.
+ARG GIT_SHA=""
+ENV FORGEHUB_GIT_SHA=$GIT_SHA
 RUN cargo build --release -p forge-server
 
 FROM debian:bookworm-slim AS runtime
+# The build context has no .git, so the revision stamp comes
+# from this build argument (compose passes GIT_SHA through).
+ARG GIT_SHA=""
+ENV FORGEHUB_GIT_SHA=$GIT_SHA
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl \
  && rm -rf /var/lib/apt/lists/* \
