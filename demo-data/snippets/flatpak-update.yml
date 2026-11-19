@@ -1,0 +1,6 @@
+name: flatpak-update
+description: Update all Flatpak apps and remove unused runtimes
+tags: [flatpak, update]
+mode: script
+script: |
+  flatpak update -y && flatpak uninstall --unused -y

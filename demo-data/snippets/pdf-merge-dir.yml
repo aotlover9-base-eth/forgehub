@@ -1,0 +1,11 @@
+name: pdf-merge-dir
+description: Merge all PDFs in a directory into merged.pdf (needs poppler's pdfunite)
+tags: [pdf]
+mode: script
+variables:
+  DIR:
+    default: "."
+    description: "Directory of PDFs"
+script: |
+  pdfunite {{DIR}}/*.pdf {{DIR}}/merged.pdf
+  ls -lh {{DIR}}/merged.pdf

@@ -1,0 +1,7 @@
+name: my-ips
+description: Show local IP addresses and the public IP
+tags: [network, ip]
+mode: script
+script: |
+  echo "local:"; hostname -I
+  echo "public:"; curl -s --max-time 5 ifconfig.me || echo "(offline)"

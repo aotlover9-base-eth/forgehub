@@ -1,0 +1,9 @@
+name: count-loc
+description: Count lines of code by file extension in the current tree
+tags: [code, wc]
+mode: script
+script: |
+  for ext in rs js ts tsx py go sh c h java; do
+    n=$(find . -name "*.$ext" -not -path './.git/*' -not -path './node_modules/*' -not -path './target/*' 2>/dev/null | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+    if [ -n "$n" ] && [ "$n" != "0" ]; then echo "$ext: $n"; fi
+  done

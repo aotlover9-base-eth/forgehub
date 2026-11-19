@@ -1,0 +1,10 @@
+name: count-by-extension
+description: Count files by extension under a directory
+tags: [find, files]
+mode: script
+variables:
+  DIR:
+    default: "."
+    description: "Directory to scan"
+script: |
+  find {{DIR}} -type f 2>/dev/null | grep -o '\.[A-Za-z0-9]\{1,10\}$' | sort | uniq -c | sort -rn | head -20

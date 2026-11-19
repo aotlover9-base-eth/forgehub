@@ -1,0 +1,11 @@
+name: backup-verify
+description: List the newest files in a backup directory with the total size
+tags: [backup]
+mode: script
+variables:
+  DIR:
+    default: "."
+    description: "Backup directory"
+script: |
+  ls -lht {{DIR}} | head -12
+  echo "total:"; du -sh {{DIR}}

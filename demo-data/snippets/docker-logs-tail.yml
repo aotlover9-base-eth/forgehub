@@ -1,0 +1,10 @@
+name: docker-logs-tail
+description: Follow a container's logs, last 100 lines first
+tags: [docker, logs]
+mode: script
+variables:
+  CONTAINER:
+    description: "Container name or id"
+    required: true
+script: |
+  docker logs -f --tail 100 {{CONTAINER}}

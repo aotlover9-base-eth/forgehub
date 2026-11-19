@@ -1,0 +1,13 @@
+name: watch-cmd
+description: Re-run a command every N seconds with watch
+tags: [watch, monitor]
+mode: script
+variables:
+  CMD:
+    description: "Command to repeat"
+    required: true
+  SECS:
+    default: "2"
+    description: "Interval in seconds"
+script: |
+  watch -n {{SECS}} '{{CMD}}'

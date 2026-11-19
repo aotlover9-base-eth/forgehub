@@ -1,0 +1,6 @@
+name: apt-update-upgrade
+description: Update package lists, upgrade everything, drop orphans (Debian/Ubuntu)
+tags: [apt, debian, update]
+mode: script
+script: |
+  sudo apt update && sudo apt -y upgrade && sudo apt -y autoremove

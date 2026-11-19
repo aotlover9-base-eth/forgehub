@@ -1,0 +1,8 @@
+name: wifi-info
+description: Show Wi-Fi and network device status (NetworkManager)
+tags: [network, wifi]
+mode: script
+script: |
+  nmcli device status
+  echo "--- active connections ---"
+  nmcli connection show --active

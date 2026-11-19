@@ -1,0 +1,6 @@
+name: failed-services
+description: List failed systemd units
+tags: [systemd]
+mode: script
+script: |
+  systemctl --failed --no-pager

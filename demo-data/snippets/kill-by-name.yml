@@ -1,0 +1,11 @@
+name: kill-by-name
+description: Show processes matching a pattern, then kill them
+tags: [ps, kill]
+mode: script
+variables:
+  PATTERN:
+    description: "Process name pattern"
+    required: true
+script: |
+  pgrep -af '{{PATTERN}}'
+  pkill -f '{{PATTERN}}' && echo "killed" || echo "nothing matched"

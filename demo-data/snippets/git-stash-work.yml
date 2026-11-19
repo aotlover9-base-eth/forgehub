@@ -1,0 +1,11 @@
+name: git-stash-work
+description: Stash current work with a dated message and list stashes
+tags: [git, stash]
+mode: script
+variables:
+  MSG:
+    default: "wip"
+    description: "Stash label"
+script: |
+  git stash push -u -m '{{MSG}} {{DATE}}'
+  git stash list | head -5

@@ -1,0 +1,10 @@
+name: dir-sizes
+description: Size of every entry in a directory, biggest first
+tags: [disk, du]
+mode: script
+variables:
+  DIR:
+    default: "."
+    description: "Directory to measure"
+script: |
+  du -sh {{DIR}}/* {{DIR}}/.[!.]* 2>/dev/null | sort -hr | head -25

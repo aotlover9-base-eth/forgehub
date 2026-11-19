@@ -1,0 +1,13 @@
+name: tar-backup-dir
+description: Create a dated .tar.gz archive of a directory in the current folder
+tags: [backup, tar]
+mode: script
+variables:
+  DIR:
+    description: "Directory to archive"
+    required: true
+script: |
+  name=$(basename {{DIR}})
+  out="$name-{{DATE}}.tar.gz"
+  tar -czf "$out" -C "$(dirname {{DIR}})" "$name"
+  ls -lh "$out"

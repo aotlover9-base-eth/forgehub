@@ -1,0 +1,7 @@
+name: git-preview-discard
+description: Preview exactly what a full discard would throw away (dry run only)
+tags: [git, undo]
+mode: script
+script: |
+  echo "== modified/staged =="; git status --short
+  echo "== untracked that clean would delete =="; git clean -nd | head -30

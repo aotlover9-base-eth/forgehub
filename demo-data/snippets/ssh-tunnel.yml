@@ -1,0 +1,16 @@
+name: ssh-tunnel
+description: Open a local port forward through an SSH host (Ctrl+C to close)
+tags: [ssh, network]
+mode: script
+variables:
+  HOST:
+    description: "SSH target, e.g. user@server"
+    required: true
+  LOCAL:
+    default: "8080"
+    description: "Local port"
+  REMOTE:
+    default: "80"
+    description: "Remote port on the server"
+script: |
+  ssh -N -L {{LOCAL}}:127.0.0.1:{{REMOTE}} {{HOST}}

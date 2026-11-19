@@ -1,0 +1,6 @@
+name: speed-check
+description: Quick download speed check against Cloudflare (25 MB)
+tags: [network, speed]
+mode: script
+script: |
+  curl -s -o /dev/null -w 'downloaded %{size_download} bytes at %{speed_download} B/s in %{time_total}s\n' 'https://speed.cloudflare.com/__down?bytes=25000000'

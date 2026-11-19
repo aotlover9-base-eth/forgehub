@@ -1,0 +1,6 @@
+name: git-contributors
+description: Rank contributors by commit count
+tags: [git, log]
+mode: script
+script: |
+  git shortlog -sn --all | head -20

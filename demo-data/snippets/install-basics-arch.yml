@@ -1,0 +1,6 @@
+name: install-basics-arch
+description: Install the everyday CLI toolkit on Arch
+tags: [arch, pacman, setup]
+mode: script
+script: |
+  sudo pacman -S --needed git curl wget htop tmux jq ripgrep unzip zip tree ncdu base-devel

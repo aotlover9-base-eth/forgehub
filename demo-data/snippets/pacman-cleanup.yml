@@ -1,0 +1,8 @@
+name: pacman-cleanup
+description: Remove orphan packages and prune the pacman cache on Arch
+tags: [arch, pacman, cleanup]
+mode: script
+script: |
+  orphans=$(pacman -Qtdq)
+  if [ -n "$orphans" ]; then sudo pacman -Rns $orphans; else echo "no orphans"; fi
+  if command -v paccache >/dev/null; then sudo paccache -r; else sudo pacman -Sc; fi

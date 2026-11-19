@@ -1,0 +1,12 @@
+name: mp3-extract
+description: Extract the audio of a video file to MP3 next to it
+tags: [ffmpeg, audio]
+mode: script
+variables:
+  FILE:
+    description: "Video file"
+    required: true
+script: |
+  out="${FILE%.*}.mp3"
+  ffmpeg -i '{{FILE}}' -vn -codec:a libmp3lame -q:a 2 "$out"
+  echo "wrote $out"

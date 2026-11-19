@@ -1,0 +1,6 @@
+name: dnf-update
+description: Refresh metadata and upgrade all packages (Fedora/RHEL)
+tags: [dnf, fedora, update]
+mode: script
+script: |
+  sudo dnf upgrade --refresh -y

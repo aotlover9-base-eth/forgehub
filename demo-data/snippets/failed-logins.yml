@@ -1,0 +1,6 @@
+name: failed-logins
+description: Show recent failed SSH login attempts
+tags: [ssh, security, logs]
+mode: script
+script: |
+  for f in /var/log/auth.log /var/log/secure; do if [ -f $f ]; then sudo grep 'Failed password' $f | tail -20; fi; done

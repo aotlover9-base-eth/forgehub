@@ -1,0 +1,17 @@
+name: replace-in-file
+description: Replace text in a file, keeping a .bak backup
+tags: [sed, text]
+mode: script
+variables:
+  FILE:
+    description: "File to edit"
+    required: true
+  FROM:
+    description: "Text to find"
+    required: true
+  TO:
+    description: "Replacement"
+    required: true
+script: |
+  sed -i.bak 's/{{FROM}}/{{TO}}/g' {{FILE}}
+  echo "done, backup at {{FILE}}.bak"

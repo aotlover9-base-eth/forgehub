@@ -1,0 +1,10 @@
+name: serve-here
+description: Serve the current directory over HTTP on a port
+tags: [python, http, server]
+mode: script
+variables:
+  PORT:
+    default: "8000"
+    description: "Port to serve on"
+script: |
+  python3 -m http.server {{PORT}}

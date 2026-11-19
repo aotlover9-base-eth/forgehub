@@ -1,0 +1,7 @@
+name: pip-requirements
+description: Freeze installed pip packages into requirements.txt
+tags: [python, pip]
+mode: script
+script: |
+  pip freeze > requirements.txt
+  wc -l requirements.txt

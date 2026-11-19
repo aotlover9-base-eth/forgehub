@@ -1,0 +1,13 @@
+name: python-venv
+description: Create a virtualenv, activate it for this shell and upgrade pip
+tags: [python, venv]
+mode: script
+variables:
+  DIR:
+    default: ".venv"
+    description: "Virtualenv directory"
+script: |
+  python3 -m venv {{DIR}}
+  . {{DIR}}/bin/activate
+  pip install --upgrade pip
+  echo "venv ready: activate it with  source {{DIR}}/bin/activate"

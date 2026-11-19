@@ -1,0 +1,13 @@
+name: grep-codebase
+description: Search a pattern in a codebase, skipping VCS and build directories
+tags: [grep, search]
+mode: script
+variables:
+  PATTERN:
+    description: "Text or regex to find"
+    required: true
+  DIR:
+    default: "."
+    description: "Where to search"
+script: |
+  grep -rn --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=target --exclude-dir=dist '{{PATTERN}}' {{DIR}} | head -50

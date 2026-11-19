@@ -1,0 +1,10 @@
+name: docker-shell
+description: Open a shell inside a running container (bash if present, else sh)
+tags: [docker]
+mode: script
+variables:
+  CONTAINER:
+    description: "Container name or id"
+    required: true
+script: |
+  docker exec -it {{CONTAINER}} sh -c 'exec bash 2>/dev/null || exec sh'

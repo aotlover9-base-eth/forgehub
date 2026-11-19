@@ -1,0 +1,7 @@
+name: rust-build-release
+description: Release build and report the target directory size
+tags: [rust, cargo]
+mode: script
+script: |
+  cargo build --release
+  du -sh target/release

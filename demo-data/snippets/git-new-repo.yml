@@ -1,0 +1,10 @@
+name: git-new-repo
+description: Initialise a repo with a sane first commit (steps mode demo)
+tags: [git, setup]
+mode: steps
+steps:
+  - git init -b main
+  - printf 'target/\nnode_modules/\n.env\n' > .gitignore
+  - git add -A
+  - git commit -m 'initial commit'
+  - git log --oneline

@@ -1,0 +1,9 @@
+name: backup-dotfiles
+description: Collect the shell dotfiles that exist into a dated archive
+tags: [backup, dotfiles]
+mode: script
+script: |
+  mkdir -p dotfiles-backup
+  for f in .bashrc .zshrc .bash_profile .gitconfig .profile; do if [ -f ~/$f ]; then cp ~/$f dotfiles-backup/; fi; done
+  tar -czf dotfiles-{{DATE}}.tar.gz dotfiles-backup
+  ls -lh dotfiles-{{DATE}}.tar.gz

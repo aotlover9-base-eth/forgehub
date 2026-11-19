@@ -1,0 +1,6 @@
+name: top-mem
+description: Top 15 processes by memory usage
+tags: [ps, monitor]
+mode: script
+script: |
+  ps aux --sort=-%mem | head -16

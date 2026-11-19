@@ -1,0 +1,10 @@
+name: logs-for-service
+description: Last hour of logs for one systemd service
+tags: [logs, systemd]
+mode: script
+variables:
+  SERVICE:
+    description: "Unit name, e.g. docker or sshd"
+    required: true
+script: |
+  journalctl -u {{SERVICE}} --since '1 hour ago' --no-pager | tail -80

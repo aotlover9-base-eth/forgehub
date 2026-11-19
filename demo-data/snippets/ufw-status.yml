@@ -1,0 +1,6 @@
+name: ufw-status
+description: Show firewall status and rules (ufw)
+tags: [security, firewall]
+mode: script
+script: |
+  sudo ufw status verbose

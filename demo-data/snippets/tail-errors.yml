@@ -1,0 +1,10 @@
+name: tail-errors
+description: Follow a log file showing only error and warning lines
+tags: [logs, tail]
+mode: script
+variables:
+  LOG:
+    default: "/var/log/syslog"
+    description: "Log file to follow"
+script: |
+  tail -F {{LOG}} | grep --line-buffered -iE 'error|warn|fail|exception'

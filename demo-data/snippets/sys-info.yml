@@ -1,0 +1,9 @@
+name: sys-info
+description: Show OS, kernel, uptime, memory and disk at a glance
+tags: [system, info]
+mode: script
+script: |
+  grep PRETTY_NAME /etc/os-release; uname -a
+  echo "== Uptime =="; uptime
+  echo "== Memory =="; free -h
+  echo "== Disk =="; df -h / /home 2>/dev/null

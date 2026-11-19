@@ -1,0 +1,10 @@
+name: find-by-name
+description: Find files by name pattern anywhere on the system
+tags: [find, files]
+mode: script
+variables:
+  PATTERN:
+    description: "Glob pattern, e.g. *.log or nginx.conf"
+    required: true
+script: |
+  find / -name '{{PATTERN}}' 2>/dev/null | head -40

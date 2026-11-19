@@ -1,0 +1,16 @@
+name: video-compress
+description: Compress a video with H.264 at a CRF quality (28 is a good default)
+tags: [ffmpeg, video]
+mode: script
+variables:
+  IN:
+    description: "Input video"
+    required: true
+  OUT:
+    description: "Output file"
+    required: true
+  CRF:
+    default: "28"
+    description: "Quality: lower is better and bigger"
+script: |
+  ffmpeg -i '{{IN}}' -vcodec libx264 -crf {{CRF}} -preset medium -acodec aac '{{OUT}}'

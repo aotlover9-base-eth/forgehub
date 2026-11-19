@@ -1,0 +1,10 @@
+name: http-headers
+description: Fetch the response headers of a URL
+tags: [network, curl, http]
+mode: script
+variables:
+  URL:
+    description: "Full URL, e.g. https://example.com"
+    required: true
+script: |
+  curl -sI {{URL}}

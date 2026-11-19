@@ -1,0 +1,20 @@
+name: extract-anything
+description: Extract any common archive format by its extension
+tags: [extract, tar, zip]
+mode: script
+variables:
+  FILE:
+    description: "Archive to extract"
+    required: true
+script: |
+  f='{{FILE}}'
+  case "$f" in
+    *.tar.gz|*.tgz) tar -xzf "$f" ;;
+    *.tar.bz2) tar -xjf "$f" ;;
+    *.tar.xz) tar -xJf "$f" ;;
+    *.zip) unzip "$f" ;;
+    *.7z) 7z x "$f" ;;
+    *.gz) gunzip -k "$f" ;;
+    *) echo "unknown format: $f"; exit 1 ;;
+  esac
+  echo "extracted: $f"

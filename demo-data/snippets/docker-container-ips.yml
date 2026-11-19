@@ -1,0 +1,6 @@
+name: docker-container-ips
+description: Show the internal IP of every running container
+tags: [docker, network]
+mode: script
+script: |
+  docker ps -q | xargs -r docker inspect --format '{{.Name}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}'

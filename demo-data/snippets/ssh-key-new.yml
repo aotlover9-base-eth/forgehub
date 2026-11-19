@@ -1,0 +1,11 @@
+name: ssh-key-new
+description: Create a new ed25519 SSH key and print the public half
+tags: [ssh, keys, security]
+mode: script
+variables:
+  NAME:
+    default: "newkey"
+    description: "Key file name under ~/.ssh"
+script: |
+  ssh-keygen -t ed25519 -f ~/.ssh/{{NAME}} -C '{{USER}}'
+  cat ~/.ssh/{{NAME}}.pub

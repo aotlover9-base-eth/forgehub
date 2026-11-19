@@ -1,0 +1,7 @@
+name: node-reinstall
+description: Delete node_modules and reinstall exactly from the lockfile
+tags: [node, npm]
+mode: script
+script: |
+  rm -rf node_modules
+  npm ci

@@ -120,7 +120,7 @@ Detail: [docs/security.md](docs/security.md) ·
 [Operations](docs/operations.md) · [FAQ](docs/faq.md) ·
 [Known gaps](docs/known-gaps.md) · [Forgenesis migration](docs/forgenesis-migration.md) ·
 [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) ·
-[Changelog](CHANGELOG.md)
+[Changelog](CHANGELOG.md) · [Demo data pack](demo-data/) — 105 starter snippets + loader
 
 ## Development
 

@@ -1,0 +1,12 @@
+name: lan-share
+description: Share the current folder on the LAN and print the URL
+tags: [http, share]
+mode: script
+variables:
+  PORT:
+    default: "8000"
+    description: "Port to share on"
+script: |
+  ip=$(hostname -I | awk '{print $1}')
+  echo "open http://$ip:{{PORT}} on any device on this network (Ctrl+C stops)"
+  python3 -m http.server {{PORT}} --bind 0.0.0.0

@@ -1,0 +1,10 @@
+name: docker-compose-update
+description: Pull fresh images and restart a compose project, then prune old images
+tags: [docker, compose]
+mode: script
+variables:
+  DIR:
+    description: "Directory with docker-compose.yml"
+    required: true
+script: |
+  cd {{DIR}} && docker compose pull && docker compose up -d && docker image prune -f

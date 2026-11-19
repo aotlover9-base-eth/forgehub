@@ -1,0 +1,10 @@
+name: qr-text
+description: Render text or a URL as a QR code in the terminal (needs qrencode)
+tags: [qr]
+mode: script
+variables:
+  TEXT:
+    description: "Text or URL to encode"
+    required: true
+script: |
+  qrencode -t ANSIUTF8 '{{TEXT}}'

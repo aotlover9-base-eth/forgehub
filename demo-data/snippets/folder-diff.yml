@@ -1,0 +1,13 @@
+name: folder-diff
+description: Show which files differ between two directories
+tags: [diff, files]
+mode: script
+variables:
+  A:
+    description: "Left directory"
+    required: true
+  B:
+    description: "Right directory"
+    required: true
+script: |
+  diff -rq {{A}} {{B}} 2>/dev/null | head -40

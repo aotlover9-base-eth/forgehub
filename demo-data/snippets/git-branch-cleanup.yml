@@ -1,0 +1,12 @@
+name: git-branch-cleanup
+description: Delete local branches already merged into main
+tags: [git]
+mode: script
+variables:
+  MAIN:
+    default: "main"
+    description: "Base branch name"
+script: |
+  git checkout {{MAIN}}
+  git pull
+  git branch --merged | grep -v -E '^\*|{{MAIN}}|master' | xargs -r git branch -d

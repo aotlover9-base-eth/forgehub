@@ -1,0 +1,6 @@
+name: sudo-users
+description: List every user with sudo/admin rights
+tags: [security, users]
+mode: script
+script: |
+  getent group sudo wheel 2>/dev/null

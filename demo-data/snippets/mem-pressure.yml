@@ -1,0 +1,7 @@
+name: mem-pressure
+description: Memory, swap and a 3-second vmstat sample
+tags: [memory, monitor]
+mode: script
+script: |
+  free -h
+  vmstat 1 3

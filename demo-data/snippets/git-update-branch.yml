@@ -1,0 +1,11 @@
+name: git-update-branch
+description: Fetch and rebase the current branch onto the latest main
+tags: [git]
+mode: script
+variables:
+  MAIN:
+    default: "main"
+    description: "Base branch name"
+script: |
+  git fetch origin
+  git rebase origin/{{MAIN}}

@@ -1,0 +1,8 @@
+name: boot-time-report
+description: Show boot duration and the slowest services at startup
+tags: [systemd, boot]
+mode: script
+script: |
+  systemd-analyze
+  echo "--- slowest ---"
+  systemd-analyze blame | head -15

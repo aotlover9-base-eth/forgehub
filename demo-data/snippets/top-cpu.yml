@@ -1,0 +1,6 @@
+name: top-cpu
+description: Top 15 processes by CPU usage
+tags: [ps, monitor]
+mode: script
+script: |
+  ps aux --sort=-%cpu | head -16

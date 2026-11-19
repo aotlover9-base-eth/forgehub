@@ -1,0 +1,11 @@
+name: mysql-dump
+description: Dump a MySQL database to a dated gzip file
+tags: [mysql, backup, database]
+mode: script
+variables:
+  DB:
+    description: "Database name"
+    required: true
+script: |
+  mysqldump {{DB}} | gzip > {{DB}}-{{TIMESTAMP}}.sql.gz
+  ls -lh {{DB}}-{{TIMESTAMP}}.sql.gz

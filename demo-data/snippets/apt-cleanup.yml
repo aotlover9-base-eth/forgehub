@@ -1,0 +1,7 @@
+name: apt-cleanup
+description: Remove orphan packages and clear the apt cache, show cache size after
+tags: [apt, debian, cleanup]
+mode: script
+script: |
+  sudo apt -y autoremove && sudo apt autoclean
+  echo "apt cache now:"; sudo du -sh /var/cache/apt

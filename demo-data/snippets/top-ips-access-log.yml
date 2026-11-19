@@ -1,0 +1,10 @@
+name: top-ips-access-log
+description: Top 20 client IPs in an nginx/apache access log
+tags: [logs, awk]
+mode: script
+variables:
+  LOG:
+    default: "/var/log/nginx/access.log"
+    description: "Access log path"
+script: |
+  awk '{print $1}' {{LOG}} | sort | uniq -c | sort -rn | head -20

@@ -1,0 +1,12 @@
+name: subnet-scan
+description: List live hosts on the local /24 subnet
+tags: [network, scan]
+mode: script
+variables:
+  SUBNET:
+    default: "192.168.1"
+    description: "First three octets of the subnet"
+script: |
+  base={{SUBNET}}
+  for i in $(seq 1 254); do ping -c1 -W1 $base.$i >/dev/null 2>&1 & done; wait
+  arp -n | grep -v incomplete | head -40

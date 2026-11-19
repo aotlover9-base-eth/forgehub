@@ -1,0 +1,11 @@
+name: pg-dump
+description: Dump a PostgreSQL database to a dated gzip file
+tags: [postgres, backup, database]
+mode: script
+variables:
+  DB:
+    description: "Database name"
+    required: true
+script: |
+  pg_dump {{DB}} | gzip > {{DB}}-{{TIMESTAMP}}.sql.gz
+  ls -lh {{DB}}-{{TIMESTAMP}}.sql.gz

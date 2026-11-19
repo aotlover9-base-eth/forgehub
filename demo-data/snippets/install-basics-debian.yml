@@ -1,0 +1,6 @@
+name: install-basics-debian
+description: Install the everyday CLI toolkit on Debian/Ubuntu
+tags: [apt, debian, setup]
+mode: script
+script: |
+  sudo apt update && sudo apt -y install curl wget git htop tmux jq ripgrep unzip zip tree ncdu

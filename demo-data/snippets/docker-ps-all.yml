@@ -1,0 +1,6 @@
+name: docker-ps-all
+description: List all containers (running and stopped) in a clean table
+tags: [docker]
+mode: script
+script: |
+  docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'

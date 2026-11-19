@@ -1,0 +1,6 @@
+name: cpu-temp
+description: Show CPU temperatures from thermal zones or lm-sensors
+tags: [monitor, hardware]
+mode: script
+script: |
+  if command -v sensors >/dev/null; then sensors; else for z in /sys/class/thermal/thermal_zone*; do echo "$z: $(cat $z/type) $(($(cat $z/temp)/1000))C"; done; fi

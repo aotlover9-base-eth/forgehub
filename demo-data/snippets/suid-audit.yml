@@ -1,0 +1,10 @@
+name: suid-audit
+description: Find setuid binaries under a path (security audit staple)
+tags: [security, audit]
+mode: script
+variables:
+  DIR:
+    default: "/usr"
+    description: "Root of the search"
+script: |
+  find {{DIR}} -type f -perm -4000 2>/dev/null | head -40

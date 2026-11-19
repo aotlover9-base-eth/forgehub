@@ -1,0 +1,10 @@
+name: service-status
+description: Status and recent log lines for a systemd service
+tags: [systemd]
+mode: script
+variables:
+  SERVICE:
+    description: "Unit name, e.g. docker"
+    required: true
+script: |
+  systemctl status {{SERVICE}} --no-pager | head -25

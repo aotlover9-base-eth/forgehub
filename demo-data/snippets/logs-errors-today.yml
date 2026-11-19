@@ -1,0 +1,6 @@
+name: logs-errors-today
+description: Show today's warnings and errors from the journal
+tags: [logs, journalctl]
+mode: script
+script: |
+  journalctl -p warning --since today --no-pager | tail -60

@@ -1,0 +1,6 @@
+name: logs-follow
+description: Follow the system journal live, starting with the last 100 lines
+tags: [logs, journalctl]
+mode: script
+script: |
+  journalctl -f -n 100 --no-pager

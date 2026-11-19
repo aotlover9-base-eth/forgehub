@@ -1,0 +1,10 @@
+name: weather
+description: Terminal weather for a city (wttr.in)
+tags: [weather, curl]
+mode: script
+variables:
+  CITY:
+    default: ""
+    description: "City name; empty means your location"
+script: |
+  curl -s 'wttr.in/{{CITY}}?format=v2'

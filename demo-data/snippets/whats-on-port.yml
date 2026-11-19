@@ -1,0 +1,10 @@
+name: whats-on-port
+description: Show which process owns a listening port
+tags: [network, ss]
+mode: script
+variables:
+  PORT:
+    description: "Port number"
+    required: true
+script: |
+  sudo ss -tulpn | grep ':{{PORT}} ' || echo "nothing on {{PORT}}"

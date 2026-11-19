@@ -1,0 +1,10 @@
+name: dedupe-lines
+description: Count duplicate lines in a file, most repeated first
+tags: [text, sort]
+mode: script
+variables:
+  FILE:
+    description: "Text file"
+    required: true
+script: |
+  sort {{FILE}} | uniq -c | sort -rn | head -25

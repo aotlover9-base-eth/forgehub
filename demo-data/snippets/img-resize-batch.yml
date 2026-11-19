@@ -1,0 +1,13 @@
+name: img-resize-batch
+description: Resize every JPG in a directory to a max width, in place (copies kept as .orig)
+tags: [imagemagick, images]
+mode: script
+variables:
+  DIR:
+    default: "."
+    description: "Directory of JPGs"
+  WIDTH:
+    default: "1600"
+    description: "Max width in pixels"
+script: |
+  mogrify -resize '{{WIDTH}}x>' -backup 2>/dev/null {{DIR}}/*.jpg 2>/dev/null || mogrify -resize '{{WIDTH}}x>' {{DIR}}/*.jpg

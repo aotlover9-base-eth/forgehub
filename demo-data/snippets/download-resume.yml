@@ -1,0 +1,10 @@
+name: download-resume
+description: Download a file, resuming if interrupted
+tags: [network, wget]
+mode: script
+variables:
+  URL:
+    description: "File URL"
+    required: true
+script: |
+  wget -c '{{URL}}'

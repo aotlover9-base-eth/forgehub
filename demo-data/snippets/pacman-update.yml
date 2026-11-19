@@ -1,0 +1,6 @@
+name: pacman-update
+description: Full system upgrade on Arch (sync + upgrade)
+tags: [arch, pacman, update]
+mode: script
+script: |
+  sudo pacman -Syu

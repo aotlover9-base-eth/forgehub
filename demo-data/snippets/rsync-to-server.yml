@@ -1,0 +1,16 @@
+name: rsync-to-server
+description: Sync a local directory to a server over SSH
+tags: [rsync, ssh, backup]
+mode: script
+variables:
+  SRC:
+    description: "Local directory"
+    required: true
+  HOST:
+    description: "SSH target, e.g. user@server"
+    required: true
+  DST:
+    description: "Remote directory"
+    required: true
+script: |
+  rsync -avz -e ssh {{SRC}} {{HOST}}:{{DST}}

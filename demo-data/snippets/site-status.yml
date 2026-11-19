@@ -1,0 +1,10 @@
+name: site-status
+description: Print the HTTP status code and total time for a URL
+tags: [network, curl, http]
+mode: script
+variables:
+  URL:
+    description: "Full URL"
+    required: true
+script: |
+  curl -s -o /dev/null -w 'code=%{http_code} time=%{time_total}s size=%{size_download}B\n' {{URL}}

@@ -1,0 +1,6 @@
+name: node-dev
+description: Start the project's dev server (npm run dev)
+tags: [node, npm]
+mode: script
+script: |
+  npm run dev

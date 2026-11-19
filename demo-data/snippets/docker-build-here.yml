@@ -1,0 +1,10 @@
+name: docker-build-here
+description: Build an image from the Dockerfile in the current directory
+tags: [docker, build]
+mode: script
+variables:
+  TAG:
+    description: "Image tag, e.g. myapp:latest"
+    required: true
+script: |
+  docker build -t {{TAG}} .

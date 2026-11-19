@@ -1,0 +1,13 @@
+name: csv-column
+description: Print one column of a CSV file
+tags: [csv, awk]
+mode: script
+variables:
+  FILE:
+    description: "CSV file"
+    required: true
+  COL:
+    default: "1"
+    description: "Column number"
+script: |
+  awk -F, -v c={{COL}} '{print $c}' {{FILE}} | head -30

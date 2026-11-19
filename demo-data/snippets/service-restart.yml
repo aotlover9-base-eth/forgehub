@@ -1,0 +1,11 @@
+name: service-restart
+description: Restart a systemd service and show its status
+tags: [systemd]
+mode: script
+variables:
+  SERVICE:
+    description: "Unit name"
+    required: true
+script: |
+  sudo systemctl restart {{SERVICE}}
+  systemctl status {{SERVICE}} --no-pager | head -12

@@ -1,0 +1,6 @@
+name: git-big-blobs
+description: Find the largest objects in the repository history
+tags: [git, size]
+mode: script
+script: |
+  git rev-list --objects --all | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' | awk '$1=="blob" {print $3, $4}' | sort -rn | head -15 | numfmt --field=1 --to=iec

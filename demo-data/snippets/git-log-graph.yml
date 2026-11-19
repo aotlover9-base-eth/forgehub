@@ -1,0 +1,6 @@
+name: git-log-graph
+description: Compact decorated graph of the last 25 commits across all branches
+tags: [git, log]
+mode: script
+script: |
+  git log --oneline --graph --decorate --all -25

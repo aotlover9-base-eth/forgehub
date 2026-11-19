@@ -1,0 +1,10 @@
+name: big-files
+description: Find files larger than 100 MB under a directory, biggest first
+tags: [find, disk]
+mode: script
+variables:
+  DIR:
+    default: "~"
+    description: "Directory to search"
+script: |
+  find {{DIR}} -type f -size +100M -printf '%s %p\n' 2>/dev/null | sort -rn | head -20 | numfmt --field=1 --to=iec

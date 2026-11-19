@@ -1,0 +1,12 @@
+name: disk-usage-top
+description: Disk usage overview plus the biggest directories under a path
+tags: [disk, du]
+mode: script
+variables:
+  PATH:
+    default: "/"
+    description: "Directory to scan"
+script: |
+  df -h
+  echo "--- biggest under {{PATH}} ---"
+  du -h --max-depth=1 {{PATH}} 2>/dev/null | sort -hr | head -15

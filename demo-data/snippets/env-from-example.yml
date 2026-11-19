@@ -1,0 +1,6 @@
+name: env-from-example
+description: Create .env from .env.example if it does not exist yet
+tags: [dev, env]
+mode: script
+script: |
+  if [ -f .env ]; then echo ".env already exists, leaving it alone"; else cp .env.example .env && echo "created .env from .env.example - now fill in the values"; fi

@@ -1,0 +1,6 @@
+name: npm-outdated
+description: Show outdated npm dependencies for this project
+tags: [node, npm]
+mode: script
+script: |
+  npm outdated || true

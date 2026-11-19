@@ -1,0 +1,6 @@
+name: ports-listening
+description: Show all listening TCP/UDP ports with their processes
+tags: [network, ss]
+mode: script
+script: |
+  sudo ss -tulpn | grep LISTEN

@@ -1,0 +1,7 @@
+name: git-undo-commit
+description: Undo the last commit, keeping all its changes staged
+tags: [git, undo]
+mode: script
+script: |
+  git reset --soft HEAD~1
+  git status --short | head -20

@@ -1,0 +1,7 @@
+name: go-check
+description: Vet and test a Go module
+tags: [go]
+mode: script
+script: |
+  go vet ./...
+  go test ./...

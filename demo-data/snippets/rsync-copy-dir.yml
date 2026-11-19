@@ -1,0 +1,13 @@
+name: rsync-copy-dir
+description: Copy a directory tree with rsync, preserving everything, with progress
+tags: [rsync, copy]
+mode: script
+variables:
+  SRC:
+    description: "Source directory"
+    required: true
+  DST:
+    description: "Destination directory"
+    required: true
+script: |
+  rsync -aH --info=progress2 {{SRC}}/ {{DST}}/

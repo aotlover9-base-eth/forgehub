@@ -1,0 +1,13 @@
+name: git-changed-files
+description: List files changed between two revisions with their status
+tags: [git, diff]
+mode: script
+variables:
+  FROM:
+    default: "HEAD~1"
+    description: "From revision"
+  TO:
+    default: "HEAD"
+    description: "To revision"
+script: |
+  git diff --name-status {{FROM}}..{{TO}}

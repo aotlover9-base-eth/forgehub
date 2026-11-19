@@ -1,0 +1,6 @@
+name: docker-image-sizes
+description: List Docker images sorted by size, biggest first
+tags: [docker]
+mode: script
+script: |
+  docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | sort -k2 -hr | head -25

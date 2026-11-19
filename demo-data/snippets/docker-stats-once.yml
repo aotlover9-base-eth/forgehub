@@ -1,0 +1,6 @@
+name: docker-stats-once
+description: One-shot CPU/memory stats for all running containers
+tags: [docker, monitor]
+mode: script
+script: |
+  docker stats --no-stream

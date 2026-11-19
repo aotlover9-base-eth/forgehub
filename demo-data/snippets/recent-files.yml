@@ -1,0 +1,13 @@
+name: recent-files
+description: Files modified in the last N days under a directory, newest first
+tags: [find, files]
+mode: script
+variables:
+  DIR:
+    default: "."
+    description: "Directory to search"
+  DAYS:
+    default: "7"
+    description: "Look back this many days"
+script: |
+  find {{DIR}} -type f -mtime -{{DAYS}} -printf '%T+ %p\n' 2>/dev/null | sort -r | head -30

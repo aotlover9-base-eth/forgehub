@@ -1,0 +1,11 @@
+name: home-snapshot
+description: Mirror Documents and Projects to an external drive, skipping caches
+tags: [backup, rsync]
+mode: script
+variables:
+  DEST:
+    description: "Destination root, e.g. /run/media/user/drive"
+    required: true
+script: |
+  rsync -a --exclude='.cache' --exclude='node_modules' --exclude='target' ~/Documents ~/Projects {{DEST}}/
+  echo "snapshot done at {{TIMESTAMP}}"

@@ -1,0 +1,10 @@
+name: dns-check
+description: Look up A, AAAA, MX and NS records for a domain
+tags: [network, dns]
+mode: script
+variables:
+  DOMAIN:
+    description: "Domain name, e.g. example.com"
+    required: true
+script: |
+  for t in A AAAA MX NS; do echo "== $t =="; dig +short {{DOMAIN}} $t; done

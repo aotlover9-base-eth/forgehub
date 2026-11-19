@@ -1,0 +1,11 @@
+name: kill-port
+description: Free a TCP port by killing whatever listens on it
+tags: [network, port]
+mode: script
+variables:
+  PORT:
+    description: "Port to free"
+    required: true
+script: |
+  if command -v fuser >/dev/null; then fuser -k {{PORT}}/tcp; else lsof -ti:{{PORT}} | xargs -r kill; fi
+  echo "port {{PORT}} should be free now"

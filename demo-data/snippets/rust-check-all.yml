@@ -1,0 +1,8 @@
+name: rust-check-all
+description: Run fmt, clippy and tests as separate steps (steps mode demo)
+tags: [rust, cargo]
+mode: steps
+steps:
+  - cargo fmt --all --check
+  - cargo clippy --workspace --all-targets -- -D warnings
+  - cargo test --workspace

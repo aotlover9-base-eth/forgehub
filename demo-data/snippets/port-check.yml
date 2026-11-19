@@ -1,0 +1,10 @@
+name: port-check
+description: Check whether a TCP port is listening on this machine
+tags: [network, ss]
+mode: script
+variables:
+  PORT:
+    description: "Port number, e.g. 8080"
+    required: true
+script: |
+  if ss -tln | grep -q ':{{PORT}} '; then echo "port {{PORT}} is LISTENING"; else echo "port {{PORT}} is free"; fi

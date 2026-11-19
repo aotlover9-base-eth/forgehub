@@ -1,0 +1,10 @@
+name: shred-file
+description: Securely overwrite and delete a single file
+tags: [security, files]
+mode: script
+variables:
+  FILE:
+    description: "File to shred"
+    required: true
+script: |
+  shred -v -u -z -n 3 '{{FILE}}'

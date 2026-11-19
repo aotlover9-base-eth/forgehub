@@ -1,0 +1,9 @@
+name: docker-cleanup
+description: Show Docker disk usage, prune stopped containers and dangling images, show again
+tags: [docker, cleanup]
+mode: script
+script: |
+  docker system df
+  docker system prune -f
+  echo "--- after ---"
+  docker system df

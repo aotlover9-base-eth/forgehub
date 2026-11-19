@@ -1,0 +1,10 @@
+name: empty-dirs
+description: List empty directories under a path
+tags: [find, files]
+mode: script
+variables:
+  DIR:
+    default: "."
+    description: "Directory to scan"
+script: |
+  find {{DIR}} -type d -empty 2>/dev/null | head -40

@@ -1,0 +1,7 @@
+name: docker-stop-all
+description: Stop every running container (asks nothing else; containers stay on disk)
+tags: [docker]
+mode: script
+script: |
+  ids=$(docker ps -q)
+  if [ -n "$ids" ]; then docker stop $ids; else echo "nothing running"; fi
