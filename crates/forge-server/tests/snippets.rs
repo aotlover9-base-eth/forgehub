@@ -155,10 +155,10 @@ async fn get_as(
 async fn read_authorisation_matrix() {
     let s = start(&[]).await;
     let (owner, oc) = signup(&s, "owner1").await;
-    let (other, _oc2) = signup(&s, "other1").await;
+    let (other, oc2) = signup(&s, "other1").await;
     let owner_read = make_token(&s, &owner, &oc, &["read"]).await;
     let owner_write = make_token(&s, &owner, &oc, &["write"]).await;
-    let other_read = make_token(&s, &other, &_oc2, &["read"]).await;
+    let other_read = make_token(&s, &other, &oc2, &["read"]).await;
     for visibility in ["private", "unlisted", "public"] {
         let name = format!("snip-{visibility}");
         let (status, _) = create(
@@ -363,6 +363,7 @@ async fn put(
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)] // the full PUT matrix in one scenario
 async fn put_versions_immutable_with_optimistic_concurrency() {
     let s = start(&[]).await;
     let (cookie, csrf) = signup(&s, "erin").await;
@@ -776,7 +777,7 @@ async fn validate_endpoint_reports_without_persisting() {
     assert_eq!(resp.status(), 200);
     let v: serde_json::Value = resp.json().await.unwrap();
     assert_eq!(v["valid"], true);
-    assert!(v["hash"].as_str().unwrap().len() == 64);
+    assert_eq!(v["hash"].as_str().unwrap().len(), 64);
     let secret = "q".repeat(24);
     let resp = s
         .client
@@ -803,5 +804,5 @@ async fn validate_endpoint_reports_without_persisting() {
     assert_eq!(resp.status(), 200);
     let v: serde_json::Value = resp.json().await.unwrap();
     assert_eq!(v["valid"], false);
-    assert!(!v["errors"].as_array().unwrap().is_empty());
+    assert_eq!(v["errors"].as_array().unwrap().len(), 1);
 }

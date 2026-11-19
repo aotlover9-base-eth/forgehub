@@ -4,10 +4,12 @@
 
 #![forbid(unsafe_code)]
 
+pub mod admin;
 pub mod auth;
 pub mod config;
 pub mod db;
 pub mod device;
+pub mod discovery;
 pub mod error;
 pub mod http;
 pub mod ratelimit;

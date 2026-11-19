@@ -73,6 +73,19 @@ docker run --rm -p 8080:8080 \
 The image runs the server as a non-root user with the database in
 `/data` and `FORGEHUB_ENV=prod`.
 
+## Admin commands
+
+There is no admin web UI in v1. Moderation runs through the
+server binary against its own database (same env config):
+
+```bash
+forge-server admin list-reports [--status open]
+forge-server admin hide-snippet <owner>/<name>   # 404 everywhere public; owner keeps access
+forge-server admin unhide-snippet <owner>/<name>
+forge-server admin ban-user <username>           # disables + revokes sessions and tokens
+forge-server admin unban-user <username>
+```
+
 ## Notes
 
 - **Backups:** the whole deployment state is the SQLite file —

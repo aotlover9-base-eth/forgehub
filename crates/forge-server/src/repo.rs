@@ -209,6 +209,10 @@ pub trait UserRepo: Send + Sync {
     async fn set_password_hash(&self, id: i64, password_hash: &str) -> RepoResult<()>;
     /// Soft-delete the account (sets `deleted_at`).
     async fn soft_delete(&self, id: i64, now: &str) -> RepoResult<()>;
+    /// Admin ban/unban (sets or clears `disabled_at`). Banning
+    /// also revokes the user's sessions and tokens (done by the
+    /// caller in the same operation via the other repos).
+    async fn set_disabled(&self, id: i64, disabled: bool, now: &str) -> RepoResult<()>;
 }
 
 /// Sessions repository.
@@ -254,6 +258,23 @@ pub trait TokenRepo: Send + Sync {
     /// Count of a user's unrevoked tokens (the per-user limit is
     /// enforced against this).
     async fn count_active_for_user(&self, user_id: i64) -> RepoResult<i64>;
+}
+
+/// One filed snippet report.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ReportRow {
+    /// Primary key.
+    pub id: i64,
+    /// Reported snippet.
+    pub snippet_id: i64,
+    /// Reporting user.
+    pub reporter_id: i64,
+    /// Free-text reason (max 500 chars, enforced by the handler).
+    pub reason: String,
+    /// open | resolved | dismissed.
+    pub status: String,
+    /// Filing time.
+    pub created_at: String,
 }
 
 /// Device codes repository.
@@ -385,6 +406,72 @@ pub trait SnippetRepo: Send + Sync {
     /// (versions/tags/stars/renames cascade) and drop rename
     /// redirects expired at `now`. Returns rows removed.
     async fn purge_deleted(&self, deleted_before: &str, now: &str) -> RepoResult<u64>;
+    /// Public discovery search. When `match_query` is present it
+    /// is a *sanitised* FTS5 MATCH string built by the handler
+    /// (quoted prefix terms only); `sort` is relevance|stars|
+    /// updated. Only public, live, unhidden snippets are ever
+    /// returned — the predicates are enforced here as well as by
+    /// FTS membership, as defence in depth.
+    async fn search_public(
+        &self,
+        match_query: Option<&str>,
+        tag: Option<&str>,
+        owner_id: Option<i64>,
+        sort: &str,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>>;
+    /// Most-used tags on public snippets: `(tag, count)` pairs.
+    async fn popular_tags(&self, limit: i64) -> RepoResult<Vec<(String, i64)>>;
+    /// Explore feed: most recently updated public snippets.
+    async fn explore_recent(&self, limit: i64, offset: i64) -> RepoResult<Vec<SnippetRow>>;
+    /// Explore feed: public snippets by stars received since
+    /// `since` (the "popular this week" window), then total stars.
+    async fn explore_popular(
+        &self,
+        since: &str,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>>;
+    /// Snippets a user starred, most recent star first. Includes
+    /// unlisted; excludes deleted/hidden and others' private.
+    async fn list_starred(
+        &self,
+        user_id: i64,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>>;
+    /// A user's public snippets, most recently updated first.
+    async fn list_public_for_owner(
+        &self,
+        owner_id: i64,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>>;
+    /// Count of a user's public live snippets.
+    async fn count_public_for_owner(&self, owner_id: i64) -> RepoResult<i64>;
+    /// Create a fork: a private copy of a source version in the
+    /// caller's account, with provenance recorded and the
+    /// source's `fork_count` incremented, in one transaction.
+    #[allow(clippy::too_many_arguments)] // one write's fields, deliberately explicit
+    async fn create_fork(
+        &self,
+        owner_id: i64,
+        name: &str,
+        description: &str,
+        mode: &str,
+        body: &str,
+        hash: &str,
+        tags: &[String],
+        source_id: i64,
+        source_version: i64,
+        source_hash: &str,
+        now: &str,
+    ) -> RepoResult<(SnippetRow, VersionRow)>;
+    /// Increment the public pull counter.
+    async fn increment_pull(&self, snippet_id: i64) -> RepoResult<()>;
+    /// Admin hide/unhide (FTS is synced in the same transaction).
+    async fn set_hidden(&self, snippet_id: i64, hidden: bool, now: &str) -> RepoResult<()>;
     /// Soft-delete (removes the FTS row in the same transaction).
     async fn soft_delete(&self, snippet_id: i64, now: &str) -> RepoResult<()>;
     /// Star (idempotent); maintains `star_count` transactionally.
@@ -408,6 +495,11 @@ pub trait ReportRepo: Send + Sync {
     ) -> RepoResult<i64>;
     /// Count reports by status.
     async fn count_by_status(&self, status: &str) -> RepoResult<i64>;
+    /// List reports, newest first, optionally by status.
+    async fn list(&self, status: Option<&str>, limit: i64) -> RepoResult<Vec<ReportRow>>;
+    /// Whether this user already has an open report on the
+    /// snippet (report dedup).
+    async fn exists_open(&self, reporter_id: i64, snippet_id: i64) -> RepoResult<bool>;
 }
 
 /// All repositories, backed by one store implementation.
@@ -548,6 +640,22 @@ impl UserRepo for SqliteStore {
             .bind(password_hash)
             .execute(&self.pool)
             .await?;
+        Ok(())
+    }
+
+    async fn set_disabled(&self, id: i64, disabled: bool, now: &str) -> RepoResult<()> {
+        if disabled {
+            sqlx::query("UPDATE users SET disabled_at = ?2 WHERE id = ?1")
+                .bind(id)
+                .bind(now)
+                .execute(&self.pool)
+                .await?;
+        } else {
+            sqlx::query("UPDATE users SET disabled_at = NULL WHERE id = ?1")
+                .bind(id)
+                .execute(&self.pool)
+                .await?;
+        }
         Ok(())
     }
 
@@ -1200,6 +1308,227 @@ impl SnippetRepo for SqliteStore {
         Ok(total)
     }
 
+    async fn search_public(
+        &self,
+        match_query: Option<&str>,
+        tag: Option<&str>,
+        owner_id: Option<i64>,
+        sort: &str,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new("");
+        if let Some(match_query) = match_query {
+            qb.push(
+                "SELECT s.* FROM snippets_fts f JOIN snippets s ON s.id = f.rowid \
+                 WHERE f.snippets_fts MATCH ",
+            );
+            qb.push_bind(match_query.to_string());
+            qb.push(" AND ");
+        } else {
+            qb.push("SELECT s.* FROM snippets s WHERE ");
+        }
+        qb.push("s.visibility = 'public' AND s.hidden_at IS NULL AND s.deleted_at IS NULL");
+        if let Some(owner_id) = owner_id {
+            qb.push(" AND s.owner_id = ");
+            qb.push_bind(owner_id);
+        }
+        if let Some(tag) = tag {
+            qb.push(
+                " AND EXISTS (SELECT 1 FROM snippet_tags \
+                 WHERE snippet_id = s.id AND tag = ",
+            );
+            qb.push_bind(tag.to_string());
+            qb.push(")");
+        }
+        match sort {
+            "stars" => qb.push(" ORDER BY s.star_count DESC, s.updated_at DESC, s.id DESC"),
+            // Relevance only exists when there is a MATCH query.
+            "relevance" if match_query.is_some() => qb.push(" ORDER BY bm25(snippets_fts)"),
+            _ => qb.push(" ORDER BY s.updated_at DESC, s.id DESC"),
+        };
+        qb.push(" LIMIT ");
+        qb.push_bind(limit);
+        qb.push(" OFFSET ");
+        qb.push_bind(offset);
+        Ok(qb
+            .build_query_as::<SnippetRow>()
+            .fetch_all(&self.pool)
+            .await?)
+    }
+
+    async fn popular_tags(&self, limit: i64) -> RepoResult<Vec<(String, i64)>> {
+        Ok(sqlx::query_as::<_, (String, i64)>(
+            "SELECT t.tag, COUNT(*) AS c FROM snippet_tags t \
+             JOIN snippets s ON s.id = t.snippet_id \
+             WHERE s.visibility = 'public' AND s.hidden_at IS NULL AND s.deleted_at IS NULL \
+             GROUP BY t.tag ORDER BY c DESC, t.tag ASC LIMIT ?1",
+        )
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn explore_recent(&self, limit: i64, offset: i64) -> RepoResult<Vec<SnippetRow>> {
+        Ok(sqlx::query_as::<_, SnippetRow>(
+            "SELECT * FROM snippets WHERE visibility = 'public' AND hidden_at IS NULL \
+             AND deleted_at IS NULL ORDER BY updated_at DESC, id DESC LIMIT ?1 OFFSET ?2",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn explore_popular(
+        &self,
+        since: &str,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>> {
+        Ok(sqlx::query_as::<_, SnippetRow>(
+            "SELECT s.* FROM snippets s \
+             LEFT JOIN stars st ON st.snippet_id = s.id AND st.created_at >= ?1 \
+             WHERE s.visibility = 'public' AND s.hidden_at IS NULL AND s.deleted_at IS NULL \
+             GROUP BY s.id ORDER BY COUNT(st.snippet_id) DESC, s.star_count DESC, s.updated_at DESC \
+             LIMIT ?2 OFFSET ?3",
+        )
+        .bind(since)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn list_starred(
+        &self,
+        user_id: i64,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>> {
+        Ok(sqlx::query_as::<_, SnippetRow>(
+            "SELECT s.* FROM stars st JOIN snippets s ON s.id = st.snippet_id \
+             WHERE st.user_id = ?1 AND s.deleted_at IS NULL AND s.hidden_at IS NULL \
+             AND (s.visibility IN ('public', 'unlisted') OR s.owner_id = ?1) \
+             ORDER BY st.created_at DESC, s.id DESC LIMIT ?2 OFFSET ?3",
+        )
+        .bind(user_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn list_public_for_owner(
+        &self,
+        owner_id: i64,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>> {
+        Ok(sqlx::query_as::<_, SnippetRow>(
+            "SELECT * FROM snippets WHERE owner_id = ?1 AND visibility = 'public' \
+             AND hidden_at IS NULL AND deleted_at IS NULL \
+             ORDER BY updated_at DESC, id DESC LIMIT ?2 OFFSET ?3",
+        )
+        .bind(owner_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn count_public_for_owner(&self, owner_id: i64) -> RepoResult<i64> {
+        Ok(sqlx::query_scalar(
+            "SELECT COUNT(*) FROM snippets WHERE owner_id = ?1 AND visibility = 'public' \
+             AND hidden_at IS NULL AND deleted_at IS NULL",
+        )
+        .bind(owner_id)
+        .fetch_one(&self.pool)
+        .await?)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn create_fork(
+        &self,
+        owner_id: i64,
+        name: &str,
+        description: &str,
+        mode: &str,
+        body: &str,
+        hash: &str,
+        tags: &[String],
+        source_id: i64,
+        source_version: i64,
+        source_hash: &str,
+        now: &str,
+    ) -> RepoResult<(SnippetRow, VersionRow)> {
+        let mut tx = self.pool.begin().await?;
+        let snippet = sqlx::query_as::<_, SnippetRow>(
+            "INSERT INTO snippets (owner_id, name, description, visibility, latest_version, \
+             forked_from_snippet_id, forked_from_version, forked_from_hash, created_at, updated_at) \
+             VALUES (?1, ?2, ?3, 'private', 1, ?4, ?5, ?6, ?7, ?7) RETURNING *",
+        )
+        .bind(owner_id)
+        .bind(name)
+        .bind(description)
+        .bind(source_id)
+        .bind(source_version)
+        .bind(source_hash)
+        .bind(now)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(map_unique)?;
+        let version = sqlx::query_as::<_, VersionRow>(
+            "INSERT INTO snippet_versions (snippet_id, version, mode, body, hash, message, created_at) \
+             VALUES (?1, 1, ?2, ?3, ?4, ?5, ?6) RETURNING *",
+        )
+        .bind(snippet.id)
+        .bind(mode)
+        .bind(body)
+        .bind(hash)
+        .bind(format!("Forked from snippet {source_id} v{source_version}"))
+        .bind(now)
+        .fetch_one(&mut *tx)
+        .await?;
+        replace_tags(&mut tx, snippet.id, tags).await?;
+        sqlx::query("UPDATE snippets SET fork_count = fork_count + 1 WHERE id = ?1")
+            .bind(source_id)
+            .execute(&mut *tx)
+            .await?;
+        // Forks are private: the FTS snapshot rule keeps them out.
+        tx.commit().await?;
+        Ok((snippet, version))
+    }
+
+    async fn increment_pull(&self, snippet_id: i64) -> RepoResult<()> {
+        sqlx::query("UPDATE snippets SET pull_count = pull_count + 1 WHERE id = ?1")
+            .bind(snippet_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn set_hidden(&self, snippet_id: i64, hidden: bool, now: &str) -> RepoResult<()> {
+        let mut tx = self.pool.begin().await?;
+        let old_fts = fts_snapshot(&mut tx, snippet_id).await?;
+        if hidden {
+            sqlx::query("UPDATE snippets SET hidden_at = ?2, updated_at = ?2 WHERE id = ?1")
+                .bind(snippet_id)
+                .bind(now)
+                .execute(&mut *tx)
+                .await?;
+        } else {
+            sqlx::query("UPDATE snippets SET hidden_at = NULL, updated_at = ?2 WHERE id = ?1")
+                .bind(snippet_id)
+                .bind(now)
+                .execute(&mut *tx)
+                .await?;
+        }
+        sync_fts(&mut tx, snippet_id, old_fts.as_ref()).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
     async fn soft_delete(&self, snippet_id: i64, now: &str) -> RepoResult<()> {
         let mut tx = self.pool.begin().await?;
         let old_fts = fts_snapshot(&mut tx, snippet_id).await?;
@@ -1292,6 +1621,31 @@ impl ReportRepo for SqliteStore {
                 .await?,
         )
     }
+
+    async fn list(&self, status: Option<&str>, limit: i64) -> RepoResult<Vec<ReportRow>> {
+        let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new("SELECT * FROM reports");
+        if let Some(status) = status {
+            qb.push(" WHERE status = ");
+            qb.push_bind(status.to_string());
+        }
+        qb.push(" ORDER BY created_at DESC, id DESC LIMIT ");
+        qb.push_bind(limit);
+        Ok(qb
+            .build_query_as::<ReportRow>()
+            .fetch_all(&self.pool)
+            .await?)
+    }
+
+    async fn exists_open(&self, reporter_id: i64, snippet_id: i64) -> RepoResult<bool> {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM reports WHERE reporter_id = ?1 AND snippet_id = ?2 AND status = 'open'",
+        )
+        .bind(reporter_id)
+        .bind(snippet_id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count > 0)
+    }
 }
 
 #[cfg(test)]
@@ -1331,6 +1685,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one long end-to-end repository scenario
     async fn snippets_versions_tags_and_fts() {
         let (repos, pool, _dir) = repos().await;
         let u = repos

@@ -49,6 +49,14 @@ async fn shutdown_signal() {
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = Config::from_env()?;
+    // `forge-server admin <command>` runs one moderation command
+    // against the database and exits (Step 10; no admin web UI).
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("admin") {
+        let pool = forge_server::db::connect(&config.database_url).await?;
+        let repos = Repos::sqlite(pool);
+        return forge_server::admin::run(&repos, &args[1..]).await;
+    }
     init_tracing(config.env);
     tracing::info!(
         "{} server starting: {}",

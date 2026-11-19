@@ -26,7 +26,7 @@
 //! cannot be instantly re-registered by anyone, including its
 //! former owner.
 
-use crate::auth::{body, verify_csrf, AuthKind, CurrentUser, RequireUser};
+use crate::auth::{body, verify_csrf, AuthKind, ClientIp, CurrentUser, RequireUser};
 use crate::db::now_iso;
 use crate::error::ApiError;
 use crate::repo::{SnippetRow, UserRow, VersionRow};
@@ -195,7 +195,7 @@ fn summary_json(body: &str) -> Result<serde_json::Value, ApiError> {
 // ------------------------------------------------------------ responses
 
 /// The openapi `Snippet` shape for one version of a snippet.
-async fn snippet_json(
+pub(crate) async fn snippet_json(
     state: &AppState,
     snippet: &SnippetRow,
     version: &VersionRow,
@@ -270,21 +270,22 @@ fn etag_matches(headers: &HeaderMap, hash: &str) -> bool {
 // --------------------------------------------------------- authorisation
 
 /// The outcome of resolving `/{owner}/{name}`.
-struct Resolved {
-    snippet: SnippetRow,
+pub(crate) struct Resolved {
+    /// The resolved live snippet.
+    pub(crate) snippet: SnippetRow,
     /// The old name the caller used, when a rename redirect was
     /// followed (reads only).
-    renamed_from: Option<String>,
+    pub(crate) renamed_from: Option<String>,
 }
 
-fn not_found() -> ApiError {
+pub(crate) fn not_found() -> ApiError {
     ApiError::not_found("snippet_not_found", "Snippet not found")
 }
 
 /// Resolve owner + name to a live snippet. With `follow_rename`,
 /// an unexpired rename redirect is honoured when no live snippet
 /// carries the name.
-async fn resolve(
+pub(crate) async fn resolve(
     state: &AppState,
     owner_name: &str,
     name: &str,
@@ -348,7 +349,7 @@ fn can_read(snippet: &SnippetRow, viewer: Option<&UserRow>) -> bool {
 
 /// Resolve + authorise a read, mapping every failure to the same
 /// 404 so private existence never leaks.
-async fn resolve_readable(
+pub(crate) async fn resolve_readable(
     state: &AppState,
     owner: &str,
     name: &str,
@@ -377,7 +378,10 @@ fn authorise_write(
 
 /// Scope + CSRF gate shared by writes that have no snippet yet
 /// (create) and those that do.
-fn check_write_scope_and_csrf(ctx: &RequireUser, headers: &HeaderMap) -> Result<(), ApiError> {
+pub(crate) fn check_write_scope_and_csrf(
+    ctx: &RequireUser,
+    headers: &HeaderMap,
+) -> Result<(), ApiError> {
     match &ctx.0.kind {
         AuthKind::Session(session) => verify_csrf(headers, session),
         AuthKind::Token(_) => {
@@ -491,17 +495,37 @@ async fn create_snippet(
 #[derive(Deserialize)]
 struct GetQuery {
     version: Option<i64>,
+    intent: Option<String>,
 }
 
 async fn get_snippet(
     State(state): State<AppState>,
     CurrentUser(viewer): CurrentUser,
+    client_ip: ClientIp,
     headers: HeaderMap,
     Path((owner, name)): Path<(String, String)>,
     Query(query): Query<GetQuery>,
 ) -> Result<Response, ApiError> {
     let viewer_user = viewer.as_ref().map(|c| c.user.clone());
-    let resolved = resolve_readable(&state, &owner, &name, viewer_user.as_ref()).await?;
+    let mut resolved = resolve_readable(&state, &owner, &name, viewer_user.as_ref()).await?;
+    // Pull counting (Step 10): a public snippet fetched with
+    // intent=run by a non-owner counts once per IP per hour. It
+    // is a popularity number only — nothing per-user is stored.
+    if query.intent.as_deref() == Some("run")
+        && resolved.snippet.visibility == "public"
+        && viewer_user.as_ref().map(|u| u.id) != Some(resolved.snippet.owner_id)
+    {
+        let ip_text = client_ip.0.map_or(String::new(), |addr| addr.to_string());
+        let ip_hash = forge_core::hash::sha256_hex(ip_text.as_bytes());
+        if state.should_count_pull(&ip_hash, resolved.snippet.id) {
+            state
+                .repos
+                .snippets
+                .increment_pull(resolved.snippet.id)
+                .await?;
+            resolved.snippet.pull_count += 1;
+        }
+    }
     let version_no = query.version.unwrap_or(resolved.snippet.latest_version);
     let version = state
         .repos
@@ -773,12 +797,12 @@ struct PageQuery {
 }
 
 /// Cursors are opaque to clients: base64url of the decimal offset.
-fn encode_cursor(offset: i64) -> String {
+pub(crate) fn encode_cursor(offset: i64) -> String {
+    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     use std::fmt::Write as _;
     let raw = offset.to_string();
     let mut out = String::new();
     let bytes = raw.as_bytes();
-    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     for chunk in bytes.chunks(3) {
         let b = [
             chunk[0],
@@ -798,7 +822,7 @@ fn encode_cursor(offset: i64) -> String {
     out
 }
 
-fn decode_cursor(cursor: &str) -> Result<i64, ApiError> {
+pub(crate) fn decode_cursor(cursor: &str) -> Result<i64, ApiError> {
     let mut values = Vec::new();
     for c in cursor.bytes() {
         let v = match c {
@@ -817,12 +841,14 @@ fn decode_cursor(cursor: &str) -> Result<i64, ApiError> {
         for (i, v) in chunk.iter().enumerate() {
             n |= u32::from(*v) << (18 - 6 * i);
         }
-        bytes.push((n >> 16) as u8);
+        // n holds 24 bits; each masked byte fits a u8 by
+        // construction.
+        bytes.push(u8::try_from((n >> 16) & 0xFF).unwrap_or(0));
         if chunk.len() > 2 {
-            bytes.push((n >> 8) as u8);
+            bytes.push(u8::try_from((n >> 8) & 0xFF).unwrap_or(0));
         }
         if chunk.len() > 3 {
-            bytes.push(n as u8);
+            bytes.push(u8::try_from(n & 0xFF).unwrap_or(0));
         }
     }
     String::from_utf8(bytes)
@@ -832,8 +858,8 @@ fn decode_cursor(cursor: &str) -> Result<i64, ApiError> {
         .ok_or_else(|| ApiError::validation("Invalid cursor"))
 }
 
-fn page_limit(query: &PageQuery) -> Result<i64, ApiError> {
-    match query.limit {
+pub(crate) fn page_limit(limit: Option<i64>) -> Result<i64, ApiError> {
+    match limit {
         Some(n) if (1..=100).contains(&n) => Ok(n),
         Some(_) => Err(ApiError::validation("limit must be between 1 and 100")),
         None => Ok(20),
@@ -848,7 +874,7 @@ async fn list_versions(
 ) -> Result<Response, ApiError> {
     let viewer_user = viewer.as_ref().map(|c| c.user.clone());
     let resolved = resolve_readable(&state, &owner, &name, viewer_user.as_ref()).await?;
-    let limit = page_limit(&query)?;
+    let limit = page_limit(query.limit)?;
     let offset = query
         .cursor
         .as_deref()
@@ -856,7 +882,7 @@ async fn list_versions(
         .transpose()?
         .unwrap_or(0);
     let all = state.repos.snippets.versions(resolved.snippet.id).await?;
-    let total = all.len() as i64;
+    let total = i64::try_from(all.len()).unwrap_or(i64::MAX);
     let page: Vec<serde_json::Value> = all
         .iter()
         .skip(usize::try_from(offset).unwrap_or(0))
@@ -982,7 +1008,7 @@ async fn my_snippets(
             "This token cannot read",
         ));
     }
-    let limit = page_limit(&query)?;
+    let limit = page_limit(query.limit)?;
     let offset = query
         .cursor
         .as_deref()
@@ -1010,7 +1036,7 @@ async fn my_snippets(
             offset,
         )
         .await?;
-    let has_more = rows.len() as i64 > limit;
+    let has_more = i64::try_from(rows.len()).unwrap_or(i64::MAX) > limit;
     let mut items = Vec::new();
     for snippet in rows.iter().take(usize::try_from(limit).unwrap_or(0)) {
         let latest = state

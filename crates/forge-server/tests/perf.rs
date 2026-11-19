@@ -1,0 +1,178 @@
+//! Performance check (Step 10): seed 10,000 public snippets and
+//! measure p95 latency for snippet reads and search against the
+//! agent.md budget (p95 < 50 ms at 10k snippets).
+//!
+//! Ignored by default (seeding takes a while); run with:
+//! `cargo test --release -p forge-server --test perf -- --ignored --nocapture`
+
+use forge_server::config::Config;
+use forge_server::http::build_router;
+use forge_server::repo::Repos;
+use forge_server::state::AppState;
+use std::collections::HashMap;
+use std::time::Instant;
+
+fn percentile(sorted_ms: &[f64], p: usize) -> f64 {
+    let idx = (sorted_ms.len() * p).div_ceil(100);
+    sorted_ms[idx.saturating_sub(1).min(sorted_ms.len() - 1)]
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)] // one seed + measure scenario
+#[ignore = "slow seed; run explicitly with --ignored"]
+async fn p95_at_10k_snippets() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("perf.db");
+    let map: HashMap<String, String> = [
+        (
+            "FORGEHUB_DATABASE_URL",
+            format!("sqlite://{}", db.display()),
+        ),
+        (
+            "FORGEHUB_WEB_DIR",
+            dir.path().join("no-web").display().to_string(),
+        ),
+    ]
+    .iter()
+    .map(|(k, v)| (k.to_string(), v.clone()))
+    .collect();
+    let config = Config::from_vars(&|k| map.get(k).cloned()).unwrap();
+    let pool = forge_server::db::connect(&config.database_url)
+        .await
+        .unwrap();
+    forge_server::db::migrate(&pool).await.unwrap();
+    let repos = Repos::sqlite(pool.clone());
+    let owner = repos
+        .users
+        .create("perf", "perf@example.com", "hash", "2026-11-19T00:00:00Z")
+        .await
+        .unwrap();
+    let seed_start = Instant::now();
+    for i in 0..10_000 {
+        let name = format!("snip-{i:05}");
+        let body = format!(
+            "name: {name}\ndescription: Perf snippet {i} about docker and ubuntu\ntags: [perf, t{}]\nscript: |\n  echo snippet {i}\n  docker ps\n",
+            i % 25
+        );
+        repos
+            .snippets
+            .create_with_version(
+                owner.id,
+                &name,
+                &format!("Perf snippet {i} about docker and ubuntu"),
+                "public",
+                "script",
+                &body,
+                &format!("hash{i:059}"),
+                None,
+                &["perf".to_string(), format!("t{}", i % 25)],
+                "2026-11-19T00:00:00Z",
+            )
+            .await
+            .unwrap();
+    }
+    println!("seeded 10,000 snippets in {:?}", seed_start.elapsed());
+
+    // Split the search cost: time the repository query alone
+    // (FTS scan + bm25) before measuring over HTTP.
+    let match_q = "\"docker\"*";
+    let t = Instant::now();
+    for _ in 0..20 {
+        let rows = repos
+            .snippets
+            .search_public(Some(match_q), None, None, "relevance", 21, 0)
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 21);
+    }
+    println!(
+        "repo search_public alone: {:.2} ms avg",
+        t.elapsed().as_secs_f64() * 1000.0 / 20.0
+    );
+
+    let state = AppState::new(config, repos, pool);
+    let app = build_router(state);
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+        )
+        .await
+        .unwrap();
+    });
+    let base = format!("http://{addr}");
+    let client = reqwest::Client::new();
+
+    // Snippet reads.
+    let mut reads = Vec::new();
+    for i in 0..200 {
+        let n = (i * 37) % 10_000;
+        let t = Instant::now();
+        let resp = client
+            .get(format!("{base}/api/v1/snippets/perf/snip-{n:05}"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        resp.bytes().await.unwrap();
+        reads.push(t.elapsed().as_secs_f64() * 1000.0);
+    }
+    reads.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let read_p50 = percentile(&reads, 50);
+    let read_p95 = percentile(&reads, 95);
+    println!("snippet read: p50 {read_p50:.2} ms, p95 {read_p95:.2} ms (n=200)");
+
+    // Search.
+    let mut searches = Vec::new();
+    for _ in 0..100 {
+        let t = Instant::now();
+        let resp = client
+            .get(format!("{base}/api/v1/search?q=docker"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        resp.bytes().await.unwrap();
+        searches.push(t.elapsed().as_secs_f64() * 1000.0);
+    }
+    searches.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let search_p50 = percentile(&searches, 50);
+    let search_p95 = percentile(&searches, 95);
+    println!("search: p50 {search_p50:.2} ms, p95 {search_p95:.2} ms (n=100)");
+
+    // Same search with limit=1 separates scan cost from the cost
+    // of rendering a page of results.
+    let mut one = Vec::new();
+    for _ in 0..50 {
+        let t = Instant::now();
+        let resp = client
+            .get(format!("{base}/api/v1/search?q=docker&limit=1"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        resp.bytes().await.unwrap();
+        one.push(t.elapsed().as_secs_f64() * 1000.0);
+    }
+    one.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    println!(
+        "search limit=1: p50 {:.2} ms, p95 {:.2} ms (n=50)",
+        percentile(&one, 50),
+        percentile(&one, 95)
+    );
+
+    // The budget is a release-mode budget; in debug builds we only
+    // record the numbers (the harness prints them either way).
+    if cfg!(not(debug_assertions)) {
+        assert!(
+            read_p95 < 50.0,
+            "read p95 {read_p95:.2} ms exceeds the 50 ms budget"
+        );
+        assert!(
+            search_p95 < 50.0,
+            "search p95 {search_p95:.2} ms exceeds the 50 ms budget"
+        );
+    }
+}

@@ -21,7 +21,22 @@ pub struct AppState {
     pub login_throttle: Arc<LoginThrottle>,
     /// Per-IP device-code lookup throttling (Step 8).
     pub device_limiter: Arc<DeviceLimiter>,
+    /// Pull-counter dedup (Step 10): `(ip hash, snippet id)` ->
+    /// last counted instant; a pull counts once per pair per
+    /// hour. In-memory and single-node, like the other limiters.
+    pub pull_dedup: Arc<PullDedup>,
+    /// Explore feed cache (Step 10): feed name -> (fetched at,
+    /// rows). 60-second TTL per the roadmap.
+    pub explore_cache: Arc<ExploreCache>,
 }
+
+/// Pull dedup map: `(ip hash, snippet id) -> last counted at`.
+pub type PullDedup = std::sync::Mutex<std::collections::HashMap<(String, i64), std::time::Instant>>;
+
+/// Explore cache: `feed -> (fetched at, rows)`.
+pub type ExploreCache = std::sync::Mutex<
+    std::collections::HashMap<String, (std::time::Instant, Vec<crate::repo::SnippetRow>)>,
+>;
 
 impl AppState {
     /// Build state from configuration + storage, deriving the
@@ -37,6 +52,34 @@ impl AppState {
             pool,
             login_throttle,
             device_limiter: Arc::new(DeviceLimiter::new()),
+            pull_dedup: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            explore_cache: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
         }
+    }
+
+    /// Should this pull be counted? Records the pair when it
+    /// should. The IP arrives already hashed (raw IPs are never
+    /// stored). Entries older than the window are evicted
+    /// opportunistically.
+    #[must_use]
+    pub fn should_count_pull(&self, ip_hash: &str, snippet_id: i64) -> bool {
+        let now = std::time::Instant::now();
+        let window = Duration::from_secs(3600);
+        let mut map = self
+            .pull_dedup
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if map.len() > 10_000 {
+            map.retain(|_, seen| now.duration_since(*seen) < window);
+        }
+        let key = (ip_hash.to_string(), snippet_id);
+        if map
+            .get(&key)
+            .is_some_and(|seen| now.duration_since(*seen) < window)
+        {
+            return false;
+        }
+        map.insert(key, now);
+        true
     }
 }
