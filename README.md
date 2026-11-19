@@ -2,102 +2,138 @@
 
 **Save a shell command once. Run it anywhere.**
 
-ForgeHub is a cloud home for shell command snippets: a web app
-and server for sharing them, plus a fast Rust CLI —
-`forgehub`, aliased to **`fg`** — that runs them with a safety
-model built for other people's code.
+A cloud home for shell command snippets: a server + web app to
+store and share them, and a Rust CLI (`forgehub`, alias `fg`) to
+run them — with the full commands, owner, version and hash shown
+**before** anything executes.
+
+| | |
+|---|---|
+| Stack | Rust (CLI + axum/SQLite server) · React + Material You 3 web |
+| Snippets | Text only, ≤ 64 KiB. No file uploads, no binaries |
+| Status | v0.1.0 · 411 Rust + 47 web tests · MIT |
+
+![ForgeHub dashboard](docs/screenshots/dashboard-expanded.png)
+
+## Quickstart — server (Docker)
 
 ```console
-$ fg ubuntu-setup
+git clone https://github.com/aotlover9-base-eth/forgehub.git
+cd forgehub
+cp .env.example .env        # set FORGEHUB_SECRET_KEY and FORGEHUB_DOMAIN
+docker compose up -d --build
 ```
 
-That fetches the snippet, shows you **exactly** what will run —
-owner, version, content hash, every command numbered — and
-asks before executing anything. Your own snippets ask
-`[y/N]`; someone else's ask you to type `yes` the first time,
-and any later change shows a diff and asks again.
+Open `https://<FORGEHUB_DOMAIN>` (default `https://localhost`),
+create an account. Details: [docs/deploy.md](docs/deploy.md).
 
-![ForgeHub dashboard at desktop width](docs/screenshots/dashboard-expanded.png)
-
-## 60-second quickstart
-
-**CLI** (after installing, below):
+## Quickstart — CLI
 
 ```console
-$ forgehub alias install     # adds the `fg` alias
-$ fg init
-$ fg record hello            # a capture shell opens: run `echo hello`, then `exit`
-$ fg hello                   # shows the commands, asks [y/N], runs
+cargo install --path crates/forge-cli   # from the clone; Rust 1.x
+forgehub alias install                  # adds the `fg` alias
+fg init
+fg record hello             # capture shell: run `echo hello`, then `exit`
+fg hello                    # shows the commands, asks [y/N], runs
 ```
 
-**Web + server**:
+Connect it to your server:
 
 ```console
-$ git clone https://github.com/aotlover9-base-eth/forgehub.git
-$ cd forgehub && cp .env.example .env   # set FORGEHUB_SECRET_KEY
-$ docker compose up -d --build          # https via Caddy; docs/deploy.md
+export FORGEHUB_REGISTRY=https://localhost   # your server's URL
+fg login                    # device-code flow: approve in the browser
+fg push hello --public      # publish a local snippet
+fg run alice/docker-setup   # run anyone's public snippet (trust flow below)
 ```
 
-Then connect the CLI to your server:
+A checksum-verifying installer (`scripts/install.sh`) ships with
+each GitHub Release.
 
-```console
-$ fg login                   # device-code flow in your browser
-$ fg push hello --public     # share it
-$ fg run alice/docker-setup  # anyone's public snippet, with the trust flow
-```
+## Commands
 
-## Install
+**Local** (offline, in `~/.forgehub`):
 
-Checksum-verifying installer (short, commented — read it
-before running it, that's the ForgeHub way):
+| Command | Does |
+|---|---|
+| `fg <name>` / `fg run <name>` | Show a snippet's commands, ask, run it |
+| `fg record <name>` | Record a shell session as a snippet |
+| `fg list` · `fg show <name>` · `fg search <text>` | Browse the local library |
+| `fg edit` · `fg rename` · `fg delete` · `fg tag` · `fg clone` | Manage snippets |
+| `fg parameterize <name>` | Turn repeated literals into prompted variables |
+| `fg import` · `fg export` | Move snippets as YAML (Forgenesis files included) |
+| `fg analyze` · `fg stats` | Mine shell history; show run statistics |
+| `fg backup` · `fg restore` | Archive / restore the whole library |
 
-```console
-$ curl -fsSL https://raw.githubusercontent.com/aotlover9-base-eth/forgehub/main/scripts/install.sh -o install.sh
-$ less install.sh
-$ sh install.sh
-```
+**Cloud** (needs `fg login`):
 
-From source (Rust 1.x): `cargo install --path crates/forge-cli`.
-Server deployment: [docs/deploy.md](docs/deploy.md).
+| Command | Does |
+|---|---|
+| `fg login` · `fg logout` · `fg whoami` | Browser device-code login; session info |
+| `fg push <name> [--public]` | Upload; re-push creates a new version |
+| `fg pull <name>` | Download a cloud snippet into the local library |
+| `fg status` · `fg diff <name>` | Local vs cloud: ahead / behind / diverged |
+| `fg fork <owner>/<name>` | Copy a public snippet into your account |
+| `fg remote list` | List your snippets on the server |
+| `fg trust list` · `fg trust revoke <owner>/<name>` | Manage run approvals |
 
-## The safety model, in plain words
+**Utility:** `fg ui` (terminal browser) · `fg doctor` (health
+check) · `fg cache list|clear` · `fg update --check` ·
+`fg completions <shell>` · `fg alias show`
 
-- **Nothing runs unseen.** Every cloud run displays the full
-  command list first. There is no silent mode for other
-  people's snippets.
-- **Trust is pinned to content.** Approving a snippet approves
-  its exact hash. If the content changes, you see a diff and
-  approve again — `-y` never skips a first run or a change.
-- **No terminal, no run.** Without an interactive terminal,
-  unskippable confirmations fail closed (exit 2) instead of
-  guessing.
-- **Secrets are blocked, not leaked.** A scanner checks
-  snippets at record, push and web-save time and refuses
-  likely credentials — findings name the kind and line, never
-  the value.
-- **Passwords and tokens are hashed** (argon2id; SHA-256 at
-  rest), sessions are revocable, and there is **no telemetry**
-  and no third-party scripts or fonts in the web app.
+**Flags that matter:** `--json` (list/show/stats/doctor) ·
+`-y` (skip `[y/N]` on your own snippets — never skips trust
+prompts) · `--offline` (run from cache) · `-v` (request log).
 
-Full detail: [docs/security.md](docs/security.md) and the
-threat model in [docs/threat-model.md](docs/threat-model.md).
+Full reference: [docs/cli-reference.md](docs/cli-reference.md) ·
+[docs/user-guide.md](docs/user-guide.md)
+
+## Safety rules (enforced, not optional)
+
+- Nothing runs unseen: every run prints the full command list first.
+- Your snippet: `[y/N]`. Someone else's, first time: type `yes`.
+- Approval is pinned to the content hash. Changed content → you
+  see a diff and approve again. `-y` never skips this.
+- No interactive terminal → unskippable prompts fail closed (exit 2).
+- A secret scanner blocks likely credentials at record, push and
+  web save. Findings name the kind and line, never the value.
+- Passwords argon2id-hashed; tokens SHA-256 at rest, shown once.
+  No telemetry. No third-party scripts or fonts.
+
+Detail: [docs/security.md](docs/security.md) ·
+[docs/threat-model.md](docs/threat-model.md)
+
+## Configuration
+
+| Variable | Meaning |
+|---|---|
+| `FORGEHUB_REGISTRY` | CLI: server URL (or `--registry`, or config) |
+| `FORGEHUB_HOME` | CLI: local library location (default `~/.forgehub`) |
+| `FORGEHUB_TOKEN` | CLI: token from the environment, for scripts |
+| `FORGEHUB_SECRET_KEY` | Server: session secret, ≥ 32 random bytes (`.env`) |
+| `FORGEHUB_DOMAIN` | Server (compose/Caddy): domain to serve, default `localhost` |
 
 ## Documentation
 
-- [User guide](docs/user-guide.md) — web and CLI, start to finish
-- [CLI reference](docs/cli-reference.md) — every command and flag
-- [API](docs/api.md) + [OpenAPI spec](docs/openapi.yaml)
-- [Self-hosting](docs/self-hosting.md) · [Deploy](docs/deploy.md) · [Operations](docs/operations.md)
-- [Migrating from Forgenesis](docs/forgenesis-migration.md)
-- [FAQ](docs/faq.md) · [Known gaps](docs/known-gaps.md)
-- [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+[User guide](docs/user-guide.md) · [CLI reference](docs/cli-reference.md) ·
+[API](docs/api.md) · [OpenAPI](docs/openapi.yaml) ·
+[Self-hosting](docs/self-hosting.md) · [Deploy](docs/deploy.md) ·
+[Operations](docs/operations.md) · [FAQ](docs/faq.md) ·
+[Known gaps](docs/known-gaps.md) · [Forgenesis migration](docs/forgenesis-migration.md) ·
+[Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) ·
+[Changelog](CHANGELOG.md)
 
-## Status
+## Development
 
-v0.1.0 — feature-complete and audited. 22 build steps, one
-commit each; the record is in [PROGRESS.md](PROGRESS.md) and
-[reports/](reports/).
+```console
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cd web && npm run lint && npm run typecheck && npm test && npm run build
+```
 
-## Licence
+History: 22 build steps, one commit + report each —
+[PROGRESS.md](PROGRESS.md), [reports/](reports/).
 
-MIT — see [LICENSE](LICENSE).
+## License
+
+MIT — [LICENSE](LICENSE)
