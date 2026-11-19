@@ -64,6 +64,20 @@ async fn main() -> Result<()> {
     forge_server::db::migrate(&pool).await?;
     tracing::info!("database ready and migrations applied");
     let state = AppState::new(config.clone(), Repos::sqlite(pool.clone()), pool);
+    // Retention: hard-delete snippets soft-deleted over 30 days
+    // ago and drop expired rename redirects (Step 9 policy).
+    {
+        let now = chrono::Utc::now();
+        let before = forge_server::auth::fmt_ts(now - chrono::Duration::days(30));
+        let purged = state
+            .repos
+            .snippets
+            .purge_deleted(&before, &forge_server::db::now_iso())
+            .await?;
+        if purged > 0 {
+            tracing::info!(purged, "purged expired snippets and rename redirects");
+        }
+    }
     let app = build_router(state);
     let listener = tokio::net::TcpListener::bind(config.bind).await?;
     tracing::info!("listening on http://{}", config.bind);

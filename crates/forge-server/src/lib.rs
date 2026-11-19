@@ -12,5 +12,6 @@ pub mod error;
 pub mod http;
 pub mod ratelimit;
 pub mod repo;
+pub mod snippets;
 pub mod state;
 pub mod tokens;

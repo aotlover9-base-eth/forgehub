@@ -59,6 +59,10 @@ pub struct Config {
     pub login_backoff_base_ms: u64,
     /// Minimum seconds between device-code polls (`FORGEHUB_DEVICE_POLL_INTERVAL_SECS`, default 5).
     pub device_poll_interval_secs: u64,
+    /// Per-user snippet cap (`FORGEHUB_MAX_SNIPPETS_PER_USER`, default 500).
+    pub max_snippets_per_user: i64,
+    /// Per-snippet version cap (`FORGEHUB_MAX_VERSIONS_PER_SNIPPET`, default 200).
+    pub max_versions_per_snippet: i64,
 }
 
 fn env_var(key: &str) -> Option<String> {
@@ -131,6 +135,29 @@ fn device_poll_interval(get: &dyn Fn(&str) -> Option<String>) -> Result<u64> {
             .unwrap_or_default(),
         5,
     )
+}
+
+/// Snippet caps (`FORGEHUB_MAX_SNIPPETS_PER_USER`,
+/// `FORGEHUB_MAX_VERSIONS_PER_SNIPPET`); both must be positive.
+fn snippet_limits(get: &dyn Fn(&str) -> Option<String>) -> Result<(i64, i64)> {
+    let per_user: i64 = parse_or(
+        "FORGEHUB_MAX_SNIPPETS_PER_USER",
+        get("FORGEHUB_MAX_SNIPPETS_PER_USER")
+            .as_deref()
+            .unwrap_or_default(),
+        500,
+    )?;
+    let per_snippet: i64 = parse_or(
+        "FORGEHUB_MAX_VERSIONS_PER_SNIPPET",
+        get("FORGEHUB_MAX_VERSIONS_PER_SNIPPET")
+            .as_deref()
+            .unwrap_or_default(),
+        200,
+    )?;
+    if per_user < 1 || per_snippet < 1 {
+        bail!("snippet limits must be at least 1");
+    }
+    Ok((per_user, per_snippet))
 }
 
 impl Config {
@@ -216,6 +243,7 @@ impl Config {
         let (session_idle_secs, session_absolute_secs, login_backoff_base_ms) =
             session_settings(get)?;
         let device_poll_interval_secs = device_poll_interval(get)?;
+        let (max_snippets_per_user, max_versions_per_snippet) = snippet_limits(get)?;
         Ok(Self {
             env,
             bind,
@@ -231,6 +259,8 @@ impl Config {
             session_absolute_secs,
             login_backoff_base_ms,
             device_poll_interval_secs,
+            max_snippets_per_user,
+            max_versions_per_snippet,
         })
     }
 

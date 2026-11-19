@@ -10,7 +10,7 @@ One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
 - [x] Step 6 — server foundation (push still blocked: repo does not exist + no GitHub auth — see reports/report_Step6.md §9)
 - [x] Step 7 — web account auth and sessions
 - [x] Step 8 — API tokens and device-code login
-- [ ] Step 9 — snippet and version API
+- [x] Step 9 — snippet and version API
 - [ ] Step 10 — search, tags, stars, forks, profiles
 - [ ] Step 11 — CLI login, whoami, credentials
 - [ ] Step 12 — CLI push, pull, remote list, fork

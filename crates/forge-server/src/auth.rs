@@ -450,7 +450,10 @@ impl LoginThrottle {
 /// The session cookie name (openapi `cookieSession`).
 pub const SESSION_COOKIE: &str = "forgehub_session";
 
-pub(crate) fn fmt_ts(dt: chrono::DateTime<chrono::Utc>) -> String {
+/// Format a timestamp in the storage format (UTC ISO-8601).
+/// Public because the server binary's retention job uses it.
+#[must_use]
+pub fn fmt_ts(dt: chrono::DateTime<chrono::Utc>) -> String {
     dt.format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 

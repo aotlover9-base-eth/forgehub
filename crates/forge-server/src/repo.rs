@@ -312,6 +312,10 @@ pub trait SnippetRepo: Send + Sync {
     ) -> RepoResult<(SnippetRow, VersionRow)>;
     /// Append a new immutable version (bumps `latest_version`,
     /// reconciles tags, syncs FTS) in one transaction.
+    /// When `expected_latest` is set, the append only happens if
+    /// the snippet is still at that version *inside the write
+    /// transaction* (optimistic concurrency); the result is then
+    /// `None` instead of the new version.
     async fn add_version(
         &self,
         snippet_id: i64,
@@ -321,7 +325,8 @@ pub trait SnippetRepo: Send + Sync {
         message: Option<&str>,
         tags: &[String],
         now: &str,
-    ) -> RepoResult<VersionRow>;
+        expected_latest: Option<i64>,
+    ) -> RepoResult<Option<VersionRow>>;
     /// By id.
     async fn by_id(&self, id: i64) -> RepoResult<Option<SnippetRow>>;
     /// By owner + name.
@@ -334,14 +339,52 @@ pub trait SnippetRepo: Send + Sync {
     async fn versions(&self, snippet_id: i64) -> RepoResult<Vec<VersionRow>>;
     /// Current tags.
     async fn tags(&self, snippet_id: i64) -> RepoResult<Vec<String>>;
-    /// Update metadata (description/visibility), syncing FTS.
+    /// Update metadata (description/visibility/tags), syncing FTS.
     async fn update_metadata(
         &self,
         snippet_id: i64,
         description: &str,
         visibility: &str,
+        tags: &[String],
         now: &str,
     ) -> RepoResult<()>;
+    /// Rename: updates the name and records a redirect from the
+    /// old name (expiring at `expires_at`) in one transaction.
+    async fn rename(
+        &self,
+        snippet_id: i64,
+        owner_id: i64,
+        old_name: &str,
+        new_name: &str,
+        expires_at: &str,
+        now: &str,
+    ) -> RepoResult<()>;
+    /// Resolve a rename redirect: the snippet id an old name
+    /// currently points at, if the redirect is unexpired.
+    async fn resolve_rename(
+        &self,
+        owner_id: i64,
+        old_name: &str,
+        now: &str,
+    ) -> RepoResult<Option<i64>>;
+    /// Count of a user's live (not soft-deleted) snippets.
+    async fn count_for_owner(&self, owner_id: i64) -> RepoResult<i64>;
+    /// A page of a user's live snippets with optional visibility /
+    /// tag filters. `sort` is one of `updated|created|name`
+    /// (validated by the caller).
+    async fn list_for_owner(
+        &self,
+        owner_id: i64,
+        visibility: Option<&str>,
+        tag: Option<&str>,
+        sort: &str,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>>;
+    /// Hard-delete snippets soft-deleted before `deleted_before`
+    /// (versions/tags/stars/renames cascade) and drop rename
+    /// redirects expired at `now`. Returns rows removed.
+    async fn purge_deleted(&self, deleted_before: &str, now: &str) -> RepoResult<u64>;
     /// Soft-delete (removes the FTS row in the same transaction).
     async fn soft_delete(&self, snippet_id: i64, now: &str) -> RepoResult<()>;
     /// Star (idempotent); maintains `star_count` transactionally.
@@ -415,6 +458,16 @@ impl SqliteStore {
 
 fn is_unique_violation(err: &sqlx::Error) -> bool {
     matches!(err, sqlx::Error::Database(db) if db.is_unique_violation())
+}
+
+/// Map a unique violation to [`RepoError::Conflict`]; pass other
+/// errors through as storage errors.
+fn map_unique(err: sqlx::Error) -> RepoError {
+    if is_unique_violation(&err) {
+        RepoError::Conflict("unique constraint violated".to_string())
+    } else {
+        RepoError::Sqlx(err)
+    }
 }
 
 // ------------------------------------------------------------------ users
@@ -892,7 +945,8 @@ impl SnippetRepo for SqliteStore {
         message: Option<&str>,
         tags: &[String],
         now: &str,
-    ) -> RepoResult<VersionRow> {
+        expected_latest: Option<i64>,
+    ) -> RepoResult<Option<VersionRow>> {
         let mut tx = self.pool.begin().await?;
         let current: Option<i64> =
             sqlx::query_scalar("SELECT latest_version FROM snippets WHERE id = ?1")
@@ -902,6 +956,11 @@ impl SnippetRepo for SqliteStore {
         let Some(current) = current else {
             return Err(RepoError::NotFound("snippet".to_string()));
         };
+        if expected_latest.is_some_and(|expected| expected != current) {
+            // Lost a race against another writer; the transaction
+            // is dropped uncommitted and the caller reports 412.
+            return Ok(None);
+        }
         let old_fts = fts_snapshot(&mut tx, snippet_id).await?;
         let next = current + 1;
         let version = sqlx::query_as::<_, VersionRow>(
@@ -926,7 +985,7 @@ impl SnippetRepo for SqliteStore {
         replace_tags(&mut tx, snippet_id, tags).await?;
         sync_fts(&mut tx, snippet_id, old_fts.as_ref()).await?;
         tx.commit().await?;
-        Ok(version)
+        Ok(Some(version))
     }
 
     async fn by_id(&self, id: i64) -> RepoResult<Option<SnippetRow>> {
@@ -991,6 +1050,7 @@ impl SnippetRepo for SqliteStore {
         snippet_id: i64,
         description: &str,
         visibility: &str,
+        tags: &[String],
         now: &str,
     ) -> RepoResult<()> {
         let mut tx = self.pool.begin().await?;
@@ -1007,9 +1067,137 @@ impl SnippetRepo for SqliteStore {
         if res.rows_affected() == 0 {
             return Err(RepoError::NotFound("snippet".to_string()));
         }
+        sqlx::query("DELETE FROM snippet_tags WHERE snippet_id = ?1")
+            .bind(snippet_id)
+            .execute(&mut *tx)
+            .await?;
+        for tag in tags {
+            sqlx::query("INSERT INTO snippet_tags (snippet_id, tag) VALUES (?1, ?2)")
+                .bind(snippet_id)
+                .bind(tag)
+                .execute(&mut *tx)
+                .await?;
+        }
         sync_fts(&mut tx, snippet_id, old_fts.as_ref()).await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    async fn rename(
+        &self,
+        snippet_id: i64,
+        owner_id: i64,
+        old_name: &str,
+        new_name: &str,
+        expires_at: &str,
+        now: &str,
+    ) -> RepoResult<()> {
+        let mut tx = self.pool.begin().await?;
+        let old_fts = fts_snapshot(&mut tx, snippet_id).await?;
+        let res = sqlx::query("UPDATE snippets SET name = ?2, updated_at = ?3 WHERE id = ?1")
+            .bind(snippet_id)
+            .bind(new_name)
+            .bind(now)
+            .execute(&mut *tx)
+            .await
+            .map_err(map_unique)?;
+        if res.rows_affected() == 0 {
+            return Err(RepoError::NotFound("snippet".to_string()));
+        }
+        sqlx::query(
+            "INSERT OR REPLACE INTO renames (owner_id, old_name, snippet_id, expires_at) \
+             VALUES (?1, ?2, ?3, ?4)",
+        )
+        .bind(owner_id)
+        .bind(old_name)
+        .bind(snippet_id)
+        .bind(expires_at)
+        .execute(&mut *tx)
+        .await?;
+        sync_fts(&mut tx, snippet_id, old_fts.as_ref()).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn resolve_rename(
+        &self,
+        owner_id: i64,
+        old_name: &str,
+        now: &str,
+    ) -> RepoResult<Option<i64>> {
+        Ok(sqlx::query_scalar(
+            "SELECT snippet_id FROM renames WHERE owner_id = ?1 AND old_name = ?2 AND expires_at > ?3",
+        )
+        .bind(owner_id)
+        .bind(old_name)
+        .bind(now)
+        .fetch_optional(&self.pool)
+        .await?)
+    }
+
+    async fn count_for_owner(&self, owner_id: i64) -> RepoResult<i64> {
+        Ok(sqlx::query_scalar(
+            "SELECT COUNT(*) FROM snippets WHERE owner_id = ?1 AND deleted_at IS NULL",
+        )
+        .bind(owner_id)
+        .fetch_one(&self.pool)
+        .await?)
+    }
+
+    async fn list_for_owner(
+        &self,
+        owner_id: i64,
+        visibility: Option<&str>,
+        tag: Option<&str>,
+        sort: &str,
+        limit: i64,
+        offset: i64,
+    ) -> RepoResult<Vec<SnippetRow>> {
+        let mut qb =
+            sqlx::QueryBuilder::<sqlx::Sqlite>::new("SELECT * FROM snippets WHERE owner_id = ");
+        qb.push_bind(owner_id);
+        qb.push(" AND deleted_at IS NULL");
+        if let Some(visibility) = visibility {
+            qb.push(" AND visibility = ");
+            qb.push_bind(visibility.to_string());
+        }
+        if let Some(tag) = tag {
+            qb.push(
+                " AND EXISTS (SELECT 1 FROM snippet_tags \
+                 WHERE snippet_id = snippets.id AND tag = ",
+            );
+            qb.push_bind(tag.to_string());
+            qb.push(")");
+        }
+        match sort {
+            "created" => qb.push(" ORDER BY created_at DESC, id DESC"),
+            "name" => qb.push(" ORDER BY name ASC, id ASC"),
+            _ => qb.push(" ORDER BY updated_at DESC, id DESC"),
+        };
+        qb.push(" LIMIT ");
+        qb.push_bind(limit);
+        qb.push(" OFFSET ");
+        qb.push_bind(offset);
+        Ok(qb
+            .build_query_as::<SnippetRow>()
+            .fetch_all(&self.pool)
+            .await?)
+    }
+
+    async fn purge_deleted(&self, deleted_before: &str, now: &str) -> RepoResult<u64> {
+        let mut total = 0u64;
+        let res =
+            sqlx::query("DELETE FROM snippets WHERE deleted_at IS NOT NULL AND deleted_at < ?1")
+                .bind(deleted_before)
+                .execute(&self.pool)
+                .await?;
+        total += res.rows_affected();
+        let res = sqlx::query("DELETE FROM renames WHERE expires_at <= ?1")
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+        total += res.rows_affected();
+        Ok(total)
     }
 
     async fn soft_delete(&self, snippet_id: i64, now: &str) -> RepoResult<()> {
@@ -1187,9 +1375,28 @@ mod tests {
                 Some("v2"),
                 &["ci".to_string(), "web".to_string()],
                 NOW,
+                None,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        // A checked append against a stale expectation writes
+        // nothing and reports None (optimistic concurrency).
+        let raced = repos
+            .snippets
+            .add_version(
+                snip.id,
+                "steps",
+                "name: ubuntu-setup\nsteps: [echo race]\n",
+                "feed99",
+                None,
+                &[],
+                NOW,
+                Some(1),
             )
             .await
             .unwrap();
+        assert!(raced.is_none(), "stale If-Match must not append");
         assert_eq!(v2.version, 2);
         // The contentless FTS row now indexes v2's body only: the
         // old body's distinctive term must no longer match.
@@ -1215,7 +1422,7 @@ mod tests {
         // Going private removes the FTS row.
         repos
             .snippets
-            .update_metadata(snip.id, "Set up Ubuntu", "private", NOW)
+            .update_metadata(snip.id, "Set up Ubuntu", "private", &[], NOW)
             .await
             .unwrap();
         let hits: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM snippets_fts")
