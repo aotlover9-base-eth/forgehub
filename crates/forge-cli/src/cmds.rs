@@ -229,18 +229,7 @@ pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Resul
         }
     };
     let cli_values = forge_core::vars::parse_assignments(&args.assignments)?;
-    let values = match forge_core::vars::resolve(&snippet, &cli_values) {
-        Ok(v) => v,
-        Err(forge_core::ForgeError::MissingVariables(missing)) => {
-            return Err(CliError::failure(format!(
-                "forgehub: missing values for variables: {}\n  what: these variables have no value from arguments, defaults or built-ins\n  why: a command with an empty variable would run the wrong thing\n  fix: {}",
-                missing.join(", "),
-                forge_core::vars::missing_hint(&missing)
-            ))
-            .into());
-        }
-        Err(e) => return Err(e.into()),
-    };
+    let values = resolve_or_prompt(&snippet, &cli_values, stdin, crate::prompt::stdin_is_tty())?;
     let hash = forge_core::hash::content_hash(&snippet);
     if args.dry_run {
         if args.json {
@@ -278,7 +267,26 @@ pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Resul
         }
     }
     let base = std::env::current_dir().context("reading the current directory")?;
+    // Record the run in history.db (spec-cli §9). Best-effort: a
+    // broken history DB must never break a run — `fg doctor` reports
+    // DB health. The row is started now and finished after execution;
+    // if this process is killed mid-run the row stays unfinished and
+    // stats counts it as interrupted.
+    let history = crate::history::Db::open(&store.history_db_path()).ok();
+    let run_id = history
+        .as_ref()
+        .and_then(|db| db.start_run(&snippet.name).ok());
+    let started = std::time::Instant::now();
     let outcome = runner::execute(&snippet, &values, &base, &store.tmp_dir())?;
+    if let (Some(db), Some(id)) = (&history, run_id) {
+        let commands = u32::try_from(snippet.command_count()).unwrap_or(u32::MAX);
+        let _ = db.finish_run(
+            id,
+            outcome.exit_code == 0,
+            started.elapsed().as_millis(),
+            commands,
+        );
+    }
     if args.json {
         println!(
             "{}",
@@ -295,9 +303,69 @@ pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Resul
     Ok(outcome.exit_code)
 }
 
-/// `fg list` — the local library.
-pub fn cmd_list(store: &Store, json: bool) -> i32 {
-    let snippets = store.list();
+/// Resolve variable values; on a terminal, prompt for each missing
+/// variable (spec-snippet-format §7 stage 5) before giving up. The
+/// final error lists **all** still-missing variables at once.
+pub fn resolve_or_prompt(
+    snippet: &Snippet,
+    cli_values: &std::collections::BTreeMap<String, String>,
+    stdin: &mut impl BufRead,
+    interactive: bool,
+) -> Result<std::collections::BTreeMap<String, String>> {
+    match forge_core::vars::resolve(snippet, cli_values) {
+        Ok(v) => Ok(v),
+        Err(forge_core::ForgeError::MissingVariables(missing)) => {
+            if !interactive {
+                return Err(missing_error(&missing).into());
+            }
+            let mut values = cli_values.clone();
+            for name in &missing {
+                let description = snippet
+                    .variables
+                    .get(name)
+                    .and_then(|spec| spec.resolve().description)
+                    .unwrap_or_default();
+                let question = if description.is_empty() {
+                    format!("Value for {name}:")
+                } else {
+                    format!("Value for {name} ({description}):")
+                };
+                match crate::prompt::ask_line(stdin, &question) {
+                    Some(answer) if !answer.is_empty() => {
+                        values.insert(name.clone(), answer);
+                    }
+                    _ => {}
+                }
+            }
+            match forge_core::vars::resolve(snippet, &values) {
+                Ok(v) => Ok(v),
+                Err(forge_core::ForgeError::MissingVariables(still)) => {
+                    Err(missing_error(&still).into())
+                }
+                Err(e) => Err(e.into()),
+            }
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+fn missing_error(missing: &[String]) -> CliError {
+    CliError::failure(format!(
+        "forgehub: missing values for variables: {}\n  what: these variables have no value from arguments, defaults or built-ins\n  why: a command with an empty variable would run the wrong thing\n  fix: {}",
+        missing.join(", "),
+        forge_core::vars::missing_hint(missing)
+    ))
+}
+
+/// `fg list [--tag t] [--long]` — the local library. JSON shape is
+/// spec-cli §3: `{ "workflows": [{ "name", "description", "tags",
+/// "mode", "origin" }] }`.
+pub fn cmd_list(store: &Store, tag: Option<&str>, long: bool, json: bool) -> i32 {
+    let snippets: Vec<Snippet> = store
+        .list()
+        .into_iter()
+        .filter(|s| tag.is_none_or(|t| s.tags.iter().any(|x| x == t)))
+        .collect();
     if json {
         let arr: Vec<_> = snippets
             .iter()
@@ -307,12 +375,11 @@ pub fn cmd_list(store: &Store, json: bool) -> i32 {
                     "description": s.description,
                     "tags": s.tags,
                     "mode": match s.effective_mode() { Mode::Script => "script", Mode::Steps => "steps" },
-                    "commands": s.command_count(),
-                    "hash": forge_core::hash::short_hash(s),
+                    "origin": "local",
                 })
             })
             .collect();
-        println!("{}", serde_json::json!(arr));
+        println!("{}", serde_json::json!({"workflows": arr}));
         return 0;
     }
     if snippets.is_empty() {
@@ -332,19 +399,128 @@ pub fn cmd_list(store: &Store, json: bool) -> i32 {
         if !s.tags.is_empty() {
             println!("    tags: {}", s.tags.join(", "));
         }
+        if long {
+            println!(
+                "    mode: {} · shell: {} · hash: {}",
+                match s.effective_mode() {
+                    Mode::Script => "script",
+                    Mode::Steps => "steps",
+                },
+                s.effective_shell(),
+                forge_core::hash::short_hash(s)
+            );
+        }
     }
     0
 }
 
-/// `fg show <name>` — print the stored YAML (or JSON).
+/// The ordered command strings a snippet would run (spec-cli §3,
+/// `show`): steps mode flattens the resolved steps; script mode is
+/// the body as a single entry.
+#[must_use]
+pub fn show_commands(snippet: &Snippet) -> Vec<String> {
+    match snippet.effective_mode() {
+        Mode::Script => vec![snippet.script.clone().unwrap_or_default()],
+        Mode::Steps => snippet
+            .resolved_steps()
+            .iter()
+            .flat_map(|s| s.commands())
+            .map(ToString::to_string)
+            .collect(),
+    }
+}
+
+/// `fg show <name>` — a summary card with numbered commands; the raw
+/// YAML is one `fg export` away. JSON shape is spec-cli §3:
+/// `{ "name", "description", "tags", "mode", "shell", "variables",
+/// "commands" }`.
 pub fn cmd_show(store: &Store, name: &str, json: bool) -> Result<i32> {
     let snippet = store.load(name)?;
     if json {
-        let mut value = serde_json::to_value(&snippet).context("serialising snippet")?;
-        value["hash"] = serde_json::Value::String(forge_core::hash::content_hash(&snippet));
-        println!("{value}");
+        let mut variables = serde_json::Map::new();
+        for (name, spec) in &snippet.variables {
+            let param = spec.resolve();
+            let mut entry = serde_json::Map::new();
+            if let Some(d) = &param.description {
+                entry.insert("description".into(), serde_json::Value::String(d.clone()));
+            }
+            if let Some(d) = &param.default {
+                entry.insert("default".into(), serde_json::Value::String(d.clone()));
+            }
+            entry.insert("required".into(), serde_json::Value::Bool(param.required));
+            variables.insert(name.clone(), serde_json::Value::Object(entry));
+        }
+        println!(
+            "{}",
+            serde_json::json!({
+                "name": snippet.name,
+                "description": snippet.description,
+                "tags": snippet.tags,
+                "mode": match snippet.effective_mode() { Mode::Script => "script", Mode::Steps => "steps" },
+                "shell": snippet.effective_shell(),
+                "variables": variables,
+                "commands": show_commands(&snippet),
+            })
+        );
+        return Ok(0);
+    }
+    let description = if snippet.description.is_empty() {
+        "(no description)".to_string()
     } else {
-        print!("{}", snippet.to_yaml()?);
+        escape_display(&snippet.description)
+    };
+    println!("{} — {}", snippet.name, description);
+    println!(
+        "  mode: {} · shell: {} · hash: {}",
+        match snippet.effective_mode() {
+            Mode::Script => "script",
+            Mode::Steps => "steps",
+        },
+        snippet.effective_shell(),
+        forge_core::hash::short_hash(&snippet)
+    );
+    if !snippet.tags.is_empty() {
+        println!("  tags: {}", snippet.tags.join(", "));
+    }
+    if !snippet.variables.is_empty() {
+        println!("  variables:");
+        for (name, spec) in &snippet.variables {
+            let param = spec.resolve();
+            let mut line = format!("    {name}");
+            if param.required {
+                line.push_str(" (required)");
+            }
+            if let Some(d) = &param.default {
+                use std::fmt::Write as _;
+                let _ = write!(line, " [default: {}]", escape_display(d));
+            }
+            if let Some(d) = &param.description {
+                if !d.is_empty() {
+                    use std::fmt::Write as _;
+                    let _ = write!(line, " — {}", escape_display(d));
+                }
+            }
+            println!("{line}");
+        }
+    }
+    println!("  commands:");
+    match snippet.effective_mode() {
+        Mode::Script => {
+            for (i, line) in snippet
+                .script
+                .as_deref()
+                .unwrap_or_default()
+                .lines()
+                .enumerate()
+            {
+                println!("    {}. {}", i + 1, escape_display(line));
+            }
+        }
+        Mode::Steps => {
+            for (i, cmd) in show_commands(&snippet).iter().enumerate() {
+                println!("    {}. {}", i + 1, escape_display(cmd));
+            }
+        }
     }
     Ok(0)
 }
@@ -548,5 +724,37 @@ mod tests {
             escape_display("apt update && apt upgrade"),
             "apt update && apt upgrade"
         );
+    }
+
+    #[test]
+    fn prompt_resolves_missing_variable() {
+        let s = Snippet::from_yaml(
+            "name: g\nvariables:\n  WHO: { description: 'who to greet', required: true }\nsteps:\n  - echo {{WHO}}\n",
+        )
+        .unwrap();
+        let mut input = std::io::Cursor::new(b"world\n".to_vec());
+        let values =
+            resolve_or_prompt(&s, &std::collections::BTreeMap::new(), &mut input, true).unwrap();
+        assert_eq!(values["WHO"], "world");
+    }
+
+    #[test]
+    fn prompt_empty_answer_stays_missing() {
+        let s = Snippet::from_yaml("name: g\nsteps:\n  - echo {{WHO}}\n").unwrap();
+        let mut input = std::io::Cursor::new(b"\n".to_vec());
+        let err = resolve_or_prompt(&s, &std::collections::BTreeMap::new(), &mut input, true)
+            .unwrap_err();
+        assert!(format!("{err}").contains("WHO"));
+    }
+
+    #[test]
+    fn missing_without_tty_lists_all() {
+        let s = Snippet::from_yaml("name: g\nsteps:\n  - echo {{A}} {{B}}\n").unwrap();
+        let mut input = std::io::Cursor::new(Vec::new());
+        let err = resolve_or_prompt(&s, &std::collections::BTreeMap::new(), &mut input, false)
+            .unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains('A') && msg.contains('B'), "{msg}");
+        assert!(msg.contains("A=value B=value"), "{msg}");
     }
 }

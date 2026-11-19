@@ -2,7 +2,7 @@
 
 - **Status:** Normative for Steps 4, 5, 11, 12, 13, 18. **Version:** 1 (Step 2, 2026-11-19)
 - **Binary:** `forgehub`. `fg` is a shell alias/function installed by `alias install` (roadmap §6); non-interactive scripts must call `forgehub`.
-- **Local state:** `$FORGEHUB_HOME` or `~/.forgehub/` — `config.toml`, `workflows/`, `cache/`, `trust.db`, `history.db`, `backups/`. **Credentials:** `$XDG_CONFIG_HOME/forgehub/credentials.toml` or `~/.config/forgehub/credentials.toml`, directory `0700`, file `0600`.
+- **Local state:** `$FORGEHUB_HOME` or `~/.forgehub/` — `config.yaml`, `snippets/`, `cache/`, `trust.db`, `history.db`, `backups/`. (Step 5 correction: the Step 2 draft said `config.toml`/`workflows/`; Steps 4–5 shipped YAML config and `snippets/` — the config *keys* are unchanged. See `reports/report_Step5.md`, Corrections.) **Credentials:** `$XDG_CONFIG_HOME/forgehub/credentials.toml` or `~/.config/forgehub/credentials.toml`, directory `0700`, file `0600`.
 
 ## 1. Global flags
 
@@ -38,7 +38,7 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 
 | Command | Behaviour (summary; Steps 4–5 are normative for detail) |
 |---------|----------------------------------------------------------|
-| `init` | Create home, `config.toml` (`shell`, `ignore_commands`, `registry_url`, `color`, `parallel_limit`, `human_overhead_seconds`, analyze thresholds), `workflows/`. Idempotent |
+| `init` | Create home, `config.yaml` (`default_shell`, `editor`, `confirm_before_run`, `ignore_commands`, `history_file`, `human_overhead_seconds`, analyze thresholds), `snippets/`, `backups/`. Idempotent |
 | `record <name> [--simple] [--force] [-d desc] [--push]` | Bash/zsh live capture with a `● rec` prompt marker; `--simple` reads stdin. Drops noise (`ls`, `cd`, `clear`, config `ignore_commands`) and consecutive duplicates; a leading `cd` becomes `cwd`; secret scanner **refuses** to save secrets and offers a variable instead. Saves steps-mode YAML |
 | `run <target> [KEY=value…] [--dry] [--step] [-k/--keep-going] [-q] [-y] [--version N] [--no-cache] [--offline]` | §6–§8. `forgehub <name>` is shorthand for `run <name>` when `<name>` is not a subcommand |
 | `list [--tag t] [--long]` | Local workflows; `--json` per §3 |
@@ -51,11 +51,11 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 | `export <name> [-o file]` | YAML to stdout or file |
 | `analyze [--min-count n] [--limit n] [--max-len n] [--dry] [-y] [--file path]` | Mine bash/zsh/fish history: session grouping by time gaps, non-overlapping counts, fragment/rotation suppression, secrets scrubbed **before** anything is written |
 | `stats [--limit n] [--explain]` | From `history.db`; saved = (commands × `human_overhead_seconds`) − actual runtime; interrupted runs excluded |
-| `backup [name]` / `restore [name] [--force]` | Snapshot/restore workflows + config (never credentials) in `~/.forgehub/backups/<timestamp>`; restore confirms and never overwrites without confirmation |
+| `backup [name] [-o file]` / `restore [archive] [--force] [--config]` | Timestamped `.tar` archives (SHA-256 manifest, verified before any write) in `~/.forgehub/backups/`; restore defaults to the newest archive, confirms, and never overwrites without confirmation. Never credentials: archives hold config + snippets only |
 | `doctor [topic]` | Home perms, config validity, shell, alias presence, workflow parse, ecosystem topics, (Step 11+) registry reachability, token validity, credential perms, clock skew. Non-zero exit on real breakage |
 | `alias install\|uninstall\|show [--shell bash\|zsh\|fish] [-y]` | Idempotent marked block in the rc file (`alias fg='forgehub'` + `alias jobs-fg='builtin fg'`; fish: a `fg` function + `jobs-fg`); backs up the rc file first; asks unless `-y` |
-| `completions <bash\|zsh\|fish\|powershell>` | `clap_complete` output; dynamic completion of local workflow names where the shell supports it |
-| `config` | **Not a command in v1** (see forgenesis-analysis §5). Edit `config.toml` directly |
+| `completions <bash\|zsh\|fish\|powershell\|elvish>` | Prints the registration snippet for `clap_complete`'s dynamic env protocol (`COMPLETE=<shell> forgehub`); completion of local workflow names is dynamic, served by the binary from the live library |
+| `config` | **Not a command in v1** (see forgenesis-analysis §5). Edit `config.yaml` directly |
 
 ## 5. Commands — cloud (Steps 11–13, 18)
 
@@ -81,7 +81,7 @@ Target forms: `name`, `owner/name`, either with `@<version>` (cloud only).
 
 Order (first match wins, and the match source is always shown in the confirm card):
 1. **Built-in subcommand** — if the first argument is a subcommand name, it is never treated as a snippet. (`forgehub run <name>` bypasses this for a snippet whose name collides — impossible for cloud names, which are reserved-word-checked, but possible for legacy local files; `run` is the escape hatch.)
-2. **Local workflow** — `~/.forgehub/workflows/<name>` (project `.forgenesis/` shadowing is a dropped Forgenesis feature and does not apply).
+2. **Local workflow** — `~/.forgehub/snippets/<name>` (project `.forgenesis/` shadowing is a dropped Forgenesis feature and does not apply).
 3. **Own cloud snippet** — if logged in, `me/<name>` at the latest version (or `@N`).
 4. **Explicit `owner/name`** — that owner's snippet (only reachable in this explicit form for other people's snippets).
 

@@ -27,10 +27,96 @@ pub struct Config {
     /// Server base URL (Step 11+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub server: Option<String>,
+    /// Seconds of human overhead (recall + typing) credited per
+    /// automated command by `fg stats` (Forgenesis default: 12).
+    #[serde(default = "default_overhead")]
+    pub human_overhead_seconds: f64,
+    /// Minimum repetitions before `fg analyze` reports a sequence.
+    #[serde(default = "default_analyze_min_count")]
+    pub analyze_min_count: u32,
+    /// Longest command sequence `fg analyze` looks for.
+    #[serde(default = "default_analyze_max_len")]
+    pub analyze_max_len: usize,
+    /// Shell-history location override for `fg analyze`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history_file: Option<String>,
+    /// Commands `fg analyze` treats as noise (exact head word, full
+    /// command, or a `prefix*` pattern).
+    #[serde(default = "default_ignores")]
+    pub ignore_commands: Vec<String>,
 }
 
 fn default_true() -> bool {
     true
+}
+
+fn default_overhead() -> f64 {
+    12.0
+}
+
+fn default_analyze_min_count() -> u32 {
+    3
+}
+
+fn default_analyze_max_len() -> usize {
+    8
+}
+
+/// The Forgenesis noise list: commands that are never workflows.
+pub fn default_ignores() -> Vec<String> {
+    [
+        "ls",
+        "ll",
+        "la",
+        "cd",
+        "clear",
+        "pwd",
+        "exit",
+        "history",
+        "which",
+        "man",
+        "htop",
+        "top",
+        "fg",
+        "bg",
+        "jobs",
+        "echo",
+        "cat",
+        "less",
+        "more",
+        "tree",
+        "whoami",
+        "date",
+        "reset",
+        "forgehub",
+        "forgenesis",
+        "sudo su",
+        "vi",
+        "vim",
+        "nano",
+    ]
+    .iter()
+    .map(ToString::to_string)
+    .collect()
+}
+
+impl Config {
+    /// Is `cmd` noise for history analysis? Matches the head word, the
+    /// whole command, or a `prefix*` pattern (Forgenesis semantics).
+    #[must_use]
+    pub fn is_ignored(&self, cmd: &str) -> bool {
+        let head = cmd.split_whitespace().next().unwrap_or("");
+        if head.is_empty() {
+            return true;
+        }
+        self.ignore_commands.iter().any(|pat| {
+            let pat = pat.trim();
+            match pat.strip_suffix('*') {
+                Some(prefix) => cmd.starts_with(prefix),
+                None => head == pat || cmd == pat,
+            }
+        })
+    }
 }
 
 impl Default for Config {
@@ -41,6 +127,11 @@ impl Default for Config {
             confirm_before_run: true,
             username: None,
             server: None,
+            human_overhead_seconds: default_overhead(),
+            analyze_min_count: default_analyze_min_count(),
+            analyze_max_len: default_analyze_max_len(),
+            history_file: None,
+            ignore_commands: default_ignores(),
         }
     }
 }
@@ -87,6 +178,18 @@ impl Store {
         self.root.join("tmp")
     }
 
+    /// Directory holding timestamped backup archives.
+    #[must_use]
+    pub fn backups_dir(&self) -> PathBuf {
+        self.root.join("backups")
+    }
+
+    /// The run-history database (`history.db`).
+    #[must_use]
+    pub fn history_db_path(&self) -> PathBuf {
+        self.root.join("history.db")
+    }
+
     /// The config file path.
     #[must_use]
     pub fn config_path(&self) -> PathBuf {
@@ -100,7 +203,12 @@ impl Store {
     /// On filesystem failures.
     pub fn ensure_dirs(&self) -> Result<Vec<PathBuf>> {
         let mut created = Vec::new();
-        for dir in [self.root.clone(), self.snippets_dir(), self.tmp_dir()] {
+        for dir in [
+            self.root.clone(),
+            self.snippets_dir(),
+            self.tmp_dir(),
+            self.backups_dir(),
+        ] {
             if !dir.exists() {
                 std::fs::create_dir_all(&dir)
                     .with_context(|| format!("creating {}", dir.display()))?;

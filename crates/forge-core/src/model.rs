@@ -490,14 +490,20 @@ impl Snippet {
         self.always.iter().map(StepSpec::normalize).collect()
     }
 
-    /// Total commands across steps and `always`, counting parallel branches.
+    /// Total commands: for steps mode, across steps and `always`
+    /// (counting parallel branches); for script mode, the number of
+    /// lines in the body.
     #[must_use]
     pub fn command_count(&self) -> usize {
-        self.resolved_steps()
-            .iter()
-            .chain(self.always_steps().iter())
-            .map(|s| s.commands().len())
-            .sum()
+        match self.effective_mode() {
+            Mode::Script => self.script.as_deref().unwrap_or_default().lines().count(),
+            Mode::Steps => self
+                .resolved_steps()
+                .iter()
+                .chain(self.always_steps().iter())
+                .map(|s| s.commands().len())
+                .sum(),
+        }
     }
 
     /// Every command string that would run, in order (script body counts
