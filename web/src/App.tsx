@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createBrowserRouter,
@@ -12,18 +12,28 @@ import {
   AppShell,
   Button,
   ConfirmDialog,
-  EmptyState,
+  Icon,
+  Skeleton,
   ToastProvider,
   type NavItem,
 } from './design';
 import { useLogout, useMe } from './api/hooks';
+import { ErrorBoundary } from './ErrorBoundary';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
-import EditorPage from './pages/EditorPage';
-import SnippetPage from './pages/SnippetPage';
-import DesignPage from './pages/DesignPage';
+import NotFoundPage from './pages/NotFoundPage';
+
+// Route-level code splitting: the heavy screens load on
+// demand so the first paint stays small.
+const EditorPage = lazy(() => import('./pages/EditorPage'));
+const SnippetPage = lazy(() => import('./pages/SnippetPage'));
+const ExplorePage = lazy(() => import('./pages/ExplorePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const DevicePage = lazy(() => import('./pages/DevicePage'));
+const DesignPage = lazy(() => import('./pages/DesignPage'));
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'home', label: 'Home', icon: 'home', href: '/' },
@@ -31,10 +41,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'library', label: 'Library', icon: 'library_books', href: '/dashboard' },
   { id: 'profile', label: 'Profile', icon: 'person', href: '/profile' },
 ];
-
-function Placeholder({ title }: { title: string }) {
-  return <EmptyState icon="terminal" title={title} message="This screen arrives in a later step." />;
-}
 
 /** Gate for signed-in screens: waits for /me, then either
  * renders or redirects to login with a return URL. */
@@ -46,6 +52,35 @@ function RequireAuth({ children }: { children: ReactNode }) {
     return <Navigate to={`/login?return=${encodeURIComponent(location.pathname)}`} replace />;
   }
   return <>{children}</>;
+}
+
+/** /profile sends you to your own public profile. */
+function OwnProfile() {
+  const me = useMe();
+  if (me.isPending) return null;
+  if (!me.data) return <Navigate to="/login?return=/profile" replace />;
+  return <Navigate to={`/${me.data.username}`} replace />;
+}
+
+/** A slim banner that appears when the browser goes offline. */
+function OfflineBanner() {
+  const [offline, setOffline] = useState(() => !navigator.onLine);
+  useEffect(() => {
+    const on = () => setOffline(false);
+    const off = () => setOffline(true);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+  if (!offline) return null;
+  return (
+    <div className="fh-offline" role="status">
+      <Icon name="info" /> You are offline. Changes will fail until the connection is back.
+    </div>
+  );
 }
 
 function Shell() {
@@ -97,6 +132,9 @@ function Shell() {
         me.data ? (
           <>
             <span aria-label={`Signed in as ${me.data.username}`}>{me.data.username}</span>
+            <Button variant="text" onClick={() => navigate('/settings')}>
+              Settings
+            </Button>
             <Button
               variant="text"
               onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/') })}
@@ -111,7 +149,19 @@ function Shell() {
         )
       }
     >
-      <Outlet />
+      <OfflineBanner />
+      <ErrorBoundary>
+        <Suspense fallback={<Skeleton lines={4} />}>
+          <Outlet />
+        </Suspense>
+      </ErrorBoundary>
+      <footer className="fh-footer">
+        <span>ForgeHub — save a command once, run it anywhere.</span>
+        <a href="https://github.com/aotlover9-base-eth/forgehub" target="_blank" rel="noreferrer">
+          Source
+        </a>
+        <span>No tracking. No third-party scripts.</span>
+      </footer>
       <ConfirmDialog
         open={helpOpen}
         headline="Keyboard shortcuts"
@@ -161,8 +211,18 @@ const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      { path: 'explore', element: <Placeholder title="Explore" /> },
-      { path: 'profile', element: <Placeholder title="Profile" /> },
+      { path: 'explore', element: <ExplorePage /> },
+      { path: 'device', element: <DevicePage /> },
+      {
+        path: 'settings',
+        element: (
+          <RequireAuth>
+            <SettingsPage />
+          </RequireAuth>
+        ),
+      },
+      { path: 'profile', element: <OwnProfile /> },
+      { path: ':username', element: <ProfilePage /> },
       { path: ':owner/:name', element: <SnippetPage /> },
       {
         path: ':owner/:name/edit',
@@ -173,7 +233,7 @@ const router = createBrowserRouter([
         ),
       },
       ...(import.meta.env.DEV ? [{ path: '__design', element: <DesignPage /> }] : []),
-      { path: '*', element: <Placeholder title="Not found" /> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ]);

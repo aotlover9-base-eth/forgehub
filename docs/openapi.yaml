@@ -130,6 +130,43 @@ paths:
         '204': { description: All sessions revoked }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+  /me/sessions:
+    get:
+      tags: [auth]
+      summary: The current user's browser sessions (cookie session only)
+      operationId: listSessions
+      security: [{ cookieSession: [] }]
+      responses:
+        '200':
+          description: Sessions, most recently used first; the current one is flagged
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessions]
+                properties:
+                  sessions:
+                    type: array
+                    items: { $ref: '#/components/schemas/SessionInfo' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /me/sessions/{ref}:
+    delete:
+      tags: [auth]
+      summary: Revoke one of the current user's sessions by its public ref
+      operationId: revokeSession
+      security: [{ cookieSession: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+        - name: ref
+          in: path
+          required: true
+          schema: { type: string, minLength: 8, description: Prefix of the stored session id hash, as returned by listSessions }
+      responses:
+        '204': { description: Session revoked (revoking the current session is a logout) }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /me:
     get:
       tags: [auth]
@@ -975,6 +1012,15 @@ components:
         bio: { type: [string, 'null'] }
         created_at: { type: string, format: date-time }
         public_snippet_count: { type: integer }
+    SessionInfo:
+      type: object
+      required: [ref, created_at, last_used_at, expires_at, current]
+      properties:
+        ref: { type: string, description: Public reference (prefix of the stored session id hash); used to revoke }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        current: { type: boolean, description: True for the session making the request }
     ApiToken:
       type: object
       required: [id, name, prefix, scopes, created_at]

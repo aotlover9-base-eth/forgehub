@@ -1,7 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, apiRaw, ApiError, setCsrfToken } from './client';
 import type {
+  ApiTokenInfo,
+  CreatedToken,
   Me,
+  PublicProfile,
+  SearchPage,
+  SessionInfo,
   Snippet,
   SnippetInput,
   SnippetPage,
@@ -246,6 +251,173 @@ export function useReport() {
       api<void>(`${snippetPath(owner, name)}/report`, {
         method: 'POST',
         body: JSON.stringify({ reason }),
+      }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Explore, profiles, settings, device (Step 17)
+// ---------------------------------------------------------------------------
+
+export type SearchSort = 'relevance' | 'stars' | 'updated';
+
+export function useSearch(query: string, tag: string | null, sort: SearchSort) {
+  return useInfiniteQuery<SearchPage>({
+    queryKey: ['search', query, tag, sort],
+    enabled: query.trim().length > 0 || tag !== null,
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next_cursor,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams({ sort, limit: '20' });
+      if (query.trim()) params.set('q', query.trim());
+      if (tag) params.set('tag', tag);
+      if (pageParam) params.set('cursor', pageParam as string);
+      return api<SearchPage>(`/search?${params.toString()}`);
+    },
+  });
+}
+
+export function useExplore(feed: 'recent' | 'popular') {
+  return useInfiniteQuery<SnippetPage>({
+    queryKey: ['explore', feed],
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next_cursor,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams({ feed, limit: '20' });
+      if (pageParam) params.set('cursor', pageParam as string);
+      return api<SnippetPage>(`/explore?${params.toString()}`);
+    },
+  });
+}
+
+export function usePopularTags() {
+  return useQuery<{ tags: { tag: string; count: number }[] }>({
+    queryKey: ['popular-tags'],
+    queryFn: () => api<{ tags: { tag: string; count: number }[] }>('/tags'),
+  });
+}
+
+export function useProfile(username: string) {
+  return useQuery<PublicProfile>({
+    queryKey: ['profile', username],
+    retry: false,
+    queryFn: () => api<PublicProfile>(`/users/${encodeURIComponent(username)}`),
+  });
+}
+
+export function useProfileSnippets(username: string) {
+  return useQuery<SnippetPage>({
+    queryKey: ['profile-snippets', username],
+    retry: false,
+    queryFn: () =>
+      api<SnippetPage>(`/users/${encodeURIComponent(username)}/snippets?limit=100&sort=updated`),
+  });
+}
+
+export function usePatchMe() {
+  const queryClient = useQueryClient();
+  return useMutation<Me, ApiError, { display_name?: string | null; bio?: string | null }>({
+    mutationFn: (patch) => api<Me>('/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+    onSuccess: (me) => {
+      if (me.csrf_token) setCsrfToken(me.csrf_token);
+      queryClient.setQueryData(['me'], me);
+    },
+  });
+}
+
+export function useChangePassword() {
+  const queryClient = useQueryClient();
+  return useMutation<Me, ApiError, { current_password: string; new_password: string }>({
+    mutationFn: (body) => api<Me>('/me', { method: 'PATCH', body: JSON.stringify(body) }),
+    onSuccess: (me) => {
+      // The password change rotated this session; the fresh
+      // CSRF token comes back in the response.
+      if (me.csrf_token) setCsrfToken(me.csrf_token);
+      queryClient.setQueryData(['me'], me);
+    },
+  });
+}
+
+export function useSessions() {
+  return useQuery<{ sessions: SessionInfo[] }>({
+    queryKey: ['sessions'],
+    retry: false,
+    queryFn: () => api<{ sessions: SessionInfo[] }>('/me/sessions'),
+  });
+}
+
+export function useRevokeSession() {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (ref) => api<void>(`/me/sessions/${encodeURIComponent(ref)}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+  });
+}
+
+export function useLogoutAll() {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, void>({
+    mutationFn: () => api<void>('/auth/logout-all', { method: 'POST' }),
+    onSettled: () => {
+      setCsrfToken(null);
+      queryClient.setQueryData(['me'], null);
+    },
+  });
+}
+
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, { username: string; password: string }>({
+    mutationFn: (body) => api<void>('/me', { method: 'DELETE', body: JSON.stringify(body) }),
+    onSettled: () => {
+      setCsrfToken(null);
+      queryClient.setQueryData(['me'], null);
+    },
+  });
+}
+
+export function useTokens() {
+  return useQuery<{ tokens: ApiTokenInfo[] }>({
+    queryKey: ['tokens'],
+    retry: false,
+    queryFn: () => api<{ tokens: ApiTokenInfo[] }>('/tokens'),
+  });
+}
+
+export function useCreateToken() {
+  const queryClient = useQueryClient();
+  return useMutation<CreatedToken, ApiError, { name: string; scopes: string[]; expires_in_days?: number }>({
+    mutationFn: (body) => api<CreatedToken>('/tokens', { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tokens'] }),
+  });
+}
+
+export function useRevokeToken() {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, number>({
+    mutationFn: (id) => api<void>(`/tokens/${id}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tokens'] }),
+  });
+}
+
+export function useDeviceLookup(userCode: string | null) {
+  return useQuery<{ client_name: string; scopes: string[]; expires_at: string }>({
+    queryKey: ['device-lookup', userCode],
+    enabled: !!userCode,
+    retry: false,
+    queryFn: () =>
+      api<{ client_name: string; scopes: string[]; expires_at: string }>(
+        `/auth/device/lookup?user_code=${encodeURIComponent(userCode!)}`,
+      ),
+  });
+}
+
+export function useDeviceDecision() {
+  return useMutation<void, ApiError, { user_code: string; approve: boolean }>({
+    mutationFn: ({ user_code, approve }) =>
+      api<void>(`/auth/device/${approve ? 'approve' : 'deny'}`, {
+        method: 'POST',
+        body: JSON.stringify({ user_code }),
       }),
   });
 }

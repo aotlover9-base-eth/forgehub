@@ -968,6 +968,66 @@ async fn get_me(RequireUser(ctx): RequireUser) -> Response {
     Json(me_json(&ctx.user, ctx.kind.session())).into_response()
 }
 
+// ---------------------------------------------------------- sessions list
+
+/// The public reference for a session: a prefix of its stored
+/// id hash. The hash is one-way, so showing a prefix is safe,
+/// and it is unique enough to address one of the user's own
+/// sessions for revocation.
+fn session_ref(id_hash: &str) -> &str {
+    &id_hash[..10.min(id_hash.len())]
+}
+
+fn session_json(row: &crate::repo::SessionRow, current: &str) -> serde_json::Value {
+    serde_json::json!({
+        "ref": session_ref(&row.id_hash),
+        "created_at": row.created_at,
+        "last_used_at": row.last_used_at,
+        "expires_at": row.expires_at,
+        "current": row.id_hash == current,
+    })
+}
+
+/// GET /me/sessions — the signed-in user's browser sessions
+/// (cookie sessions only; a bearer token is not a session).
+async fn list_sessions(
+    State(state): State<AppState>,
+    ctx: RequireSession,
+) -> Result<Response, ApiError> {
+    let rows = state.repos.sessions.list_for_user(ctx.user.id).await?;
+    let sessions: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|row| session_json(row, &ctx.session.id_hash))
+        .collect();
+    Ok(Json(serde_json::json!({ "sessions": sessions })).into_response())
+}
+
+/// DELETE /me/sessions/{ref} — revoke one of the user's
+/// sessions by its public ref. Revoking the current session
+/// is a logout. Unknown or ambiguous refs are a 404 (the ref
+/// is only ever shown to the owner, so this is not an oracle).
+async fn revoke_session(
+    State(state): State<AppState>,
+    ctx: RequireSession,
+    headers: HeaderMap,
+    axum::extract::Path(reference): axum::extract::Path<String>,
+) -> Result<Response, ApiError> {
+    verify_csrf(&headers, &ctx.session)?;
+    if reference.len() < 8 || !reference.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(ApiError::not_found("session_not_found", "No such session"));
+    }
+    let rows = state.repos.sessions.list_for_user(ctx.user.id).await?;
+    let matches: Vec<&crate::repo::SessionRow> = rows
+        .iter()
+        .filter(|row| row.id_hash.starts_with(&reference))
+        .collect();
+    if matches.len() != 1 {
+        return Err(ApiError::not_found("session_not_found", "No such session"));
+    }
+    state.repos.sessions.delete(&matches[0].id_hash).await?;
+    Ok(StatusCode::NO_CONTENT.into_response())
+}
+
 #[derive(Deserialize)]
 #[allow(clippy::option_option)] // tri-state JSON: absent vs null vs value
 struct PatchMeRequest {
@@ -1110,6 +1170,8 @@ pub fn routes() -> Router<AppState> {
         .route("/auth/logout", post(logout))
         .route("/auth/logout-all", post(logout_all))
         .route("/me", get(get_me).patch(patch_me).delete(delete_me))
+        .route("/me/sessions", get(list_sessions))
+        .route("/me/sessions/{ref}", axum::routing::delete(revoke_session))
 }
 
 #[cfg(test)]

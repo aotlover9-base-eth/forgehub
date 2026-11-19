@@ -78,3 +78,46 @@ export interface SnippetInput {
   body: string;
   message?: string;
 }
+
+export interface SearchResult {
+  snippet: Snippet;
+  highlights: { field: string; start: number; end: number }[];
+}
+
+export interface SearchPage {
+  results: SearchResult[];
+  next_cursor: string | null;
+}
+
+export interface PublicProfile {
+  username: string;
+  display_name: string | null;
+  bio: string | null;
+  created_at: string;
+  public_snippet_count: number;
+}
+
+export interface SessionInfo {
+  ref: string;
+  created_at: string;
+  last_used_at: string;
+  expires_at: string;
+  current: boolean;
+}
+
+export interface ApiTokenInfo {
+  id: number;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+}
+
+/** POST /tokens response: the metadata plus the plaintext,
+ * which the server shows exactly once. */
+export interface CreatedToken extends ApiTokenInfo {
+  token: string;
+}

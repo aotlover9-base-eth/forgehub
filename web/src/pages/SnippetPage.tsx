@@ -128,7 +128,7 @@ export default function SnippetPage() {
         </span>
         <div style={{ flex: 1, minWidth: 240 }}>
           <h1 style={{ margin: 0, fontSize: 'var(--md-sys-typescale-headline-medium-size)', fontWeight: 500 }}>
-            <Link to={`/users/${owner}`} style={{ color: 'inherit' }}>
+            <Link to={`/${owner}`} style={{ color: 'inherit' }}>
               {owner}
             </Link>
             {' / '}

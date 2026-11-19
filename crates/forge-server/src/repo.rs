@@ -228,6 +228,9 @@ pub trait SessionRepo: Send + Sync {
     async fn delete(&self, id_hash: &str) -> RepoResult<()>;
     /// Delete all of a user's sessions.
     async fn delete_for_user(&self, user_id: i64) -> RepoResult<u64>;
+    /// All of a user's sessions, most recently used first
+    /// (settings/security screen).
+    async fn list_for_user(&self, user_id: i64) -> RepoResult<Vec<SessionRow>>;
 }
 
 /// API tokens repository.
@@ -723,6 +726,15 @@ impl SessionRepo for SqliteStore {
             .execute(&self.pool)
             .await?;
         Ok(res.rows_affected())
+    }
+
+    async fn list_for_user(&self, user_id: i64) -> RepoResult<Vec<SessionRow>> {
+        Ok(sqlx::query_as::<_, SessionRow>(
+            "SELECT * FROM sessions WHERE user_id = ?1 ORDER BY last_used_at DESC",
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?)
     }
 }
 

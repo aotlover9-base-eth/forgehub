@@ -329,6 +329,31 @@
   cursor: pointer;
 }
 
+/* ---- Offline banner + footer */
+.fh-offline {
+  display: flex;
+  align-items: center;
+  gap: var(--fh-space-2);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-radius: var(--md-sys-shape-corner-small);
+  padding: var(--fh-space-2) var(--fh-space-3);
+  margin-bottom: var(--fh-space-3);
+}
+.fh-footer {
+  display: flex;
+  gap: var(--fh-space-4);
+  flex-wrap: wrap;
+  margin-top: var(--fh-space-7);
+  padding-top: var(--fh-space-4);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+}
+.fh-footer a {
+  color: inherit;
+}
+
 /* ---- Danger action inside dialogs */
 .fh-danger-action {
   --md-text-button-label-text-color: var(--md-sys-color-error);
