@@ -1,0 +1,32 @@
+# Fixture in the Forgenesis format, exercising the feature set
+# docs/forgenesis-analysis.md says ForgeHub keeps: variables with `def`,
+# conditions, retries, per-step env/cwd, and always-steps.
+name: deploy-api
+description: Deploy the API the Forgenesis way
+tags: [deploy, api]
+vars:
+  BRANCH:
+    description: Git branch to deploy
+    def: main
+  RESTART:
+    default: "true"
+    required: true
+env:
+  APP_ENV: production
+retry: 2
+steps:
+  - name: Checkout
+    command: git checkout {{BRANCH}}
+    if: .git
+  - name: Build
+    run: cargo build --release
+    timeout: 10m
+  - name: Restart
+    cmd: systemctl restart api
+    if:
+      equals: ["{{RESTART}}", "true"]
+    retry:
+      times: 3
+      delay: 2s
+always:
+  - echo deploy finished

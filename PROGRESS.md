@@ -4,7 +4,7 @@ One commit and one report per step. See `agent.md` §5-§6 and `roadmap.md` §5.
 
 - [x] Step 1 — bootstrap monorepo, study forgenesis, CI skeleton
 - [x] Step 2 — specs, ADRs, threat model, API contract (push still blocked: no GitHub auth / remote URL — see reports/report_Step1.md §9)
-- [ ] Step 3 — forge-core shared library
+- [x] Step 3 — forge-core shared library
 - [ ] Step 4 — local CLI core (init, record, run, manage)
 - [ ] Step 5 — local CLI parity (vars, stats, backup, doctor, alias) — 🛑 CHECKPOINT 1
 - [ ] Step 6 — server foundation

@@ -8,6 +8,20 @@ repository.workspace = true
 description = "Shared ForgeHub library: snippet model, YAML parsing, variables, name rules, hashing, secret scan, danger lints."
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_yaml = "0.9"
+sha2 = "0.10"
+thiserror = "2"
+
+[dev-dependencies]
+proptest = "1"
+
+[[bench]]
+name = "parse_hash"
+harness = false
 
 [lints]
 workspace = true

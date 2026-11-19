@@ -1,16 +1,43 @@
 #![forbid(unsafe_code)]
-//! `forge-core` — shared `ForgeHub` library.
+//! `forge-core` — the shared `ForgeHub` library used by the CLI and the
+//! server. No network access and no filesystem side effects: everything
+//! here is pure computation over text and values.
 //!
-//! Step 1 provides only the crate skeleton so the workspace builds.
-//! The snippet model, YAML parsing and validation, canonical serialisation
-//! and hashing, variable resolution, secret scanning and danger lints are
-//! implemented in Step 3 against `docs/spec-snippet-format.md`.
+//! Modules:
+//! - [`model`] — the snippet document (both modes) and its limits.
+//! - [`parse`] — strict parsing: `Snippet::from_yaml` / `from_bytes`.
+//! - [`names`] — snippet-name, username and tag rules, reserved words.
+//! - [`vars`] — `{{VAR}}` substitution, resolution order, durations.
+//! - [`hash`] — canonical serialisation (spec §9) and SHA-256 hashing.
+//! - [`scan`] — secret scanning (ADR 0007).
+//! - [`lint`] — danger lints (warnings only).
+//! - [`import`] — the Forgenesis conversion layer.
 //!
 //! # Examples
 //!
 //! ```
-//! assert_eq!(forge_core::PRODUCT, "ForgeHub");
+//! let snippet = forge_core::Snippet::from_yaml(
+//!     "name: hello\nsteps:\n  - echo hello\n",
+//! )
+//! .unwrap();
+//! assert_eq!(snippet.command_count(), 1);
+//! assert_eq!(forge_core::hash::short_hash(&snippet).len(), 8);
+//! assert_eq!(forge_core::scan::scan_snippet(&snippet).len(), 0);
 //! ```
+
+pub mod error;
+pub mod hash;
+pub mod import;
+pub mod lint;
+pub mod model;
+pub mod names;
+pub mod parse;
+pub mod scan;
+pub mod vars;
+
+pub use error::{ForgeError, Result};
+pub use import::{import_forgenesis, ImportOutcome};
+pub use model::{Mode, Snippet};
 
 /// Product name shared by the CLI, server and web app.
 pub const PRODUCT: &str = "ForgeHub";

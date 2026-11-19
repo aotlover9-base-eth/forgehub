@@ -1,0 +1,12 @@
+# Fixture with Forgenesis-era extras ForgeHub dropped: the import layer
+# must drop them, note each drop, and keep the workflow itself intact.
+name: LegacySetup
+description: Old file with dropped features
+packs:
+  - web-dev
+sync: true
+steps:
+  - git pull
+  - command: pnpm install
+    if: package.json
+    plugin: turbo
