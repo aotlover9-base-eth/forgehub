@@ -84,6 +84,47 @@ jobs:
       - name: Run the browser end-to-end story
         run: bash scripts/e2e-web.sh --skip-build
 
+  docker:
+    name: Docker (image build + boot smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build the image
+        run: docker build -t forgehub:ci --build-arg GIT_SHA=${{ github.sha }} .
+      # The gap this closes (docs/known-gaps.md): until now CI
+      # never built the image, so a broken docker-compose /
+      # Dockerfile / runtime-env combination could ship green
+      # — and did (the v0.1.0 compose file carried a literal
+      # placeholder as its database URL and crash-looped on
+      # first real use). Booting the image and demanding a
+      # healthy response plus a real signup exercises the
+      # migrations, the database and the API inside the exact
+      # artifact users run.
+      - name: Boot it and demand health + a working signup
+        run: |
+          docker run -d --name forgehub-ci -p 8080:8080 \
+            -e FORGEHUB_SECRET_KEY=ci-smoke-secret-key-that-is-long-enough-0123456789 \
+            forgehub:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/api/v1/health; then
+              echo "healthy after ${i} tries"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "server never became healthy; logs:"
+              docker logs forgehub-ci
+              exit 1
+            fi
+            sleep 2
+          done
+          curl -fsS -X POST http://127.0.0.1:8080/api/v1/auth/signup \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"ci-smoke","email":"ci@forgehub.dev","password":"ci-smoke-pass-12345"}'
+          echo "signup inside the image works"
+      - name: Show logs on failure
+        if: failure()
+        run: docker logs forgehub-ci || true
+
   supply-chain:
     name: Supply chain (deny, audit, npm audit)
     runs-on: ubuntu-latest

@@ -31,7 +31,7 @@ Login throttling and API rate limits live in the memory of one
 server process. A multi-node deployment needs a shared store;
 single-node deployments (the v1 target) are exact.
 
-## Docker image build-verified 2026-11-19; CI still does not build it
+## Docker image build-verified 2026-11-19; CI builds and smokes it since 2026-11-20
 
 The first real `docker compose up --build` on a user machine
 (2026-11-19) built the image and started Caddy fine — and
@@ -42,9 +42,10 @@ Step 21; the development machine has no Docker, so nothing
 had ever run it). The server therefore could not open its
 database (SQLite code 14). Fixed the same day in a
 post-v0.1.0 commit, together with the same placeholder in
-`docs/deploy.md`. Remaining gap: CI still does not build
-the image; adding a docker-build + health-smoke job to CI
-is the top post-v1 operations item.
+`docs/deploy.md`. CI now has a `docker` job that builds the
+image, boots it and demands a healthy response plus a
+working signup, so this class of breakage fails the build
+instead of reaching a user.
 
 ## Features deliberately absent in v0.1.0
 
