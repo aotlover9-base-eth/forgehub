@@ -6,6 +6,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-20
+
+### Fixed
+
+- The Instrument Serif is a landing-page-only treatment
+  again: headings inside the signed-in app use the standard
+  UI typeface (Roboto Flex), per the user's clarification
+  right after v0.1.1 was tagged. This release supersedes
+  v0.1.1 (which was never published).
+
 ## [0.1.1] - 2026-11-20
 
 A polish-and-recovery release: the Observe redesign, the
