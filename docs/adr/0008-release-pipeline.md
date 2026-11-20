@@ -59,3 +59,14 @@ cancellation for exactly this reason. macOS users build
 from source (`cargo install --path crates/forge-cli`);
 `scripts/install.sh` says so explicitly on Darwin, and the
 Homebrew template is Linux-only.
+
+## Addendum (2026-11-20, later): attestations dropped
+
+The v0.1.3 workflow run — the first whose build legs all
+passed — failed in the collect job: GitHub build-provenance
+attestations are "not available for user-owned private
+repositories". The attestation step is removed; SHA256SUMS
+remains the integrity contract and `scripts/install.sh`
+verifies downloads against it. If the repository ever goes
+public, the step can return (it is one `uses:` block,
+SHA-pinned in git history).

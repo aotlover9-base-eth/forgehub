@@ -6,6 +6,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-20
+
+### Fixed
+
+- The release pipeline can finish now: GitHub does not
+  offer build-provenance attestations for user-owned
+  private repositories, which failed v0.1.3's collect job
+  after all build legs had passed. The attestation step is
+  removed; `SHA256SUMS` remains the integrity contract and
+  `scripts/install.sh` verifies against it. v0.1.4 is the
+  first published release; everything in the 0.1.1–0.1.3
+  entries below is included.
+
 ## [0.1.3] - 2026-11-20
 
 ### Removed
