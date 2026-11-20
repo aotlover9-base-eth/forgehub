@@ -340,3 +340,80 @@
   color: var(--fh-observe-fg);
   background: var(--fh-observe-hover-bg);
 }
+
+/* ---- The app scene: the same Observe world inside the
+   shell (user-directed, 2026-11-20 — "after creating account
+   all sections must be of same theme"). The drifting smoke
+   backdrop sits fixed behind everything, dimmed by a scrim
+   so dense pages stay readable; the top bar and bottom nav
+   become glass; cards pick up a blur over the scene. Colour
+   itself comes from the .observe-app token scope in
+   tokens.css — this section only does glass and layout. */
+
+body:has(.observe-app) {
+  background: var(--fh-observe-bg);
+}
+
+.observe-app {
+  position: relative;
+  background: var(--fh-observe-bg);
+}
+
+.observe-app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: url('/media/observe-bg.jpg');
+  background-size: cover;
+  background-position: center bottom;
+  transform: scale(1.08);
+  animation: observe-drift 70s ease-in-out infinite alternate;
+}
+
+.observe-app-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fh-observe-scrim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .observe-app-bg {
+    animation: none;
+  }
+}
+
+.observe-app.fh-shell {
+  background: transparent;
+}
+
+.observe-app .fh-topbar,
+.observe-app .fh-nav,
+.observe-app .fh-shell__main,
+.observe-app .fh-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.observe-app .fh-topbar {
+  background: var(--fh-observe-glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--fh-observe-line);
+}
+
+.observe-app .fh-nav--bar {
+  background: var(--fh-observe-glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid var(--fh-observe-line);
+}
+
+.observe-app .fh-card {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.observe-app .fh-footer {
+  background: transparent;
+}

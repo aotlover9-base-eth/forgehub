@@ -58,7 +58,8 @@ export function AppShell({
     );
   };
   return (
-    <div className={`fh-shell fh-shell--${widthClass}`}>
+    <div className={`fh-shell fh-shell--${widthClass} observe-app`}>
+      <div className="observe-app-bg" aria-hidden="true" />
       <header className="fh-topbar">
         <span className="fh-topbar__title">{title}</span>
         <span className="fh-topbar__actions">
