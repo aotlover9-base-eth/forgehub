@@ -3,9 +3,13 @@ import { describe, expect, it } from 'vitest';
 import App from './App';
 
 describe('App', () => {
-  it('renders the shell and the logged-out landing', async () => {
+  it('renders the standalone landing, signed out', async () => {
     render(<App />);
-    expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+    // The landing is its own full-viewport scene (Observe
+    // theme) with a glass nav — the app shell is NOT rendered
+    // on it, so Home can never be mistaken for another page.
+    expect(screen.getByRole('navigation', { name: 'Landing' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
     // /me resolves 401 (MSW default) -> landing with sign-up CTA.
     expect(await screen.findByText('Create account', undefined, { timeout: 4000 })).toBeInTheDocument();
     expect(screen.getByText(/Save a command once/)).toBeInTheDocument();

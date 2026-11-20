@@ -210,11 +210,13 @@ function Shell() {
 }
 
 const router = createBrowserRouter([
+  // The landing page is a standalone full-viewport scene with
+  // its own glass nav (the Observe theme) — it does not render
+  // inside the app shell.
+  { path: '/', element: <LandingPage /> },
   {
-    path: '/',
     element: <Shell />,
     children: [
-      { index: true, element: <LandingPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
       {

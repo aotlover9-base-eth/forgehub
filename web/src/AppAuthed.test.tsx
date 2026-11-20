@@ -25,17 +25,28 @@ describe('App navigation (signed in)', () => {
         HttpResponse.json({ snippets: [], next_cursor: null }),
       ),
     );
+    server.use(
+      http.get('/api/v1/me/snippets', () =>
+        HttpResponse.json({ snippets: [], next_cursor: null }),
+      ),
+    );
     render(<App />);
     // Home is the home page even when signed in (it used to
     // redirect to the dashboard, i.e. "Home goes to Library").
+    // Since the Observe theme it is a standalone scene with no
+    // shell nav at all — the CTA is the way into the app.
     expect(
       await screen.findByText(/Save a command once/, undefined, { timeout: 4000 }),
     ).toBeInTheDocument();
     expect(
       await screen.findByText('Open your library', undefined, { timeout: 4000 }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
 
+    // Into the shell via the library CTA, then to the profile.
+    fireEvent.click(screen.getByText('Open your library'));
+    expect(
+      await screen.findByRole('button', { name: 'Profile' }, { timeout: 4000 }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Profile' }));
     expect(
       await screen.findByRole('heading', { name: 'Ada' }, { timeout: 4000 }),
