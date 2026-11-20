@@ -6,7 +6,7 @@
 
 **Save a shell command once. Run it anywhere.** ⚒️
 
-![Release](https://img.shields.io/badge/release-v0.1.4-FFFFFF?style=flat-square&labelColor=0D1117)
+![Release](https://img.shields.io/badge/release-v0.1.6-FFFFFF?style=flat-square&labelColor=0D1117)
 ![Tests](https://img.shields.io/badge/tests-478%20passing-2EA043?style=flat-square&labelColor=0D1117)
 ![License](https://img.shields.io/badge/license-MIT-9E9E9E?style=flat-square&labelColor=0D1117)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-6E7F8D?style=flat-square&labelColor=0D1117)

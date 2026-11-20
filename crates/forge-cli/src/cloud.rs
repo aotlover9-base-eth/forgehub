@@ -142,9 +142,10 @@ pub fn credentials_path() -> Result<PathBuf> {
     let dir = match std::env::var_os("XDG_CONFIG_HOME") {
         Some(d) if !d.is_empty() => PathBuf::from(d),
         _ => {
-            let home = std::env::var_os("HOME")
-                .context("neither XDG_CONFIG_HOME nor HOME is set; cannot locate credentials")?;
-            PathBuf::from(home).join(".config")
+            let home = forge_core::vars::home_dir().context(
+                "neither XDG_CONFIG_HOME nor a home directory is set (HOME on Unix, USERPROFILE on Windows); cannot locate credentials",
+            )?;
+            home.join(".config")
         }
     };
     Ok(dir.join("forgehub").join("credentials.toml"))

@@ -86,7 +86,7 @@ pub fn history_path(cfg: &Config) -> Option<PathBuf> {
             }
         }
     }
-    let home = PathBuf::from(std::env::var_os("HOME")?);
+    let home = forge_core::vars::home_dir()?;
     let shell = cfg
         .default_shell
         .clone()
@@ -112,8 +112,8 @@ pub fn history_path(cfg: &Config) -> Option<PathBuf> {
 
 fn expand_home(path: &str) -> PathBuf {
     if let Some(rest) = path.strip_prefix("~/") {
-        if let Some(home) = std::env::var_os("HOME") {
-            return PathBuf::from(home).join(rest);
+        if let Some(home) = forge_core::vars::home_dir() {
+            return home.join(rest);
         }
     }
     PathBuf::from(path)

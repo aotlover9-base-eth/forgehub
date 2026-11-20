@@ -6,6 +6,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-20
+
+### Fixed
+
+- **Every store command failed on Windows** with "neither
+  FORGEHUB_HOME nor HOME is set". Windows terminals do not
+  set `HOME`; the CLI now resolves the home directory the
+  Windows way too - `HOME`, then `USERPROFILE`, then
+  `HOMEDRIVE` + `HOMEPATH` - through one shared helper
+  (`forge_core::vars::home_dir`) used by the store, the
+  credentials path, the Forgenesis import dir, `doctor`,
+  the alias installer and history analysis. Verified by
+  unit tests over the resolution order.
+
 ## [0.1.5] - 2026-11-20
 
 ### Fixed

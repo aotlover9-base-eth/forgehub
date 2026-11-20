@@ -343,9 +343,9 @@ fn import_one(
 pub fn forgenesis_workflows_dir() -> PathBuf {
     match std::env::var_os("FORGENESIS_HOME") {
         Some(h) if !h.is_empty() => PathBuf::from(h).join("workflows"),
-        _ => std::env::var_os("HOME").map_or_else(
+        _ => forge_core::vars::home_dir().map_or_else(
             || PathBuf::from(".forgenesis/workflows"),
-            |h| PathBuf::from(h).join(".forgenesis").join("workflows"),
+            |h| h.join(".forgenesis").join("workflows"),
         ),
     }
 }
@@ -928,15 +928,15 @@ fn database_check(store: &Store) -> Check {
 
 #[allow(clippy::verbose_bit_mask)] // as above: permission bits read as a mask
 fn credentials_check() -> Check {
-    let Some(home) = std::env::var_os("HOME") else {
+    let Some(home) = forge_core::vars::home_dir() else {
         return check(
             "credentials",
             "warn",
-            "HOME is not set; cannot locate credentials".into(),
+            "no home directory (HOME/USERPROFILE) is set; cannot locate credentials".into(),
         );
     };
-    let dir = std::env::var_os("XDG_CONFIG_HOME")
-        .map_or_else(|| PathBuf::from(&home).join(".config"), PathBuf::from);
+    let dir =
+        std::env::var_os("XDG_CONFIG_HOME").map_or_else(|| home.join(".config"), PathBuf::from);
     let file = dir.join("forgehub").join("credentials.toml");
     if !file.exists() {
         return check(
@@ -1259,9 +1259,9 @@ fn resolve_shell(flag: Option<&str>) -> String {
 }
 
 fn home_dir() -> Result<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from).ok_or_else(|| {
+    forge_core::vars::home_dir().ok_or_else(|| {
         CliError::failure(
-            "forgehub: HOME is not set\n  what: cannot locate your shell rc file\n  fix: set HOME, or pass --shell and edit the rc file manually",
+            "forgehub: no home directory found\n  what: cannot locate your shell rc file (looked for HOME, then USERPROFILE)\n  fix: set HOME, or pass --shell and edit the rc file manually",
         )
         .into()
     })

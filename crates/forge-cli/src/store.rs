@@ -155,15 +155,16 @@ impl Store {
     /// Open the store at `$FORGEHUB_HOME` or `~/.forgehub`.
     ///
     /// # Errors
-    /// When neither `FORGEHUB_HOME` nor `HOME` is set.
+    /// When neither `FORGEHUB_HOME` nor a home directory
+    /// (`HOME`, or `USERPROFILE` on Windows) is set.
     pub fn open() -> Result<Self> {
         let root = match std::env::var_os("FORGEHUB_HOME") {
             Some(h) if !h.is_empty() => PathBuf::from(h),
             _ => {
-                let home = std::env::var_os("HOME").context(
-                    "neither FORGEHUB_HOME nor HOME is set; cannot find the ForgeHub home",
+                let home = forge_core::vars::home_dir().context(
+                    "neither FORGEHUB_HOME nor a home directory is set (HOME on Unix, USERPROFILE on Windows); cannot find the ForgeHub home",
                 )?;
-                PathBuf::from(home).join(".forgehub")
+                home.join(".forgehub")
             }
         };
         Ok(Self { root })

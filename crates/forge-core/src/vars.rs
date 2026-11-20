@@ -71,8 +71,37 @@ pub fn builtins() -> BTreeMap<String, String> {
     m
 }
 
-fn home_dir() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from)
+/// The user's home directory.
+///
+/// Unix shells set `HOME`; Windows does not - it sets
+/// `USERPROFILE` (and `HOMEDRIVE` + `HOMEPATH`). All three
+/// spellings are honoured, so the CLI works in a plain
+/// Windows terminal where `HOME` is unset (the v0.1.5 exe
+/// failed every store command there for exactly this).
+#[must_use]
+pub fn home_dir() -> Option<PathBuf> {
+    home_dir_from(|k| std::env::var_os(k))
+}
+
+/// [`home_dir`] over an injected environment lookup, so the
+/// resolution order is testable without mutating the
+/// process environment.
+fn home_dir_from(get: impl Fn(&str) -> Option<std::ffi::OsString>) -> Option<PathBuf> {
+    let pick = |k: &str| get(k).filter(|v| !v.is_empty()).map(PathBuf::from);
+    if let Some(h) = pick("HOME") {
+        return Some(h);
+    }
+    if let Some(p) = pick("USERPROFILE") {
+        return Some(p);
+    }
+    match (get("HOMEDRIVE"), get("HOMEPATH")) {
+        (Some(d), Some(p)) if !d.is_empty() && !p.is_empty() => {
+            let mut joined = d;
+            joined.push(&p);
+            Some(PathBuf::from(joined))
+        }
+        _ => None,
+    }
 }
 
 /// Replace every `{{NAME}}`; an error lists **all** missing names at once.
@@ -297,6 +326,48 @@ mod tests {
             .iter()
             .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
             .collect()
+    }
+
+    fn env(pairs: &[(&str, &str)]) -> impl Fn(&str) -> Option<std::ffi::OsString> {
+        let owned: Vec<(String, String)> = pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+            .collect();
+        move |k| {
+            owned
+                .iter()
+                .find(|(name, _)| name == k)
+                .map(|(_, v)| std::ffi::OsString::from(v.clone()))
+        }
+    }
+
+    #[test]
+    fn home_dir_prefers_home_then_userprofile_then_drive_path() {
+        assert_eq!(
+            home_dir_from(env(&[
+                ("HOME", "/home/ada"),
+                ("USERPROFILE", "C:\\Users\\ada")
+            ])),
+            Some(PathBuf::from("/home/ada"))
+        );
+        assert_eq!(
+            home_dir_from(env(&[("USERPROFILE", "C:\\Users\\ada")])),
+            Some(PathBuf::from("C:\\Users\\ada"))
+        );
+        assert_eq!(
+            home_dir_from(env(&[("HOMEDRIVE", "C:"), ("HOMEPATH", "\\Users\\ada")])),
+            Some(PathBuf::from("C:\\Users\\ada"))
+        );
+    }
+
+    #[test]
+    fn home_dir_treats_empty_as_unset_and_gives_up_cleanly() {
+        assert_eq!(
+            home_dir_from(env(&[("HOME", ""), ("USERPROFILE", "C:\\Users\\ada")])),
+            Some(PathBuf::from("C:\\Users\\ada"))
+        );
+        assert_eq!(home_dir_from(env(&[])), None);
+        assert_eq!(home_dir_from(env(&[("HOMEDRIVE", "C:")])), None);
     }
 
     #[test]
