@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 /**
  * The full web story in a real browser (Step 20):
- * signup -> dashboard (screenshots at 3 widths) -> create
+ * signup -> home -> dashboard (screenshots at 3 widths) -> create
  * ubuntu-setup -> view -> edit -> versions + diff -> settings
  * token reveal-once flow -> device page error state.
  *
@@ -21,7 +21,9 @@ test('web story: signup, create, edit, diff, token, device', async ({ page, cont
   await page.getByRole('textbox', { name: 'Email' }).fill('webuser@example.com');
   await page.getByRole('textbox', { name: 'Password' }).fill('a long passphrase');
   await button('Create account').click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  // Since the Home separation (2026-11-20) signup lands on the
+  // in-app Home page, not the Library.
+  await expect(page).toHaveURL(/\/home$/);
 
   // --- dashboard screenshots at the three width classes -------
   for (const [name, width] of [
@@ -31,7 +33,10 @@ test('web story: signup, create, edit, diff, token, device', async ({ page, cont
   ] as const) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/dashboard');
-    await page.screenshot({ path: `../docs/screenshots/dashboard-${name}.png` });
+    // Width-class captures are run artifacts, not docs: the
+    // old dashboard-*.png files were removed from
+    // docs/screenshots on purpose (2026-11-20).
+    await page.screenshot({ path: `test-results/dashboard-${name}.png` });
   }
   await page.setViewportSize({ width: 1280, height: 900 });
 
