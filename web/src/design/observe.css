@@ -472,3 +472,155 @@ body:has(.observe-app) {
   font-weight: 400;
   letter-spacing: -0.01em;
 }
+
+/* ------------------------------------------------------------------ */
+/* Motion (user-directed, 2026-11-20): the UI felt too static.        */
+/* Entrance choreography on the landing, a page transition            */
+/* inside the app, and small physical responses on cards,             */
+/* buttons and nav circles. Transform/opacity only; the               */
+/* reduced-motion block at the end silences all of it.                */
+
+@keyframes fh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fh-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fh-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.observe-nav-wrap {
+  animation: fh-drop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.observe-display {
+  animation: fh-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+.observe-sub {
+  animation: fh-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+}
+
+.observe-pill-wrap {
+  animation: fh-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.34s both;
+}
+
+.observe-social {
+  animation: fh-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.48s both;
+}
+
+.observe-circle {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.observe-circle:hover {
+  transform: translateY(-4px) scale(1.05);
+}
+
+.observe-cta-solid {
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.observe-cta-solid:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.observe-join {
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.observe-join:hover {
+  filter: brightness(1.06);
+}
+
+.observe-join:active {
+  transform: scale(0.97);
+}
+
+/* The route wrapper is keyed by pathname in App.tsx, so this
+   replays on every navigation inside the app. */
+.observe-app .fh-route {
+  animation: fh-page-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.observe-app .fh-card {
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+}
+
+.observe-app .fh-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--fh-observe-line-strong);
+}
+
+.observe-app
+  :is(md-filled-button, md-filled-tonal-button, md-outlined-button, md-text-button, md-icon-button) {
+  transition: transform 0.15s ease;
+}
+
+.observe-app
+  :is(
+    md-filled-button,
+    md-filled-tonal-button,
+    md-outlined-button,
+    md-text-button,
+    md-icon-button
+  ):active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .observe-nav-wrap,
+  .observe-display,
+  .observe-sub,
+  .observe-pill-wrap,
+  .observe-social,
+  .observe-app .fh-route {
+    animation: none;
+  }
+
+  .observe-circle,
+  .observe-cta-solid,
+  .observe-join,
+  .observe-app .fh-card,
+  .observe-app
+    :is(md-filled-button, md-filled-tonal-button, md-outlined-button, md-text-button, md-icon-button) {
+    transition: none;
+  }
+
+  .observe-circle:hover,
+  .observe-cta-solid:hover,
+  .observe-app .fh-card:hover {
+    transform: none;
+  }
+}

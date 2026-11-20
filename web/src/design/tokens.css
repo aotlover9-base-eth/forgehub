@@ -167,6 +167,7 @@
   /* The pinned mobile bottom bar sits over scrolling content,
      so it gets a denser glass than the floating panels. */
   --fh-observe-bar-bg: rgb(8 8 10 / 0.78);
+  --fh-observe-line-strong: rgb(255 255 255 / 0.28);
   --fh-observe-line: rgb(255 255 255 / 0.12);
 
   /* Map the scheme onto @material/web component tokens. */

@@ -172,7 +172,11 @@ function Shell() {
       <OfflineBanner />
       <ErrorBoundary>
         <Suspense fallback={<Skeleton lines={4} />}>
-          <Outlet />
+          {/* Keyed by pathname so the page-transition
+              animation replays on every navigation. */}
+          <div key={location.pathname} className="fh-route">
+            <Outlet />
+          </div>
         </Suspense>
       </ErrorBoundary>
       <footer className="fh-footer">
