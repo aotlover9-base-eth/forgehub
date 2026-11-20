@@ -217,6 +217,34 @@
   white-space: nowrap;
 }
 
+/* Compact landing nav (mobile fix, 2026-11-20): at phone
+   widths the wordmark collided with the Log in link — brand
+   plus actions simply did not fit inside the pill. The wrap
+   and pill paddings shrink, the wordmark drops a typescale
+   step and the action gaps tighten. */
+@media (max-width: 560px) {
+  .observe-nav-wrap {
+    padding: var(--fh-space-4) var(--fh-space-3) 0;
+  }
+  .observe-nav {
+    padding: 6px 6px 6px 16px;
+    gap: var(--fh-space-2);
+  }
+  .observe-wordmark {
+    font-size: var(--md-sys-typescale-title-medium-size);
+  }
+  .observe-actions {
+    gap: var(--fh-space-2);
+  }
+  .observe-cta-text {
+    font-size: var(--md-sys-typescale-label-large-size);
+  }
+  .observe-cta-solid {
+    padding: 8px 14px;
+    font-size: var(--md-sys-typescale-label-large-size);
+  }
+}
+
 /* Hero: centred, nudged up, headline in Instrument Serif
    with a soft dark aura instead of a drop shadow so white
    type survives the bright frames low in the backdrop. */
@@ -403,10 +431,24 @@ body:has(.observe-app) {
 }
 
 .observe-app .fh-nav--bar {
-  background: var(--fh-observe-glass-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--fh-observe-bar-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--fh-observe-line);
+  /* Mobile fix (2026-11-20): the bar was an in-flow grid
+     row, so on any page taller than the viewport it sank
+     below the fold — navigation unreachable while scrolling.
+     Pin it to the viewport bottom; the main column gets
+     matching bottom padding so nothing hides behind it. */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+}
+
+.observe-app.fh-shell--compact .fh-shell__main {
+  padding-bottom: 96px;
 }
 
 .observe-app .fh-card {
