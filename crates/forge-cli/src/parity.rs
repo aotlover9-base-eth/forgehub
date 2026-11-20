@@ -1074,9 +1074,7 @@ fn token_check(client: &crate::cloud::ApiClient, registry: &str) -> Check {
     let env_token = std::env::var("FORGEHUB_TOKEN")
         .ok()
         .filter(|t| !t.trim().is_empty());
-    let stored = crate::cloud::load_credentials_file()
-        .ok()
-        .and_then(|c| c.registries.get(registry).cloned());
+    let stored = crate::cloud::stored_entry(registry);
     let Some(token) = env_token.or_else(|| stored.map(|e| e.token)) else {
         return check(
             "token",

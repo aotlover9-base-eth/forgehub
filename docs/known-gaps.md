@@ -62,10 +62,21 @@ instead of reaching a user.
 - **Admin web UI.** Moderation is the operator CLI
   (`forge-server admin …`) by design — no privileged web
   surface exists to attack.
-- **OS keyring storage for CLI credentials.** Tokens live in
-  `~/.config/forgehub/credentials.toml` (directory 0700, file
-  0600, reads refuse looser permissions). Keyring integration
-  is a post-v1 hardening option.
+- **OS keyring storage for CLI credentials** (landed
+  2026-11-20, with honest limits). `FORGEHUB_CREDENTIAL_STORE`
+  selects `auto` (default), `file` or `keyring`. macOS and
+  Windows builds store tokens in Keychain / Credential
+  Manager. On Linux the secret-service backend is a
+  `linux-keyring` cargo feature, **off in the release
+  binaries**: it links the system D-Bus library, which the
+  static musl builds cannot do — Linux release builds keep
+  using `~/.config/forgehub/credentials.toml` (directory
+  0700, file 0600, reads refuse looser permissions), and
+  auto mode falls back to that file on every platform when
+  no keyring answers. The keyring crate's process-local
+  mock store is deliberately never used (detected at
+  compile time): a credential that vanishes with the
+  process would be worse than the file.
 - **Windows depth.** The CLI builds and runs on Windows for
   local library management, but executing snippets assumes a
   POSIX shell and the `fg` alias is Unix-shell only.

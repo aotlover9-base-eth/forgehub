@@ -122,6 +122,7 @@ Detail: [docs/security.md](docs/security.md) ·
 | `FORGEHUB_REGISTRY` | CLI: server URL (or `--registry`, or config) |
 | `FORGEHUB_HOME` | CLI: local library location (default `~/.forgehub`) |
 | `FORGEHUB_TOKEN` | CLI: token from the environment, for scripts |
+| `FORGEHUB_CREDENTIAL_STORE` | CLI: `auto` (default) / `file` / `keyring` — OS keyring vs credentials file |
 | `FORGEHUB_SECRET_KEY` | Server: session secret, ≥ 32 random bytes (`.env`) |
 | `FORGEHUB_DOMAIN` | Server (compose/Caddy): domain to serve, default `localhost` |
 | `FORGEHUB_SMTP_URL` | Server: SMTP URL for password-reset mail, e.g. `smtps://user:pass@host:465` |

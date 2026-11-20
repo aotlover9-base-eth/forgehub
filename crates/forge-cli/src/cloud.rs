@@ -14,11 +14,13 @@
 //!   through [`redact`] when a token is in scope, and the token
 //!   prefix (first 8 chars of the random part) is the most that is
 //!   ever displayed.
-//! - Credentials live in `$XDG_CONFIG_HOME/forgehub/credentials.toml`
-//!   (or `~/.config/forgehub/credentials.toml`), directory 0700,
-//!   file 0600, keyed by registry URL, written atomically. A file
-//!   with group/other permissions is refused (with a fix offer on a
-//!   TTY) rather than read.
+//! - Credentials live in the OS keyring when one is reachable
+//!   (secret-service / Keychain / Credential Manager), else in
+//!   `$XDG_CONFIG_HOME/forgehub/credentials.toml` (directory 0700,
+//!   file 0600, keyed by registry URL, written atomically; a file
+//!   with group/other permissions is refused, with a fix offer on
+//!   a TTY, rather than read). `FORGEHUB_CREDENTIAL_STORE` =
+//!   `auto` (default) | `file` | `keyring` picks the behaviour.
 
 use std::collections::BTreeMap;
 use std::io::BufRead;
@@ -165,7 +167,7 @@ fn set_mode(path: &std::path::Path, mode: u32) -> std::io::Result<()> {
 /// Load the credentials file, enforcing permissions: a file that is
 /// group/other-readable is refused — on a TTY the user is offered a
 /// chmod fix; non-interactively the error says exactly what to run.
-pub fn load_credentials(stdin: &mut impl BufRead) -> Result<CredFile> {
+fn load_credentials_gated(stdin: &mut impl BufRead) -> Result<CredFile> {
     let path = credentials_path()?;
     if !path.exists() {
         return Ok(CredFile::default());
@@ -216,7 +218,7 @@ pub fn load_credentials_file() -> Result<CredFile> {
 /// Persist the credentials file atomically: ensure the directory
 /// (0700), write a temp file (0600) in it, rename over the target.
 /// An empty file (no registries) removes the file instead.
-pub fn save_credentials(creds: &CredFile) -> Result<()> {
+fn save_credentials_file(creds: &CredFile) -> Result<()> {
     let path = credentials_path()?;
     if creds.registries.is_empty() {
         if path.exists() {
@@ -252,6 +254,248 @@ pub fn save_credentials(creds: &CredFile) -> Result<()> {
     set_mode(&tmp, 0o600)?; // in case a stale tmp existed with wider perms
     std::fs::rename(&tmp, &path).with_context(|| format!("cannot replace {}", path.display()))?;
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Credential store selection: OS keyring with file fallback
+// (2026-11-20 increment, closing the known gap)
+// ---------------------------------------------------------------------------
+
+/// Which credential store to use, from `FORGEHUB_CREDENTIAL_STORE`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CredStoreMode {
+    /// Keyring when reachable, the file otherwise (default).
+    Auto,
+    /// The credentials file only (the pre-2026 behaviour).
+    File,
+    /// The OS keyring only; an unreachable keyring is an error.
+    Keyring,
+}
+
+/// Parse a `FORGEHUB_CREDENTIAL_STORE` value; anything unknown
+/// means Auto (a typo must not lock anyone out of their login).
+#[must_use]
+pub fn parse_cred_store_mode(value: Option<&str>) -> CredStoreMode {
+    match value {
+        Some("file") => CredStoreMode::File,
+        Some("keyring") => CredStoreMode::Keyring,
+        _ => CredStoreMode::Auto,
+    }
+}
+
+/// The store mode in effect for this process.
+#[must_use]
+pub fn cred_store_mode() -> CredStoreMode {
+    parse_cred_store_mode(std::env::var("FORGEHUB_CREDENTIAL_STORE").ok().as_deref())
+}
+
+/// Whether this build has a real OS keyring backend compiled
+/// in. The keyring crate silently substitutes a process-local
+/// *mock* store when no platform backend is compiled (a Linux
+/// build without the `linux-keyring` feature), and a
+/// credential that vanishes when the process exits is worse
+/// than no keyring at all — so the mock is never consulted:
+/// without a compiled backend, auto mode is the file, and
+/// keyring mode is an explicit error.
+const KEYRING_COMPILED: bool = cfg!(any(
+    target_os = "macos",
+    target_os = "windows",
+    feature = "linux-keyring"
+));
+
+/// Keyring service name (the "account" is the registry URL).
+const KEYRING_SERVICE: &str = "forgehub";
+/// Keyring entry holding the JSON list of registries stored in
+/// the keyring — the keyring API cannot enumerate, so the
+/// index lives next to the entries it names.
+const KEYRING_INDEX_KEY: &str = "__registries__";
+
+/// The keyring operations the store logic needs, behind a
+/// trait so tests can drive it with an in-memory fake.
+trait KeyringBackend {
+    fn get(&self, key: &str) -> Result<Option<String>>;
+    fn set(&self, key: &str, value: &str) -> Result<()>;
+    fn delete(&self, key: &str) -> Result<()>;
+}
+
+/// The real OS keyring (secret-service on Linux, Keychain on
+/// macOS, Credential Manager on Windows) via the keyring crate.
+struct OsKeyring;
+
+impl KeyringBackend for OsKeyring {
+    fn get(&self, key: &str) -> Result<Option<String>> {
+        let entry =
+            keyring::Entry::new(KEYRING_SERVICE, key).context("the OS keyring is unavailable")?;
+        match entry.get_password() {
+            Ok(value) => Ok(Some(value)),
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(e) => Err(anyhow::Error::from(e)).context("reading the OS keyring failed"),
+        }
+    }
+
+    fn set(&self, key: &str, value: &str) -> Result<()> {
+        keyring::Entry::new(KEYRING_SERVICE, key)
+            .context("the OS keyring is unavailable")?
+            .set_password(value)
+            .context("writing the OS keyring failed")
+    }
+
+    fn delete(&self, key: &str) -> Result<()> {
+        let entry =
+            keyring::Entry::new(KEYRING_SERVICE, key).context("the OS keyring is unavailable")?;
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(e) => Err(anyhow::Error::from(e)).context("clearing the OS keyring failed"),
+        }
+    }
+}
+
+/// Read every keyring-stored credential (index + entries).
+/// A corrupt or missing entry is skipped, never fatal.
+fn keyring_load(backend: &dyn KeyringBackend) -> Result<CredFile> {
+    let mut out = CredFile::default();
+    let Some(index) = backend.get(KEYRING_INDEX_KEY)? else {
+        return Ok(out);
+    };
+    let registries: Vec<String> = serde_json::from_str(&index).unwrap_or_default();
+    for registry in registries {
+        if let Some(text) = backend.get(&registry)? {
+            if let Ok(entry) = toml::from_str::<CredEntry>(&text) {
+                out.registries.insert(registry, entry);
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Write the full credential state to the keyring: entries for
+/// registries that disappeared are deleted (logout must not
+/// leave a copy behind) and the index is rewritten to match.
+fn keyring_save(backend: &dyn KeyringBackend, creds: &CredFile) -> Result<()> {
+    let old = keyring_load(backend)?;
+    for registry in old.registries.keys() {
+        if !creds.registries.contains_key(registry) {
+            backend.delete(registry)?;
+        }
+    }
+    for (registry, entry) in &creds.registries {
+        let text = toml::to_string(entry).context("cannot serialise a credential")?;
+        backend.set(registry, &text)?;
+    }
+    let index: Vec<&String> = creds.registries.keys().collect();
+    backend
+        .set(KEYRING_INDEX_KEY, &serde_json::to_string(&index)?)
+        .context("cannot write the keyring index")?;
+    Ok(())
+}
+
+/// Merge two credential sets; `ring` wins per registry (it is
+/// the store `save_credentials` writes to in auto mode, so it
+/// holds the fresher copy whenever both exist).
+fn merge_credentials(mut file: CredFile, ring: CredFile) -> CredFile {
+    for (registry, entry) in ring.registries {
+        file.registries.insert(registry, entry);
+    }
+    file
+}
+
+/// Load the effective credentials, honouring
+/// [`cred_store_mode`]: file mode reads the file (with its
+/// permission gate); keyring mode reads the keyring only and
+/// errors when it is unreachable; auto merges both, keyring
+/// first, and treats an unreachable keyring as "file only".
+pub fn load_credentials(stdin: &mut impl BufRead) -> Result<CredFile> {
+    match cred_store_mode() {
+        CredStoreMode::File => load_credentials_gated(stdin),
+        CredStoreMode::Keyring => {
+            if !KEYRING_COMPILED {
+                return Err(CliError::failure(
+                    "forgehub: credentials not read\n  what: this build has no OS keyring support (Linux builds need the `linux-keyring` cargo feature)\n  fix: set FORGEHUB_CREDENTIAL_STORE=file to use the credentials file",
+                )
+                .into());
+            }
+            keyring_load(&OsKeyring).map_err(|e| {
+                anyhow::Error::from(CliError::failure(format!(
+                    "forgehub: credentials not read\n  what: {e}\n  fix: unlock your OS keyring, or set FORGEHUB_CREDENTIAL_STORE=file to use the credentials file"
+                )))
+            })
+        }
+        CredStoreMode::Auto => {
+            let file = load_credentials_gated(stdin)?;
+            if !KEYRING_COMPILED {
+                return Ok(file);
+            }
+            match keyring_load(&OsKeyring) {
+                Ok(ring) => Ok(merge_credentials(file, ring)),
+                Err(_) => Ok(file),
+            }
+        }
+    }
+}
+
+/// Persist the effective credentials, honouring
+/// [`cred_store_mode`]. In auto mode a successful keyring
+/// write removes the file (one source of truth); when the
+/// keyring is unreachable the file write is the fallback.
+/// In keyring mode a failed write is an error — the caller
+/// asked for the keyring explicitly.
+pub fn save_credentials(creds: &CredFile) -> Result<()> {
+    match cred_store_mode() {
+        CredStoreMode::File => save_credentials_file(creds),
+        CredStoreMode::Keyring => {
+            if !KEYRING_COMPILED {
+                return Err(CliError::failure(
+                    "forgehub: credentials not saved\n  what: this build has no OS keyring support (Linux builds need the `linux-keyring` cargo feature)\n  fix: set FORGEHUB_CREDENTIAL_STORE=file to use the credentials file",
+                )
+                .into());
+            }
+            keyring_save(&OsKeyring, creds).map_err(|e| {
+                anyhow::Error::from(CliError::failure(format!(
+                    "forgehub: credentials not saved\n  what: {e}\n  fix: unlock your OS keyring, or set FORGEHUB_CREDENTIAL_STORE=file to use the credentials file"
+                )))
+            })?;
+            remove_credentials_file()
+        }
+        CredStoreMode::Auto => {
+            if !KEYRING_COMPILED {
+                return save_credentials_file(creds);
+            }
+            match keyring_save(&OsKeyring, creds) {
+                Ok(()) => remove_credentials_file(),
+                Err(_) => save_credentials_file(creds),
+            }
+        }
+    }
+}
+
+/// Delete the credentials file if it exists (after the state
+/// moved to the keyring).
+fn remove_credentials_file() -> Result<()> {
+    let path = credentials_path()?;
+    if path.exists() {
+        std::fs::remove_file(&path).with_context(|| format!("cannot remove {}", path.display()))?;
+    }
+    Ok(())
+}
+
+/// The stored credential for one registry, without prompting
+/// (doctor's token check): the keyring first in auto/keyring
+/// mode, then the credentials file.
+#[must_use]
+pub fn stored_entry(registry: &str) -> Option<CredEntry> {
+    if cred_store_mode() != CredStoreMode::File && KEYRING_COMPILED {
+        if let Ok(ring) = keyring_load(&OsKeyring) {
+            if let Some(entry) = ring.registries.get(registry) {
+                return Some(entry.clone());
+            }
+        }
+        if cred_store_mode() == CredStoreMode::Keyring {
+            return None;
+        }
+    }
+    load_credentials_file()
+        .ok()
+        .and_then(|c| c.registries.get(registry).cloned())
 }
 
 // ---------------------------------------------------------------------------
@@ -1086,5 +1330,117 @@ mod tests {
         let entry = &back.registries["http://127.0.0.1:8080"];
         assert_eq!(entry.username, "anna");
         assert_eq!(entry.scopes, ["read", "write"]);
+    }
+
+    #[derive(Default)]
+    struct FakeKeyring {
+        map: std::sync::Mutex<std::collections::HashMap<String, String>>,
+        fail: bool,
+    }
+
+    impl KeyringBackend for FakeKeyring {
+        fn get(&self, key: &str) -> Result<Option<String>> {
+            if self.fail {
+                anyhow::bail!("keyring is down");
+            }
+            Ok(self.map.lock().unwrap().get(key).cloned())
+        }
+
+        fn set(&self, key: &str, value: &str) -> Result<()> {
+            if self.fail {
+                anyhow::bail!("keyring is down");
+            }
+            self.map
+                .lock()
+                .unwrap()
+                .insert(key.to_string(), value.to_string());
+            Ok(())
+        }
+
+        fn delete(&self, key: &str) -> Result<()> {
+            if self.fail {
+                anyhow::bail!("keyring is down");
+            }
+            self.map.lock().unwrap().remove(key);
+            Ok(())
+        }
+    }
+
+    fn ring_entry(token: &str, username: &str) -> CredEntry {
+        CredEntry {
+            token: token.into(),
+            username: username.into(),
+            token_name: None,
+            scopes: vec!["read".into()],
+            expires_at: None,
+        }
+    }
+
+    #[test]
+    fn keyring_roundtrip_and_pruning() {
+        let ring = FakeKeyring::default();
+        let mut creds = CredFile::default();
+        creds
+            .registries
+            .insert("https://a.example".into(), ring_entry("fgh_AAA", "anna"));
+        creds
+            .registries
+            .insert("https://b.example".into(), ring_entry("fgh_BBB", "bob"));
+        keyring_save(&ring, &creds).unwrap();
+        let back = keyring_load(&ring).unwrap();
+        assert_eq!(back.registries.len(), 2);
+        assert_eq!(back.registries["https://a.example"].username, "anna");
+        // A registry dropped from the saved state is pruned
+        // from the keyring (logout leaves no copy behind).
+        creds.registries.remove("https://b.example");
+        keyring_save(&ring, &creds).unwrap();
+        let back = keyring_load(&ring).unwrap();
+        assert_eq!(back.registries.len(), 1);
+        assert!(ring.get("https://b.example").unwrap().is_none());
+        // Saving the empty state clears everything.
+        keyring_save(&ring, &CredFile::default()).unwrap();
+        assert!(keyring_load(&ring).unwrap().registries.is_empty());
+    }
+
+    #[test]
+    fn keyring_errors_propagate_to_the_caller() {
+        let ring = FakeKeyring {
+            fail: true,
+            ..Default::default()
+        };
+        assert!(keyring_load(&ring).is_err());
+        assert!(keyring_save(&ring, &CredFile::default()).is_err());
+    }
+
+    #[test]
+    fn merge_prefers_the_keyring_copy() {
+        let mut file = CredFile::default();
+        file.registries
+            .insert("https://a.example".into(), ring_entry("fgh_OLD", "anna"));
+        file.registries.insert(
+            "https://file-only.example".into(),
+            ring_entry("fgh_F", "fred"),
+        );
+        let mut ring = CredFile::default();
+        ring.registries
+            .insert("https://a.example".into(), ring_entry("fgh_NEW", "anna"));
+        let merged = merge_credentials(file, ring);
+        assert_eq!(merged.registries["https://a.example"].token, "fgh_NEW");
+        assert_eq!(
+            merged.registries["https://file-only.example"].token,
+            "fgh_F"
+        );
+    }
+
+    #[test]
+    fn store_mode_parsing_defaults_to_auto() {
+        assert_eq!(parse_cred_store_mode(Some("file")), CredStoreMode::File);
+        assert_eq!(
+            parse_cred_store_mode(Some("keyring")),
+            CredStoreMode::Keyring
+        );
+        assert_eq!(parse_cred_store_mode(Some("auto")), CredStoreMode::Auto);
+        assert_eq!(parse_cred_store_mode(Some("typo")), CredStoreMode::Auto);
+        assert_eq!(parse_cred_store_mode(None), CredStoreMode::Auto);
     }
 }

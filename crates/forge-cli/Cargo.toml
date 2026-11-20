@@ -17,6 +17,14 @@ clap = { version = "4", features = ["derive"] }
 clap_complete = { version = "4", features = ["unstable-dynamic"] }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 forge-core = { version = "0.1.0", path = "../forge-core" }
+# OS keyring for credential storage (2026-11-20): Keychain on
+# macOS, Credential Manager on Windows. Only cloud commands
+# touch it, and an unreachable keyring falls back to the
+# credentials file (see cloud.rs). The Linux secret-service
+# backend is the `linux-keyring` feature below, not a default:
+# it links the system D-Bus library, which would break the
+# static musl release binaries and headless builds.
+keyring = { version = "3", default-features = false, features = ["apple-native", "windows-native"] }
 regex = "1"
 # TUI (Step 18): ratatui rendering over crossterm; only the
 # `ui` command constructs them, so other commands pay nothing.
@@ -43,6 +51,14 @@ serde_yaml = "0.9"
 similar = "2"
 toml = "0.8"
 clap_mangen = "0.3.4"
+
+[features]
+# Linux OS-keyring support via D-Bus secret-service (GNOME
+# Keyring / KWallet). Requires libdbus-1-dev at build time and
+# a running secret service at run time; without it, Linux
+# builds use the credentials file (which auto mode falls back
+# to on every platform when no keyring answers).
+linux-keyring = ["keyring/sync-secret-service"]
 
 [dev-dependencies]
 # Integration tests drive the real server in-process (Step 11).
