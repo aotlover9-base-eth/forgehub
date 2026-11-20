@@ -6,6 +6,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-20
+
+### Fixed
+
+- **The Windows .exe died instantly on machines without
+  the Visual C++ Redistributable.** It dynamically linked
+  `VCRUNTIME140.dll`; the Windows build now statically
+  links the MSVC runtime (`+crt-static`), so the exe is
+  self-contained - download it and run it, nothing else to
+  install. Everything else is unchanged from 0.1.4.
+
 ## [0.1.4] - 2026-11-20
 
 ### Fixed
