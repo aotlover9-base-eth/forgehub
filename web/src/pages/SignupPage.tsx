@@ -36,7 +36,7 @@ export default function SignupPage() {
       {
         onSuccess: () => {
           toast({ message: 'Account created. Welcome to ForgeHub.' });
-          navigate('/dashboard', { replace: true });
+          navigate('/home', { replace: true });
         },
         onError: (error) => {
           if (error instanceof ApiError && error.code === 'username_taken') {

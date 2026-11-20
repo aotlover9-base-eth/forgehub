@@ -15,6 +15,7 @@ import { authedHandlers, meFixture, server, snippetFixture } from '../test/msw';
 import LoginPage from './LoginPage';
 import SignupPage from './SignupPage';
 import DashboardPage from './DashboardPage';
+import HomePage from './HomePage';
 
 function renderPage(ui: React.ReactNode, route = '/') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -194,5 +195,39 @@ describe('DashboardPage', () => {
     await waitFor(() => expect(screen.getByText('ubuntu-setup')).toBeTruthy());
     const results = await axe.run(container);
     expect(results.violations).toEqual([]);
+  });
+});
+
+describe('HomePage', () => {
+  it('greets the user and shows recent + popular snippets', async () => {
+    server.use(
+      http.get('/api/v1/me', () => HttpResponse.json(meFixture)),
+      http.get('/api/v1/me/snippets', () =>
+        HttpResponse.json({ snippets: [snippetFixture()], next_cursor: null }),
+      ),
+      http.get('/api/v1/explore', () =>
+        HttpResponse.json({
+          snippets: [snippetFixture({ owner: 'bob', name: 'disk-usage', star_count: 7 })],
+          next_cursor: null,
+        }),
+      ),
+    );
+    renderPage(<HomePage />, '/home');
+    await waitFor(() => expect(screen.getByText('Welcome back, Ada')).toBeTruthy());
+    expect(screen.getByText('Your recent snippets')).toBeTruthy();
+    expect(screen.getByText('ubuntu-setup')).toBeTruthy();
+    expect(screen.getByText('Popular this week')).toBeTruthy();
+    expect(screen.getByText('disk-usage')).toBeTruthy();
+    expect(screen.getByText('View all in your Library')).toBeTruthy();
+  });
+
+  it('offers a first-snippet call to action when the library is empty', async () => {
+    server.use(
+      http.get('/api/v1/me', () => HttpResponse.json(meFixture)),
+      http.get('/api/v1/me/snippets', () => HttpResponse.json({ snippets: [], next_cursor: null })),
+      http.get('/api/v1/explore', () => HttpResponse.json({ snippets: [], next_cursor: null })),
+    );
+    renderPage(<HomePage />, '/home');
+    await waitFor(() => expect(screen.getByText('Save your first snippet')).toBeTruthy());
   });
 });

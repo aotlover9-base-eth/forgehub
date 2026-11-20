@@ -22,7 +22,7 @@ export default function LoginPage() {
       {
         onSuccess: () => {
           toast({ message: 'Welcome back' });
-          navigate(params.get('return') || '/dashboard', { replace: true });
+          navigate(params.get('return') || '/home', { replace: true });
         },
         onError: (error) => {
           // Login failures are generic by design (no account

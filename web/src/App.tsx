@@ -27,6 +27,7 @@ import NotFoundPage from './pages/NotFoundPage';
 
 // Route-level code splitting: the heavy screens load on
 // demand so the first paint stays small.
+const HomePage = lazy(() => import('./pages/HomePage'));
 const EditorPage = lazy(() => import('./pages/EditorPage'));
 const SnippetPage = lazy(() => import('./pages/SnippetPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
@@ -36,7 +37,7 @@ const DevicePage = lazy(() => import('./pages/DevicePage'));
 const DesignPage = lazy(() => import('./pages/DesignPage'));
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'home', label: 'Home', icon: 'home', href: '/' },
+  { id: 'home', label: 'Home', icon: 'home', href: '/home' },
   { id: 'explore', label: 'Explore', icon: 'explore', href: '/explore' },
   { id: 'library', label: 'Library', icon: 'library_books', href: '/dashboard' },
   { id: 'profile', label: 'Profile', icon: 'person', href: '/profile' },
@@ -89,20 +90,17 @@ function Shell() {
   const me = useMe();
   const logout = useLogout();
   const [helpOpen, setHelpOpen] = useState(false);
-  // Which nav item is "here": Home only at '/', Profile on
-  // your own profile page, otherwise the matching section —
-  // and nothing on pages that belong to no section (another
-  // user's profile, a snippet, settings). The old fallback
-  // lit up Home on all of those, which made Profile look
-  // like it had gone Home.
+  // Which nav item is "here": Profile on your own profile
+  // page, otherwise the matching section — and nothing on
+  // pages that belong to no section (another user's profile,
+  // a snippet, settings). Home is the in-app /home page; the
+  // public landing at '/' lives outside this shell entirely
+  // (the two were separated on 2026-11-20 at the user's
+  // direction — Home used to bounce people to the landing).
   const active: string | null =
-    location.pathname === '/'
-      ? 'home'
-      : me.data && location.pathname === `/${me.data.username}`
-        ? 'profile'
-        : (NAV_ITEMS.find(
-            (item) => item.href !== '/' && location.pathname.startsWith(item.href),
-          )?.id ?? null);
+    me.data && location.pathname === `/${me.data.username}`
+      ? 'profile'
+      : (NAV_ITEMS.find((item) => location.pathname.startsWith(item.href))?.id ?? null);
 
   // Minimal keyboard shortcuts (discoverable via the help
   // dialog, opened with ?): n = new snippet, / = focus the
@@ -219,6 +217,14 @@ const router = createBrowserRouter([
     children: [
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
+      {
+        path: 'home',
+        element: (
+          <RequireAuth>
+            <HomePage />
+          </RequireAuth>
+        ),
+      },
       {
         path: 'dashboard',
         element: (
