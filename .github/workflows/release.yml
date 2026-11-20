@@ -86,12 +86,19 @@ jobs:
           Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
           $hash = (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLower()
           "$hash  $name.zip" | Out-File -Encoding ascii "dist/$name.zip.sha256"
+          # The bare .exe ships too (owner request, 2026-11-20):
+          # Windows users should not have to unzip anything to
+          # get the binary. Same bytes as inside the zip.
+          Copy-Item "dist/$name/forgehub.exe" "dist/$name.exe"
+          $exeHash = (Get-FileHash "dist/$name.exe" -Algorithm SHA256).Hash.ToLower()
+          "$exeHash  $name.exe" | Out-File -Encoding ascii "dist/$name.exe.sha256"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: forgehub-${{ matrix.target }}
           path: |
             dist/*.tar.gz
             dist/*.zip
+            dist/*.exe
             dist/*.sha256
           if-no-files-found: error
 

@@ -80,7 +80,8 @@ fg push hello --public      # publish a local snippet
 fg run alice/docker-setup   # run anyone's public snippet (trust flow below)
 ```
 
-Prebuilt binaries (Linux x86_64/aarch64, Windows x86_64) are on
+Prebuilt binaries (Linux x86_64/aarch64 tarballs, a Windows
+zip and a direct Windows `.exe`) are on
 the [Releases page](https://github.com/aotlover9-base-eth/forgehub/releases).
 This repository is private, so download them signed in - in the
 browser, or with `gh release download v0.1.4` - and verify
