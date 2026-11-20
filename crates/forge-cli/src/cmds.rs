@@ -38,7 +38,7 @@ pub fn escape_display(text: &str) -> String {
     out
 }
 
-/// `fg init` — create the `ForgeHub` home, config and library dirs.
+/// `fg init` - create the `ForgeHub` home, config and library dirs.
 pub fn cmd_init(store: &Store, json: bool) -> Result<i32> {
     let created = store.ensure_dirs()?;
     let cfg_path = store.config_path();
@@ -69,7 +69,7 @@ pub fn cmd_init(store: &Store, json: bool) -> Result<i32> {
     Ok(0)
 }
 
-/// `fg record` — capture a shell session and save it as a snippet.
+/// `fg record` - capture a shell session and save it as a snippet.
 /// Record a session; also returns the saved snippet's name
 /// (Step 12's `record --push` hook needs it).
 pub fn cmd_record_inner(
@@ -321,7 +321,7 @@ pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Resul
     }
     let base = std::env::current_dir().context("reading the current directory")?;
     // Record the run in history.db (spec-cli §9). Best-effort: a
-    // broken history DB must never break a run — `fg doctor` reports
+    // broken history DB must never break a run - `fg doctor` reports
     // DB health. The row is started now and finished after execution;
     // if this process is killed mid-run the row stays unfinished and
     // stats counts it as interrupted.
@@ -414,7 +414,7 @@ fn missing_error(missing: &[String]) -> CliError {
     ))
 }
 
-/// `fg list [--tag t] [--long]` — the local library. JSON shape is
+/// `fg list [--tag t] [--long]` - the local library. JSON shape is
 /// spec-cli §3: `{ "workflows": [{ "name", "description", "tags",
 /// "mode", "origin" }] }`.
 pub fn cmd_list(store: &Store, tag: Option<&str>, long: bool, json: bool) -> i32 {
@@ -450,7 +450,7 @@ pub fn cmd_list(store: &Store, tag: Option<&str>, long: bool, json: bool) -> i32
         let desc = if s.description.is_empty() {
             String::new()
         } else {
-            format!(" — {}", escape_display(&s.description))
+            format!(" - {}", escape_display(&s.description))
         };
         println!("{} ({} commands){}", s.name, s.command_count(), desc);
         if !s.tags.is_empty() {
@@ -493,7 +493,7 @@ pub fn show_commands(snippet: &Snippet) -> Vec<String> {
     }
 }
 
-/// `fg show <name>` — a summary card with numbered commands; the raw
+/// `fg show <name>` - a summary card with numbered commands; the raw
 /// YAML is one `fg export` away. JSON shape is spec-cli §3:
 /// `{ "name", "description", "tags", "mode", "shell", "variables",
 /// "commands" }`.
@@ -532,7 +532,7 @@ pub fn cmd_show(store: &Store, name: &str, json: bool) -> Result<i32> {
     } else {
         escape_display(&snippet.description)
     };
-    println!("{} — {}", snippet.name, description);
+    println!("{} - {}", snippet.name, description);
     println!(
         "  mode: {} · shell: {} · hash: {}",
         match snippet.effective_mode() {
@@ -560,7 +560,7 @@ pub fn cmd_show(store: &Store, name: &str, json: bool) -> Result<i32> {
             if let Some(d) = &param.description {
                 if !d.is_empty() {
                     use std::fmt::Write as _;
-                    let _ = write!(line, " — {}", escape_display(d));
+                    let _ = write!(line, " - {}", escape_display(d));
                 }
             }
             println!("{line}");
@@ -588,7 +588,7 @@ pub fn cmd_show(store: &Store, name: &str, json: bool) -> Result<i32> {
     Ok(0)
 }
 
-/// `fg search <query>` — substring match over name, description, tags
+/// `fg search <query>` - substring match over name, description, tags
 /// and commands.
 pub fn cmd_search(store: &Store, query: &str, json: bool) -> i32 {
     let q = query.to_lowercase();
@@ -616,7 +616,7 @@ pub fn cmd_search(store: &Store, query: &str, json: bool) -> i32 {
         println!("No snippets match `{query}`.");
     }
     for s in &matches {
-        println!("{} — {}", s.name, escape_display(&s.description));
+        println!("{} - {}", s.name, escape_display(&s.description));
     }
     0
 }
@@ -683,7 +683,7 @@ pub fn cmd_rename(store: &Store, old: &str, new: &str, json: bool) -> Result<i32
     Ok(0)
 }
 
-/// `fg delete <name>` — confirms unless `--yes`.
+/// `fg delete <name>` - confirms unless `--yes`.
 pub fn cmd_delete(
     store: &Store,
     stdin: &mut impl BufRead,
@@ -717,7 +717,7 @@ pub fn cmd_delete(
     Ok(0)
 }
 
-/// `fg edit <name>` — open in the editor; re-validate afterwards and
+/// `fg edit <name>` - open in the editor; re-validate afterwards and
 /// restore the original when the edit breaks the file.
 pub fn cmd_edit(store: &Store, name: &str) -> Result<i32> {
     let path = store.path_for(name)?;

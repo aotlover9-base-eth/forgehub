@@ -1,4 +1,4 @@
-# Spec — Data model
+# Spec - Data model
 
 - **Status:** Normative for Step 6 (migrations) and Steps 7–10. **Version:** 1 (Step 2, 2026-11-19)
 - **Store:** SQLite (WAL) via `sqlx`, behind repository traits (ADR 0002). Postgres is a later swap, not a v1 feature.
@@ -34,7 +34,7 @@ erDiagram
 | `display_name` | TEXT | NULL; ≤ 80 chars (app-enforced) |
 | `bio` | TEXT | NULL; ≤ 280 chars |
 | `created_at` | TEXT | NOT NULL |
-| `disabled_at` | TEXT | NULL; set by admin ban (Step 10) — account cannot log in |
+| `disabled_at` | TEXT | NULL; set by admin ban (Step 10) - account cannot log in |
 | `deleted_at` | TEXT | NULL; soft delete (Step 17 account deletion) |
 
 ### sessions
@@ -85,7 +85,7 @@ Index: `token_hash` (unique). Limit: ≤ 25 non-revoked tokens per user (app-enf
 | `latest_version` | INTEGER | NOT NULL DEFAULT 0; 0 only transiently during creation |
 | `star_count` / `fork_count` / `pull_count` | INTEGER | NOT NULL DEFAULT 0; maintained transactionally in the same transaction as the event |
 | `forked_from_snippet_id` | INTEGER | FK → snippets, NULL; plus `forked_from_version` INTEGER NULL and `forked_from_hash` TEXT NULL recorded at fork time |
-| `hidden_at` | TEXT | NULL; admin hide (Step 10) — behaves as deleted for all non-admin reads |
+| `hidden_at` | TEXT | NULL; admin hide (Step 10) - behaves as deleted for all non-admin reads |
 | `deleted_at` | TEXT | NULL; soft delete, purged after 30 days |
 | `created_at` / `updated_at` | TEXT | NOT NULL; `updated_at` changes on metadata or version changes |
 
@@ -110,12 +110,12 @@ Versions are **immutable**: no UPDATE path exists in any repository trait.
 `(user_id INTEGER FK ON DELETE CASCADE, snippet_id INTEGER FK ON DELETE CASCADE, created_at TEXT NOT NULL, PRIMARY KEY (user_id, snippet_id))`.
 
 ### renames
-`(owner_id INTEGER, old_name TEXT, snippet_id INTEGER FK ON DELETE CASCADE, expires_at TEXT, PRIMARY KEY (owner_id, old_name))`. A rename (Step 9) inserts a row with a 30-day expiry; resolution of `owner/old_name` redirects to the snippet's current name until expiry, after which the name is free for reuse by the same owner only after expiry (another owner may never take a name that would shadow an unexpired redirect for a different snippet — enforced in application code and tested).
+`(owner_id INTEGER, old_name TEXT, snippet_id INTEGER FK ON DELETE CASCADE, expires_at TEXT, PRIMARY KEY (owner_id, old_name))`. A rename (Step 9) inserts a row with a 30-day expiry; resolution of `owner/old_name` redirects to the snippet's current name until expiry, after which the name is free for reuse by the same owner only after expiry (another owner may never take a name that would shadow an unexpired redirect for a different snippet - enforced in application code and tested).
 
 ### reports
-`(id INTEGER PK, snippet_id INTEGER FK ON DELETE CASCADE, reporter_id INTEGER FK ON DELETE CASCADE, reason TEXT NOT NULL ≤ 500 chars, status TEXT NOT NULL DEFAULT 'open' — open|actioned|dismissed, created_at TEXT NOT NULL)`.
+`(id INTEGER PK, snippet_id INTEGER FK ON DELETE CASCADE, reporter_id INTEGER FK ON DELETE CASCADE, reason TEXT NOT NULL ≤ 500 chars, status TEXT NOT NULL DEFAULT 'open' - open|actioned|dismissed, created_at TEXT NOT NULL)`.
 
-## 3. Search — FTS5
+## 3. Search - FTS5
 
 ```sql
 CREATE VIRTUAL TABLE snippets_fts USING fts5(

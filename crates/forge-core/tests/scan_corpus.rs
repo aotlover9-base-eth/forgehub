@@ -1,7 +1,7 @@
 //! Secret-scanner corpus: positive cases (every kind must be caught)
 //! and negative cases (placeholders, hashes, ordinary commands must
 //! stay clean). Lives under tests/ so scripts/scan-staged.sh can
-//! exclude this corpus — its fake secrets are fake, but a scanner
+//! exclude this corpus - its fake secrets are fake, but a scanner
 //! cannot know that.
 
 use forge_core::scan::{redact, scan, scan_snippet, SecretKind};

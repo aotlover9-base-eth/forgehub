@@ -38,7 +38,7 @@ crossterm = "0.28"
 # the OS trust store (rustls-native-certs), NOT webpki-roots:
 # ForgeHub is self-hosted, so servers legitimately present
 # certificates from private/local CAs (e.g. Caddy's local CA on
-# https://localhost) that only the system store can vouch for —
+# https://localhost) that only the system store can vouch for -
 # the CLI must trust what the OS trusts, like curl and git do.
 # (With webpki-roots, `fg login` against https://localhost
 # failed TLS even after the CA was installed system-wide;
@@ -73,7 +73,7 @@ workspace = true
 
 # .deb packaging (Step 21): `cargo install cargo-deb` then
 # `cargo deb -p forge-cli` produces a Debian package locally.
-# Template only — nothing is published from the repo.
+# Template only - nothing is published from the repo.
 [package.metadata.deb]
 maintainer = "Aotlover9 <nikhilbhaiop77@gmail.com>"
 copyright = "2026, Aotlover9"

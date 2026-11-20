@@ -1,4 +1,4 @@
-# ADR 0005 — Web auth uses cookie sessions; the CLI uses bearer tokens
+# ADR 0005 - Web auth uses cookie sessions; the CLI uses bearer tokens
 
 - **Status:** Accepted (Step 2, 2026-11-19)
 
@@ -19,7 +19,7 @@ needs revocable, scoped, non-interactive credentials.
   stored hashed, scoped `read`/`write`, shown once), sent as
   `Authorization: Bearer`. Bearer requests carry no ambient authority, so
   they are CSRF-exempt. Tokens cannot mint or revoke tokens or change the
-  password — those operations require a cookie session.
+  password - those operations require a cookie session.
 - The device-code flow (Step 8) is the bridge: a browser (cookie) approves,
   a CLI receives a token.
 

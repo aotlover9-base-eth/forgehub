@@ -1,6 +1,6 @@
 //! Snippet API tests (Step 9): the authorisation matrix is the
-//! priority — every endpoint × {anonymous, other user, owner,
-//! read token, write token} × {private, unlisted, public} — plus
+//! priority - every endpoint × {anonymous, other user, owner,
+//! read token, write token} × {private, unlisted, public} - plus
 //! versions, rename redirects, optimistic concurrency, secret
 //! scanning, and pagination.
 

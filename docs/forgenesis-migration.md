@@ -18,7 +18,7 @@ workflow becomes a ForgeHub snippet in `~/.forgehub/snippets`:
 - Commands, descriptions and tags carry over; ForgeHub adds
   the canonical form (sorted tags, normalised newlines) and a
   content hash on first save.
-- History and statistics do **not** migrate — ForgeHub starts
+- History and statistics do **not** migrate - ForgeHub starts
   its own `history.db`. Your Forgenesis directory is never
   modified.
 
@@ -30,9 +30,9 @@ check the result, then `fg backup` before you delete anything.
 | Forgenesis | ForgeHub |
 |---|---|
 | Local only | Local + optional cloud (login, push/pull, fork) |
-| `sync` of a directory | Dropped — superseded by push/pull with version checks (see the analysis doc) |
-| Packs | Dropped — tags + search cover the use case |
-| `config` subcommand | Dropped — `config.yaml` is a plain file you edit |
+| `sync` of a directory | Dropped - superseded by push/pull with version checks (see the analysis doc) |
+| Packs | Dropped - tags + search cover the use case |
+| `config` subcommand | Dropped - `config.yaml` is a plain file you edit |
 | Runs without confirmation | Cloud runs confirm with the trust model; local runs keep the classic prompt |
 
 ## Staying on Forgenesis

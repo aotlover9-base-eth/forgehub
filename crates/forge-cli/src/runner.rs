@@ -461,7 +461,7 @@ pub fn execute(
 /// Step-through execution (`--step`, Step 13): like
 /// [`execute`], but before each main step the user is shown the
 /// step and asked; `y` runs it, `n`/Enter skips it, `q` aborts
-/// the run (exit code 2 — refused). Script mode has a single
+/// the run (exit code 2 - refused). Script mode has a single
 /// unit of work, so it behaves exactly like [`execute`].
 /// `always` steps are not prompted (they are cleanup by
 /// definition) and still run after an abort.
@@ -511,7 +511,7 @@ pub fn execute_stepwise(
             step.label()
         };
         eprintln!(
-            "[{}/{}] {} — {}",
+            "[{}/{}] {} - {}",
             i + 1,
             total,
             step.label(),

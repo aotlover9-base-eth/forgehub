@@ -8,7 +8,7 @@
 //!   Step 11 report). Proxy env vars (`HTTP_PROXY`, `HTTPS_PROXY`,
 //!   `NO_PROXY`) are honoured by reqwest's system-proxy default.
 //! - Retries: idempotent GETs retry transport errors and
-//!   502/503/504 twice with backoff. POST/DELETE never retry — the
+//!   502/503/504 twice with backoff. POST/DELETE never retry - the
 //!   device poll loop is its own retry mechanism.
 //! - Tokens are never printed. Anything the server returns is shown
 //!   through [`redact`] when a token is in scope, and the token
@@ -165,7 +165,7 @@ fn set_mode(path: &std::path::Path, mode: u32) -> std::io::Result<()> {
 }
 
 /// Load the credentials file, enforcing permissions: a file that is
-/// group/other-readable is refused — on a TTY the user is offered a
+/// group/other-readable is refused - on a TTY the user is offered a
 /// chmod fix; non-interactively the error says exactly what to run.
 fn load_credentials_gated(stdin: &mut impl BufRead) -> Result<CredFile> {
     let path = credentials_path()?;
@@ -177,7 +177,7 @@ fn load_credentials_gated(stdin: &mut impl BufRead) -> Result<CredFile> {
         if mode & 0o077 != 0 {
             if prompt::stdin_is_tty() {
                 eprintln!(
-                    "forgehub: {} has permissions {mode:03o} — credentials must not be group/other readable.",
+                    "forgehub: {} has permissions {mode:03o} - credentials must not be group/other readable.",
                     path.display()
                 );
                 if prompt::ask_yes_no(stdin, "Fix to 0600 now?") {
@@ -294,7 +294,7 @@ pub fn cred_store_mode() -> CredStoreMode {
 /// *mock* store when no platform backend is compiled (a Linux
 /// build without the `linux-keyring` feature), and a
 /// credential that vanishes when the process exits is worse
-/// than no keyring at all — so the mock is never consulted:
+/// than no keyring at all - so the mock is never consulted:
 /// without a compiled backend, auto mode is the file, and
 /// keyring mode is an explicit error.
 const KEYRING_COMPILED: bool = cfg!(any(
@@ -306,7 +306,7 @@ const KEYRING_COMPILED: bool = cfg!(any(
 /// Keyring service name (the "account" is the registry URL).
 const KEYRING_SERVICE: &str = "forgehub";
 /// Keyring entry holding the JSON list of registries stored in
-/// the keyring — the keyring API cannot enumerate, so the
+/// the keyring - the keyring API cannot enumerate, so the
 /// index lives next to the entries it names.
 const KEYRING_INDEX_KEY: &str = "__registries__";
 
@@ -437,7 +437,7 @@ pub fn load_credentials(stdin: &mut impl BufRead) -> Result<CredFile> {
 /// [`cred_store_mode`]. In auto mode a successful keyring
 /// write removes the file (one source of truth); when the
 /// keyring is unreachable the file write is the fallback.
-/// In keyring mode a failed write is an error — the caller
+/// In keyring mode a failed write is an error - the caller
 /// asked for the keyring explicitly.
 pub fn save_credentials(creds: &CredFile) -> Result<()> {
     match cred_store_mode() {
@@ -647,7 +647,7 @@ impl ApiClient {
     }
 
     /// GET with retries (transport errors and 502/503/504, twice,
-    /// with backoff) — GETs are idempotent.
+    /// with backoff) - GETs are idempotent.
     pub fn get(
         &self,
         path: &str,
@@ -707,7 +707,7 @@ impl ApiClient {
 /// What a poll response means for the login loop.
 #[derive(Debug, PartialEq, Eq)]
 pub enum PollVerdict {
-    /// `status: approved` — the access token is in the body.
+    /// `status: approved` - the access token is in the body.
     Approved,
     /// Keep waiting.
     Pending,
@@ -767,7 +767,7 @@ fn client_name() -> String {
 }
 
 /// Try to open the browser at `url`. Skipped silently on SSH
-/// sessions and headless Linux; all failures are ignored — the URL
+/// sessions and headless Linux; all failures are ignored - the URL
 /// is always printed as well.
 fn try_open_browser(url: &str) {
     if std::env::var_os("SSH_CONNECTION").is_some() || std::env::var_os("SSH_TTY").is_some() {
@@ -933,7 +933,7 @@ fn poll_for_approval(
 
 /// Persist a successful login: credentials entry + config
 /// `server`/`username` (a config write failure is a warning, not a
-/// failed login — the credential is already stored).
+/// failed login - the credential is already stored).
 fn finish_login(
     store: &Store,
     stdin: &mut impl BufRead,
@@ -1003,7 +1003,7 @@ pub fn registry_is_insecure(registry: &str) -> bool {
 pub fn warn_if_insecure_registry(registry: &str) {
     if registry_is_insecure(registry) {
         eprintln!(
-            "forgehub: warning: registry {registry} uses plain http:// — your token will cross the network unencrypted.\n  fix: use the https:// address of the registry (loopback http:// is fine for local dev)"
+            "forgehub: warning: registry {registry} uses plain http:// - your token will cross the network unencrypted.\n  fix: use the https:// address of the registry (loopback http:// is fine for local dev)"
         );
     }
 }
@@ -1019,7 +1019,7 @@ pub fn cmd_login(
     warn_if_insecure_registry(&registry);
     let client = ApiClient::new(&registry)?;
     let entry = if token_flag {
-        // Token from stdin only — never argv, where it would land
+        // Token from stdin only - never argv, where it would land
         // in shell history and `ps`. (Read through the caller's
         // stdin handle: the process stdin lock is already held by
         // `main`, so a second handle would deadlock.)
@@ -1148,7 +1148,7 @@ pub fn cmd_whoami(
         None => println!("  token:    fgh_{}…", token_prefix(&entry.token)),
     }
     if entry.scopes.is_empty() {
-        println!("  scopes:   (unknown — token was provided directly)");
+        println!("  scopes:   (unknown - token was provided directly)");
     } else {
         println!("  scopes:   {}", entry.scopes.join(", "));
     }

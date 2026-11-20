@@ -23,7 +23,7 @@ axum = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 forge-core = { version = "0.1.0", path = "../forge-core" }
 # Outgoing mail (password resets): SMTP transport + message
-# builder only, rustls for smtps (no async runtime features —
+# builder only, rustls for smtps (no async runtime features -
 # sends happen on spawn_blocking).
 lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "builder", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }

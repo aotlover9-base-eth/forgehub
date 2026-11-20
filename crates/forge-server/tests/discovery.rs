@@ -277,7 +277,7 @@ async fn stars_flow() {
     );
     let (_, v) = get(&s, "/api/v1/snippets/anna/docker-cleanup", None).await;
     assert_eq!(v["star_count"], 0);
-    // Private snippets cannot be starred — not even by their owner.
+    // Private snippets cannot be starred - not even by their owner.
     assert_eq!(
         star(
             true,

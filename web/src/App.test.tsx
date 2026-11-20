@@ -6,7 +6,7 @@ describe('App', () => {
   it('renders the standalone landing, signed out', async () => {
     render(<App />);
     // The landing is its own full-viewport scene (Observe
-    // theme) with a glass nav — the app shell is NOT rendered
+    // theme) with a glass nav - the app shell is NOT rendered
     // on it, so Home can never be mistaken for another page.
     expect(screen.getByRole('navigation', { name: 'Landing' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
@@ -28,7 +28,7 @@ describe('App keyboard shortcuts', () => {
     // Regression: in a browser, a keydown from a Material
     // field's inner <input> (inside its shadow root) is
     // retargeted to the <md-outlined-text-field> host before
-    // it reaches the window listener — dispatch on the host
+    // it reaches the window listener - dispatch on the host
     // to reproduce that. 'n' is the new-snippet shortcut;
     // an email starting with 'n' bounced the user to /login
     // via /new + RequireAuth on the first letter typed.

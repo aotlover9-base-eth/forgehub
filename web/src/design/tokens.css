@@ -131,7 +131,7 @@
   --fh-nav-active-text: var(--md-sys-color-on-secondary-container);
 
   /* Observe landing theme (user-directed, 2026-11-20): a dark
-     glass scene used ONLY by the public landing page — it is a
+     glass scene used ONLY by the public landing page - it is a
      deliberate exception to the Material scheme above, scoped
      to one route. Monochrome values live here so observe.css
      stays literal-free like every other stylesheet. */
@@ -284,7 +284,7 @@
 
 /* Observe app scope (user-directed, 2026-11-20): inside the
    app shell, the dark scheme above is re-pointed to the
-   Observe monochrome palette — white is the only accent,
+   Observe monochrome palette - white is the only accent,
    surfaces become translucent glass tones over the scene
    backdrop, and the active nav state is the white pill.
    Declared last so it wins on the shell element. Error is

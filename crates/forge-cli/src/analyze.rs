@@ -1,11 +1,11 @@
-//! `fg analyze` — mine shell history for repeated command sequences.
+//! `fg analyze` - mine shell history for repeated command sequences.
 //!
 //! Ported from Forgenesis `analyze.rs` (see
 //! `docs/forgenesis-analysis.md`): parse bash/zsh/fish history, drop
 //! noise and anything secret-shaped, segment into sessions by time
 //! gaps, and mine non-overlapping repeated sequences with
 //! fragment/rotation suppression. Secret scrubbing happens at the
-//! filter stage — **before** anything is printed or written — and uses
+//! filter stage - **before** anything is printed or written - and uses
 //! both the Forgenesis marker screen and the `forge-core` scanner.
 //!
 //! Everything except file IO is pure functions over `Vec<HistEntry>`,
@@ -238,7 +238,7 @@ pub fn looks_sensitive(cmd: &str) -> bool {
 }
 
 /// Drop noise (`ls`, `cd`, editors, config `ignore_commands`) and
-/// anything that looks like a secret — by the marker screen **or** the
+/// anything that looks like a secret - by the marker screen **or** the
 /// `forge-core` scanner. This runs before candidates are mined,
 /// printed or saved: secrets never leave this function.
 #[must_use]
@@ -290,7 +290,7 @@ pub fn segment_sessions(entries: &[HistEntry], gap_secs: i64) -> Vec<Vec<String>
 /// Mine sessions for repeated sequences.
 ///
 /// Counts **non-overlapping** occurrences: `a b a b a b` contains
-/// `a b` three times, not five. Longer candidates win — a sequence
+/// `a b` three times, not five. Longer candidates win - a sequence
 /// fully contained in an already-accepted, equally-frequent longer
 /// one (or a rotation of it) is dropped.
 #[must_use]

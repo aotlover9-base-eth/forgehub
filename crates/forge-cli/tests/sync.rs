@@ -1,5 +1,5 @@
 //! Step 12 integration tests: the real CLI against the real
-//! server — push/pull round trips with hash equality, optimistic
+//! server - push/pull round trips with hash equality, optimistic
 //! concurrency conflicts, status states, secret refusal, remote
 //! management and forks.
 

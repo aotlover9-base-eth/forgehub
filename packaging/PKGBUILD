@@ -1,4 +1,4 @@
-# AUR PKGBUILD TEMPLATE (Step 21) — not published.
+# AUR PKGBUILD TEMPLATE (Step 21) - not published.
 # Maintainer: Aotlover9
 # To publish: create the AUR package `forgehub-bin`, replace
 # the sha256sums with the values from the release SHA256SUMS,

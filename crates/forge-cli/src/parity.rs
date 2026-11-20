@@ -164,7 +164,7 @@ pub fn apply_parameterization(
 /// `--literal/--as` pairs apply exactly those; `--yes` applies every
 /// candidate with its suggested name; on a terminal each candidate is
 /// confirmed individually; without a terminal and without `--yes`
-/// nothing is applied (exit 2 — the fail-safe rule).
+/// nothing is applied (exit 2 - the fail-safe rule).
 #[allow(clippy::too_many_arguments)]
 pub fn cmd_parameterize(
     store: &Store,
@@ -274,7 +274,7 @@ fn apply_and_report(
 
 // ---------------------------------------------------------------- clone / import / export
 
-/// `fg clone <name> <new>` — duplicate a local snippet.
+/// `fg clone <name> <new>` - duplicate a local snippet.
 pub fn cmd_clone(store: &Store, name: &str, new: &str, json: bool) -> Result<i32> {
     forge_core::names::validate_snippet_name(new)?;
     if store.exists(new) {
@@ -531,7 +531,7 @@ fn offer_candidate(
 }
 
 /// `fg analyze [--min-count n] [--limit n] [--max-len n] [--dry] [-y]
-/// [--file path]` — mine shell history for repeated sequences and
+/// [--file path]` - mine shell history for repeated sequences and
 /// offer to save them as snippets. Secrets are scrubbed inside
 /// `analyze::filter_commands`, before anything is printed or written.
 pub fn cmd_analyze(
@@ -590,7 +590,7 @@ pub fn cmd_analyze(
         return Ok(0);
     }
     println!(
-        "Analyzed {} — {} commands, {} after filtering, {} session(s).",
+        "Analyzed {} - {} commands, {} after filtering, {} session(s).",
         path.display(),
         analysis.entries,
         analysis.filtered,
@@ -649,7 +649,7 @@ fn human_duration(ms: u128) -> String {
     }
 }
 
-/// `fg stats [--limit n] [--explain]` — run statistics from
+/// `fg stats [--limit n] [--explain]` - run statistics from
 /// `history.db` (spec-cli §3/§4): saved = (commands x
 /// `human_overhead_seconds`) - actual runtime; interrupted runs are
 /// excluded from every total and reported separately.
@@ -783,7 +783,7 @@ fn home_perms_check(store: &Store) -> Check {
                     "home perms",
                     "warn",
                     format!(
-                        "{} is {mode:03o}; snippets can contain sensitive commands — consider chmod 700",
+                        "{} is {mode:03o}; snippets can contain sensitive commands - consider chmod 700",
                         store.root().display()
                     ),
                 )
@@ -805,7 +805,7 @@ fn home_and_config_checks(store: &Store) -> Vec<Check> {
         checks.push(check(
             "home",
             "fail",
-            format!("{} does not exist — run `fg init`", store.root().display()),
+            format!("{} does not exist - run `fg init`", store.root().display()),
         ));
     }
     #[cfg(unix)]
@@ -907,7 +907,7 @@ fn alias_check() -> Check {
         check(
             "alias",
             "warn",
-            format!("{} — run `fg alias install`", states.join(", ")),
+            format!("{} - run `fg alias install`", states.join(", ")),
         )
     }
 }
@@ -962,7 +962,7 @@ fn credentials_check() -> Check {
                         "credentials",
                         "fail",
                         format!(
-                            "{} is {mode:03o}; credentials must not be group/other readable — chmod 600 it",
+                            "{} is {mode:03o}; credentials must not be group/other readable - chmod 600 it",
                             file.display()
                         ),
                     )
@@ -982,7 +982,7 @@ fn credentials_check() -> Check {
 }
 
 /// Cloud checks (Step 11): when a registry is configured, probe
-/// it — reachability, clock skew against the server's `Date`
+/// it - reachability, clock skew against the server's `Date`
 /// header, and validity of the stored token. All probes use a 3 s
 /// timeout and never prompt. No registry → a single ok note, so
 /// offline-only users see no change.
@@ -1006,7 +1006,7 @@ fn cloud_checks(store: &Store) -> Vec<Check> {
             "registry transport",
             "warn",
             format!(
-                "registry {registry} uses plain http:// to a non-loopback host; tokens cross the network unencrypted — prefer https://"
+                "registry {registry} uses plain http:// to a non-loopback host; tokens cross the network unencrypted - prefer https://"
             ),
         ));
     }
@@ -1094,7 +1094,7 @@ fn token_check(client: &crate::cloud::ApiClient, registry: &str) -> Check {
         Err(e) if e.status == 401 => check(
             "token",
             "fail",
-            "the stored token is invalid or expired — run `fg login`".into(),
+            "the stored token is invalid or expired - run `fg login`".into(),
         ),
         Err(e) => check(
             "token",
@@ -1133,7 +1133,7 @@ fn run_checks(store: &Store) -> Vec<Check> {
 
 /// Ecosystem topics for `fg doctor <topic>`: optional toolchains a
 /// snippet library commonly depends on. Presence is `ok`, absence is
-/// `warn` (never a failure — they are optional by definition).
+/// `warn` (never a failure - they are optional by definition).
 const ECOSYSTEM_TOPICS: &[(&str, &[&str])] = &[
     ("rust", &["rustc", "cargo"]),
     ("node", &["node", "npm"]),
@@ -1190,7 +1190,7 @@ fn topic_checks(store: &Store, topic: &str) -> Result<Vec<Check>> {
     Ok(filtered)
 }
 
-/// `fg doctor [topic]` — environment and library health checks.
+/// `fg doctor [topic]` - environment and library health checks.
 /// JSON shape is spec-cli section 3: `{ "checks": [{ "name", "level",
 /// "detail" }], "ok": bool }`. Exit 1 when any check fails.
 pub fn cmd_doctor(store: &Store, topic: Option<&str>, json: bool) -> Result<i32> {
@@ -1360,7 +1360,7 @@ fn confirm_rc_edit(stdin: &mut impl BufRead, yes: bool, what: &str) -> Result<bo
     ))
 }
 
-/// `fg alias install|uninstall|show [--shell bash|zsh|fish] [-y]` —
+/// `fg alias install|uninstall|show [--shell bash|zsh|fish] [-y]` -
 /// the roadmap section 6 mechanism: a marked, idempotent block in the
 /// shell rc file (`alias fg='forgehub'` + `alias jobs-fg='builtin
 /// fg'`; fish gets `fg`/`jobs-fg` function files, the `funcsave`

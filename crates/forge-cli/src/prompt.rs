@@ -51,7 +51,7 @@ pub fn ask_yes_no(input: &mut impl BufRead, question: &str) -> bool {
 }
 
 /// Ask for a typed `yes` (third-party trust confirmations,
-/// Step 13). Anything else — including `y` — means no.
+/// Step 13). Anything else - including `y` - means no.
 pub fn ask_typed_yes(input: &mut impl BufRead, question: &str) -> bool {
     eprint!("{question} ");
     let _ = std::io::stderr().flush();

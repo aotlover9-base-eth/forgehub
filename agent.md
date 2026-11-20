@@ -1,6 +1,6 @@
-# agent.md — Operating Manual for the Coding Agent
+# agent.md - Operating Manual for the Coding Agent
 
-> **Project:** ForgeHub (working name) — a cloud home for shell command snippets, with a web app and a fast Rust CLI (`fg`).
+> **Project:** ForgeHub (working name) - a cloud home for shell command snippets, with a web app and a fast Rust CLI (`fg`).
 > **Agent:** Muse, **high thinking** for the whole project.
 > **Companion file:** `roadmap.md` (the plan, the 22 steps, the prompts, the specs).
 > **This file** is the law. If a step prompt ever conflicts with this file, stop and flag it in the report instead of guessing.
@@ -9,13 +9,13 @@
 
 ## 1. Mission in one paragraph
 
-Users create an account on a website and store **commands and small shell scripts** (text only — never file uploads, never binaries). A user installs a Rust CLI, aliases it to `fg`, logs in from the terminal, and can then run any stored snippet from anywhere:
+Users create an account on a website and store **commands and small shell scripts** (text only - never file uploads, never binaries). A user installs a Rust CLI, aliases it to `fg`, logs in from the terminal, and can then run any stored snippet from anywhere:
 
 ```
 fg ubuntu-setup
 ```
 
-The CLI fetches the snippet from the cloud, **shows exactly what it will run**, asks `[y/N]`, and only then runs it. The CLI also keeps all the local features of the author's earlier tool, **Forgenesis** (`record`, local `run`, variables, `--dry`, `--step`, search, tags, stats, backup, TUI…), and adds git-like cloud commands (`login`, `push`, `pull`, `fork`). Reference for the local features: https://github.com/aotlover9-base-eth/forgenesis (Rust, MIT, by the same user — reuse and port it freely, do not reinvent it).
+The CLI fetches the snippet from the cloud, **shows exactly what it will run**, asks `[y/N]`, and only then runs it. The CLI also keeps all the local features of the author's earlier tool, **Forgenesis** (`record`, local `run`, variables, `--dry`, `--step`, search, tags, stats, backup, TUI…), and adds git-like cloud commands (`login`, `push`, `pull`, `fork`). Reference for the local features: https://github.com/aotlover9-base-eth/forgenesis (Rust, MIT, by the same user - reuse and port it freely, do not reinvent it).
 
 Speed is a feature. Safety is a feature. A snippet runner that executes remote text is a remote-code-execution surface by design, so **honest, loud safety UX is part of the product**.
 
@@ -24,7 +24,7 @@ Speed is a feature. Safety is a feature. A snippet runner that executes remote t
 ## 2. Session start checklist (do this every time you begin or resume)
 
 1. Read this file fully.
-2. Read `roadmap.md` — at minimum: §Locked decisions, §Design language, the step you are about to run, and the appendices it references.
+2. Read `roadmap.md` - at minimum: §Locked decisions, §Design language, the step you are about to run, and the appendices it references.
 3. Read `PROGRESS.md` (the checklist you maintain) and the **latest** `reports/report_Step*.md`.
 4. Run `git status` and `git log --oneline -n 10`. The working tree **must be clean** and the last commit must be the previous step's commit. If not, stop and reconcile before writing code (see §5.6).
 5. Run the baseline gates (§9) so you know the starting state is green.
@@ -41,8 +41,8 @@ If you lost context mid-step, re-do this checklist; `PROGRESS.md` + the last rep
 | R1 | **Git is installed and authenticated.** After **every** step you create **exactly one commit** (a "git snapshot"). 22 steps = 22 commits. Details in §5. |
 | R2 | After **every** step you write and **save** `reports/report_Step<N>.md` (e.g. `reports/report_Step7.md`) using the template in §6, and that file is **part of that step's commit**. |
 | R3 | **Never** mark a step done until its acceptance criteria and the verification gates (§9) pass. Failing gates = no commit. |
-| R4 | **Design language is strictly Material You (Material Design 3).** Controlled colour — see §8. No hardcoded colours, radii, or font sizes outside the token files. |
-| R5 | **Security first** for anything that touches auth, tokens, snippet execution, or user content — see §10. |
+| R4 | **Design language is strictly Material You (Material Design 3).** Controlled colour - see §8. No hardcoded colours, radii, or font sizes outside the token files. |
+| R5 | **Security first** for anything that touches auth, tokens, snippet execution, or user content - see §10. |
 | R6 | **Text only.** The product stores commands/scripts as text with a hard size limit. No file upload endpoint anywhere. |
 | R7 | **No telemetry** in the CLI or server beyond what the roadmap explicitly lists. |
 | R8 | **Never** commit secrets, `.env` files, tokens, private keys, or real credentials. Use `.env.example`. |
@@ -53,7 +53,7 @@ If you lost context mid-step, re-do this checklist; `PROGRESS.md` + the last rep
 
 ---
 
-## 4. Locked technical decisions (summary — full table in roadmap.md)
+## 4. Locked technical decisions (summary - full table in roadmap.md)
 
 - **Monorepo**, Cargo workspace + web app:
   ```
@@ -67,7 +67,7 @@ If you lost context mid-step, re-do this checklist; `PROGRESS.md` + the last rep
 - **Rust** stable, edition 2021+, `clap`, `serde`, `serde_yaml`/`toml`, `reqwest` (rustls, no OpenSSL), `tokio`, `ratatui`+`crossterm`, `rusqlite` (CLI local history), `sqlx` (server), `argon2`, `sha2`, `tracing`.
 - **Database:** SQLite (WAL) for v1 with FTS5 for search, behind repository traits so Postgres is a later swap.
 - **Auth:** email+password (argon2id) for web with cookie sessions; **device-code flow (RFC 8628 style)** for CLI login; hashed personal API tokens.
-- **Binary name:** `forgehub`; the installer/`forgehub alias install` creates the `fg` alias (because `fg` is a shell builtin — see roadmap §Shell alias).
+- **Binary name:** `forgehub`; the installer/`forgehub alias install` creates the `fg` alias (because `fg` is a shell builtin - see roadmap §Shell alias).
 - If you believe a locked decision is wrong, **do not silently deviate**: write an ADR in `docs/adr/` explaining the problem and your proposal, finish the step with the locked decision, and raise it in the report.
 
 ---
@@ -86,7 +86,7 @@ Sequence at the end of every step, in this exact order:
 1. Verification gates pass (§9).
 2. Write/refresh `reports/report_Step<N>.md`.
 3. Tick the step in `PROGRESS.md`.
-4. `git add -A` — then **review `git status` and `git diff --cached --stat`**; unstage anything that should not be committed (build output, secrets, large binaries).
+4. `git add -A` - then **review `git status` and `git diff --cached --stat`**; unstage anything that should not be committed (build output, secrets, large binaries).
 5. Commit with the message format below.
 6. `git tag step-<N>` (lightweight tag is fine).
 7. `git push origin main --follow-tags`.
@@ -122,10 +122,10 @@ Before every commit, run `git diff --cached` through the repo's secret scan (Ste
 
 ## 6. Report protocol
 
-After every step write **`reports/report_Step<N>.md`**, then commit it with the step. Use this template — all headings required, write "None" where empty:
+After every step write **`reports/report_Step<N>.md`**, then commit it with the step. Use this template - all headings required, write "None" where empty:
 
 ```markdown
-# Report — Step <N>: <title>
+# Report - Step <N>: <title>
 
 - **Date/time:** <ISO-8601 with timezone>
 - **Commit:** <short sha> (tag `step-<N>`)
@@ -156,7 +156,7 @@ After every step write **`reports/report_Step<N>.md`**, then commit it with the 
 <Threats considered, mitigations added, anything left open.>
 
 ## 7. Dependencies added
-<name — purpose — licence — why this one>
+<name - purpose - licence - why this one>
 
 ## 8. Corrections to earlier steps
 <None, or what you fixed and why.>
@@ -198,7 +198,7 @@ If your environment supports sub-agents, you may parallelise **inside** a step (
 
 ---
 
-## 8. Design language — Material You (Material Design 3), strictly
+## 8. Design language - Material You (Material Design 3), strictly
 
 This applies to the **web app** fully, and to the **CLI/TUI** through the same semantic roles.
 
@@ -261,7 +261,7 @@ If a tool is missing and cannot be installed (e.g. no network), say so in the re
 
 ---
 
-## 10. Security rules (summary — full model in roadmap §Security)
+## 10. Security rules (summary - full model in roadmap §Security)
 
 1. **Execution safety is UX, not an afterthought.** Before running a cloud snippet the CLI always prints the full commands (or script), the owner, version, and short content hash, and asks `[y/N]` (default **No**). Third-party snippets require a stronger confirmation (type `yes`) the first time, and **a changed hash since last trusted run shows a diff first**.
 2. Never auto-run on fetch. Never pipe a downloaded body straight into a shell without the confirmation screen. `-y` skips the prompt **only** for snippets owned by the logged-in user or already trusted at that exact hash.
@@ -311,7 +311,7 @@ If a tool is missing and cannot be installed (e.g. no network), say so in the re
 
 ---
 
-## 13. Quick reference — daily commands
+## 13. Quick reference - daily commands
 
 ```bash
 git status && git log --oneline -n 5

@@ -1,4 +1,4 @@
-# ADR 0006 — Content hash and trust pinning design
+# ADR 0006 - Content hash and trust pinning design
 
 - **Status:** Accepted (Step 2, 2026-11-19)
 
@@ -16,7 +16,7 @@ must be computable identically by `forge-core` on the CLI, the server, and
   script body byte-preserved apart from LF + one trailing newline).
 - The server stores the hash it computed; the CLI **recomputes it locally**
   from the fetched body and refuses to run on a mismatch (hard error).
-- Trust is pinned to `(owner, name, hash)` — not to a name, not to a
+- Trust is pinned to `(owner, name, hash)` - not to a name, not to a
   version number (spec-cli §7). A version pin (`@N`) selects *which*
   version to fetch; the hash check and trust rules still apply to it.
 - `GET` responses carry the hash as an `ETag`, enabling `If-None-Match`
@@ -25,7 +25,7 @@ must be computable identically by `forge-core` on the CLI, the server, and
 ## Alternatives rejected
 - **Hash the raw submitted bytes:** YAML re-quoting, CRLF, or key reordering
   by an editor would change the hash of a semantically identical snippet,
-  training users to click through "changed" warnings — the worst outcome
+  training users to click through "changed" warnings - the worst outcome
   for a trust system.
 - **Hash a "semantic AST" without a serialisation spec:** not independently
   implementable or testable; §9's byte-level definition is.

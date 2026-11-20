@@ -21,7 +21,7 @@ import { relativeTime } from '../validation';
  * Render text with the API's byte-range highlights wrapped
  * in <mark>. Ranges are UTF-8 byte offsets; we walk code
  * points so non-ASCII text lines up. Everything renders as
- * React text — no HTML is ever injected.
+ * React text - no HTML is ever injected.
  */
 export function highlighted(text: string, ranges: { start: number; end: number }[]): ReactNode {
   if (ranges.length === 0) return text;

@@ -25,7 +25,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - **macOS release binaries.** ForgeHub ships Linux
   (x86_64 + aarch64) and Windows (x86_64) builds only, by
-  the project owner's decision — macOS CI minutes on a
+  the project owner's decision - macOS CI minutes on a
   private repository are a cost the project does not
   carry. The web app is unaffected (it runs in any
   browser), the CLI still builds and runs on macOS from
@@ -59,7 +59,7 @@ found by real use on a real machine.
   every session and API token. Delivery via SMTP
   (`FORGEHUB_SMTP_URL`); dev servers log the link instead.
 - **In-app Home page** (`/home`): greeting, recent snippets,
-  popular-this-week and a run-anywhere card — separate from
+  popular-this-week and a run-anywhere card - separate from
   the public landing page, which the nav's Home used to
   bounce signed-in users to. Login and signup land there.
 - **OS keyring credential storage** for the CLI
@@ -83,7 +83,7 @@ found by real use on a real machine.
   gone. Page headings use the serif inside the app too.
 - **Motion**: landing entrance choreography, per-navigation
   page transitions, card hover lift and button press
-  feedback — all silenced by `prefers-reduced-motion`.
+  feedback - all silenced by `prefers-reduced-motion`.
 - **TUI**: the Mine and Explore cloud tabs paginate through
   the full list instead of showing only the first page.
 - README rewritten table-first, with screenshots of the
@@ -112,7 +112,7 @@ found by real use on a real machine.
 
 ## [0.1.0] - 2026-11-19
 
-The first release: a cloud home for shell command snippets —
+The first release: a cloud home for shell command snippets -
 web app, server, and the `forgehub` CLI (alias `fg`).
 
 ### Added
@@ -126,16 +126,16 @@ web app, server, and the `forgehub` CLI (alias `fg`).
 - **CLI (cloud)**: device-code login (RFC 8628 style), scoped
   API tokens, push/pull with optimistic concurrency, status and
   diff against the server, fork, remote list/show/delete,
-  visibility, search, star — and running cloud snippets with
+  visibility, search, star - and running cloud snippets with
   the trust model: full command display, typed `yes` for other
   people's snippets, hash-pinned trust, changed-hash diff and
   re-confirmation, fail-safe without a terminal.
 - **Server**: axum + SQLite (WAL, FTS5) API implementing
-  `docs/openapi.yaml` — accounts with argon2id passwords and
+  `docs/openapi.yaml` - accounts with argon2id passwords and
   hashed sessions, API tokens and device login, snippet CRUD
   with immutable versions, full-text search, explore feeds,
   profiles, stars, forks, reports, and an operator admin CLI.
-- **Web**: Material You 3 app (seed `#36618E`) — auth, dashboard,
+- **Web**: Material You 3 app (seed `#36618E`) - auth, dashboard,
   snippet editor with live validation and secret blocking,
   snippet pages with version diffing, explore/search with match
   highlighting, profiles, settings (profile, security, sessions,

@@ -1,4 +1,4 @@
-# ADR 0002 — SQLite (WAL + FTS5) for v1, behind repository traits
+# ADR 0002 - SQLite (WAL + FTS5) for v1, behind repository traits
 
 - **Status:** Accepted (Step 2, 2026-11-19)
 
@@ -24,7 +24,7 @@ without handler changes.
   and ranked full-text search; reimplementing those on files is more code
   and more risk.
 - **Triggers to maintain FTS:** rejected for the reason in spec-data-model
-  §3 — the "public, latest version only" rule would be duplicated in SQL.
+  §3 - the "public, latest version only" rule would be duplicated in SQL.
 
 ## Consequences
 Single-writer semantics are accepted; write paths must be short

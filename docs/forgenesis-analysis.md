@@ -1,9 +1,9 @@
-# Forgenesis analysis — what ForgeHub reuses, ports, redesigns or drops
+# Forgenesis analysis - what ForgeHub reuses, ports, redesigns or drops
 
 - **Source studied:** https://github.com/aotlover9-base-eth/forgenesis
 - **Revision studied:** `f69cdf2` ("Forgenesis: forge once, execute forever"), the only commit in the cloned history (`git log --oneline` shows one commit)
 - **Cloned to:** `/tmp/forgenesis-ref` (throwaway, outside this repo, per Step 1)
-- **Licence:** MIT, Copyright (c) 2026 Aotlover9 — the same author as ForgeHub. Reuse and porting are permitted; substantial ports in later steps must carry an attribution comment header (per `roadmap.md` Step 1 §4).
+- **Licence:** MIT, Copyright (c) 2026 Aotlover9 - the same author as ForgeHub. Reuse and porting are permitted; substantial ports in later steps must carry an attribution comment header (per `roadmap.md` Step 1 §4).
 - **Size:** single Rust package, binary `fg`, ~7,512 lines of Rust in `src/` plus a 491-line README; its README claims 126 unit tests (verified: 126 `#[test]` attributes in `src/`).
 
 This document is the reuse plan for Steps 3–5 and 18. No Forgenesis code was
@@ -19,7 +19,7 @@ copied in Step 1; porting happens in the steps named below.
 | `runner.rs` | 1,003 | Execution engine: conditions, retries, timeouts, parallel dispatch, background/quiet steps, `Mode::{Normal, Dry, Step}`, `RunReport`/`StepResult`, exit behaviour |
 | `record.rs` | 420 | `fg record`: interactive shell wrapping (bash `--rcfile`, zsh `ZDOTDIR`) with a per-command hook, `--simple` stdin capture, pure post-processing in `clean_captured` (drops noise, consecutive duplicates, recording-session commands; leading `cd` becomes workflow/step `cwd`) |
 | `analyze.rs` | 587 | History mining: bash/zsh/fish history parsing, session grouping by time gaps, non-overlapping repeated-sequence counting, fragment/rotation suppression, `Candidate::suggested_name`, secret scrubbing before anything is written |
-| `vars.rs` | 206 | `{{VAR}}` placeholders (`find_placeholders`, `substitute` — errors list **all** missing names at once, `substitute_lossy`), built-ins (`HOME`, `PWD`, `DIRNAME`, `DATE`, `TIME`, `TIMESTAMP`, `USER`), `KEY=value` parsing, `~`/`$VAR` path and env expansion |
+| `vars.rs` | 206 | `{{VAR}}` placeholders (`find_placeholders`, `substitute` - errors list **all** missing names at once, `substitute_lossy`), built-ins (`HOME`, `PWD`, `DIRNAME`, `DATE`, `TIME`, `TIMESTAMP`, `USER`), `KEY=value` parsing, `~`/`$VAR` path and env expansion |
 | `config.rs` | 202 | `Paths` (`$FORGENESIS_HOME` or `~/.forgenesis`: config, workflows, plugins, backups, `history.db`), project `.forgenesis/` discovery, `Config` (shell, `confirm_before_run`, `parallel_limit`, theme, editor, `human_overhead_seconds`, history file, analyze thresholds, `ignore_commands`, `registry_url`), TOML load/save, shell detection |
 | `store.rs` | 401 | Workflow storage: global registry plus per-project `.forgenesis/` shadowing, `Origin::{Global, Project}`, load/save/list/search plumbing |
 | `db.rs` | 386 | rusqlite (bundled) history DB: WAL, `runs`/`steps` recording, `WorkflowStat`, `Totals`; stats arithmetic lives with `cmd_stats` in `main.rs` (saved = commands × `human_overhead_seconds` − actual runtime; interrupted runs excluded) |
@@ -35,7 +35,7 @@ Dependencies (its `Cargo.toml`): `anyhow`, `chrono`, `clap` (derive),
 `serde_yaml`, `shell-words`, `toml`. Release profile: `opt-level = "z"`, LTO,
 `codegen-units = 1`, strip. Edition 2021.
 
-## 2. Workflow YAML model — the compatibility baseline
+## 2. Workflow YAML model - the compatibility baseline
 
 A workflow is YAML with: `name`, `description`, `tags`, `cwd`, `shell`, `env`,
 `variables` (aliases `vars`/`params`; each a bare default string or
@@ -43,7 +43,7 @@ A workflow is YAML with: `name`, `description`, `tags`, `cwd`, `shell`, `env`,
 `retry`, `always`, `created`, `source`.
 
 A step is a bare string, a boolean (YAML reads unquoted `true`/`false` as a
-command — accepted deliberately), or a map with `command` (aliases `run`,
+command - accepted deliberately), or a map with `command` (aliases `run`,
 `cmd`, `exec`), `parallel`, `name`, `if`, `wait`, `retry`, `cwd`, `env`,
 `continue_on_error` (alias `ignore_errors`), `background`, `quiet`, `timeout`.
 
@@ -94,7 +94,7 @@ fixtures from this model.
 | `config` subcommand (`fg config --set …`) | Not in the roadmap's CLI reference (Appendix D); configuration is edited as `config.toml` in v1. Doctor reports config validity (Step 5). Noted as a candidate deferred idea. |
 | Binary named `fg` | ForgeHub's binary is `forgehub`; `fg` is an alias (ADR 0001). |
 
-## 6. Command mapping — Forgenesis → ForgeHub
+## 6. Command mapping - Forgenesis → ForgeHub
 
 | Forgenesis (`fg …`) | ForgeHub (`forgehub …` / `fg …`) | Step |
 |----------------------|----------------------------------|------|
@@ -113,15 +113,15 @@ fixtures from this model.
 | `backup [-o]`, `restore [name] [--force]` | `backup`, `restore` (workflows + config, never credentials) | 5 |
 | `doctor [topic]` | `doctor [topic]` (+ alias, credential and registry checks later) | 5, 11 |
 | `ui` | `ui` (Local · Mine · Explore; same confirm/trust path) | 18 |
-| `sync [--push\|--pull] [--dry-run]` | — dropped (§5); use `push` / `pull` | 12 |
-| `install <pack>`, `plugins [--remove]`, `update` | — dropped (§5); `update --check` (CLI version only) | 18 |
-| `config [--path] [--set]` | — dropped (§5); edit `config.toml` | — |
-| — (no cloud in Forgenesis) | `login`, `logout`, `whoami`, `push`, `pull`, `status`, `diff`, `fork`, `remote …`, `trust …`, `cache …`, `alias install\|uninstall\|show`, `completions <shell>` | 5, 11–13, 18 |
+| `sync [--push\|--pull] [--dry-run]` | - dropped (§5); use `push` / `pull` | 12 |
+| `install <pack>`, `plugins [--remove]`, `update` | - dropped (§5); `update --check` (CLI version only) | 18 |
+| `config [--path] [--set]` | - dropped (§5); edit `config.toml` | - |
+| - (no cloud in Forgenesis) | `login`, `logout`, `whoami`, `push`, `pull`, `status`, `diff`, `fork`, `remote …`, `trust …`, `cache …`, `alias install\|uninstall\|show`, `completions <shell>` | 5, 11–13, 18 |
 
 ## 7. Test notes
 
 Forgenesis's tests are in-module unit tests (126) covering sequence mining,
-YAML parsing, the runner, parameterization, sync and TUI state — all without
+YAML parsing, the runner, parameterization, sync and TUI state - all without
 spawning a shell or a terminal. ForgeHub keeps that discipline (agent.md §11)
 and adds `assert_cmd` integration tests with a temporary `FORGEHUB_HOME`
 from Step 4, and server integration tests from Step 6.
@@ -131,6 +131,6 @@ from Step 4, and server integration tests from Step 6.
 Forgenesis is MIT (Copyright (c) 2026 Aotlover9), by the same author as
 ForgeHub. Ported code keeps the MIT licence (this repo's `LICENSE` uses the
 same copyright holder, found in the Forgenesis `LICENSE` and its git history
-— the local `git config` in this environment was unset). Where a port is
+- the local `git config` in this environment was unset). Where a port is
 substantial, the ForgeHub file will carry a header comment naming Forgenesis
 as its source.

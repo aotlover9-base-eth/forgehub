@@ -91,7 +91,7 @@ pub fn api_fail(e: &ApiFailure, token: &str) -> CliError {
             "forgehub: the stored token is invalid or expired (401)\n  what: {msg}\n  fix: forgehub login"
         )),
         404 => CliError::not_found(format!(
-            "forgehub: not found (404)\n  what: {msg} — private snippets are indistinguishable from missing ones\n  fix: check the owner/name, or ask the owner to share it"
+            "forgehub: not found (404)\n  what: {msg} - private snippets are indistinguishable from missing ones\n  fix: check the owner/name, or ask the owner to share it"
         )),
         412 => {
             let latest = e
@@ -225,7 +225,7 @@ fn checked_local(store: &Store, name: &str) -> Result<(forge_core::Snippet, Stri
     let findings = forge_core::scan::scan_snippet(&snippet);
     if !findings.is_empty() {
         let mut out = format!(
-            "forgehub: refusing to push `{name}`\n  what: the local secret scan found possible secrets — they never leave this machine:\n"
+            "forgehub: refusing to push `{name}`\n  what: the local secret scan found possible secrets - they never leave this machine:\n"
         );
         for f in &findings {
             let _ = writeln!(out, "  line {}: {}", f.line, f.kind.as_str());
@@ -293,7 +293,7 @@ pub fn push_one(
                 });
                 let Some(baseline) = baseline else {
                     return Err(CliError::failure(format!(
-                        "forgehub: version conflict\n  what: {}/{remote_name} already exists on the server (v{remote_version}) and this local copy has no sync baseline for it — pushing would silently overwrite someone else's version\n  fix: `fg diff {name}` to compare, `fg pull {remote_name} --as {name}` to fetch theirs first, or push under a new name with --as",
+                        "forgehub: version conflict\n  what: {}/{remote_name} already exists on the server (v{remote_version}) and this local copy has no sync baseline for it - pushing would silently overwrite someone else's version\n  fix: `fg diff {name}` to compare, `fg pull {remote_name} --as {name}` to fetch theirs first, or push under a new name with --as",
                         sess.username
                     ))
                     .into());
@@ -565,7 +565,7 @@ pub fn cmd_pull(
         // (display-escaped, spec-cli §8) before asking.
         if !json {
             println!(
-                "{} — {}",
+                "{} - {}",
                 escape_display(&format!("{owner}/{name}")),
                 escape_display(snippet.description.as_str())
             );
@@ -817,15 +817,15 @@ pub fn cmd_status(
             r.name,
             r.state.label(),
             r.local_version
-                .map_or_else(|| "—".into(), |v| v.to_string()),
+                .map_or_else(|| "-".into(), |v| v.to_string()),
             r.remote_version
-                .map_or_else(|| "—".into(), |v| v.to_string()),
+                .map_or_else(|| "-".into(), |v| v.to_string()),
         );
     }
     Ok(0)
 }
 
-/// `fg diff <name>` — unified diff, local vs remote latest.
+/// `fg diff <name>` - unified diff, local vs remote latest.
 pub fn cmd_diff(
     store: &Store,
     stdin: &mut impl BufRead,
@@ -984,7 +984,7 @@ pub fn cmd_remote_show(
         return Ok(0);
     }
     println!(
-        "{}/{} — {}",
+        "{}/{} - {}",
         escape_display(&owner),
         escape_display(&name),
         escape_display(remote["description"].as_str().unwrap_or_default())
@@ -1021,7 +1021,7 @@ pub fn cmd_remote_show(
     Ok(0)
 }
 
-/// `fg remote delete <name>` — confirmation, then soft-delete.
+/// `fg remote delete <name>` - confirmation, then soft-delete.
 pub fn cmd_remote_delete(
     store: &Store,
     stdin: &mut impl BufRead,
@@ -1185,7 +1185,7 @@ pub(crate) fn url_encode(text: &str) -> String {
 // Fork
 // ---------------------------------------------------------------------------
 
-/// `fg fork <owner/name> [--as name]` — server fork, then an
+/// `fg fork <owner/name> [--as name]` - server fork, then an
 /// optional pull (prompted on a TTY).
 pub fn cmd_fork(
     store: &Store,
@@ -1294,13 +1294,13 @@ pub fn after_record_push(
     match record_push_decision(logged_in, prompt::stdin_is_tty(), yes) {
         RecordPush::SkipNotLoggedIn => {
             if !json {
-                println!("(Not logged in — skipping the cloud push. `fg login` enables it.)");
+                println!("(Not logged in - skipping the cloud push. `fg login` enables it.)");
             }
             Ok(0)
         }
         RecordPush::SkipNonInteractive => {
             if !json {
-                println!("(Non-interactive — not pushing. Run `fg push {name}` when ready.)");
+                println!("(Non-interactive - not pushing. Run `fg push {name}` when ready.)");
             }
             Ok(0)
         }

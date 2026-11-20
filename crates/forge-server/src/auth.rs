@@ -610,7 +610,7 @@ async fn resolve_session(state: &AppState, headers: &HeaderMap) -> Option<AuthCo
 /// Resolve an `Authorization: Bearer fgh_…` header: hash the
 /// presented token, look it up, enforce revocation/expiry and
 /// account state, and touch `last_used_at` at most once a minute.
-/// A revoked token is rejected on the very next request — there is
+/// A revoked token is rejected on the very next request - there is
 /// no cache.
 async fn resolve_token(state: &AppState, headers: &HeaderMap) -> Option<AuthContext> {
     let header = headers.get(header::AUTHORIZATION)?.to_str().ok()?;
@@ -975,7 +975,7 @@ async fn password_reset_request(
     result: Result<Json<ResetRequestBody>, JsonRejection>,
 ) -> Response {
     // Always 204: malformed body, unknown address, throttled,
-    // mail down — the response is identical either way, so it
+    // mail down - the response is identical either way, so it
     // cannot confirm that an account exists (the same rule the
     // signup handler applies to email conflicts).
     let Ok(Json(req)) = result else {
@@ -1030,7 +1030,7 @@ async fn password_reset_request(
     let mailer = state.mailer.clone();
     let recipient = user.email.clone();
     // lettre blocks; keep the send off the async runtime. A
-    // delivery failure is logged, never answered — see above.
+    // delivery failure is logged, never answered - see above.
     tokio::task::spawn_blocking(move || {
         if let Err(err) = mailer.send_password_reset(&recipient, &reset_url) {
             tracing::error!(error = %err, "password reset: mail delivery failed");
@@ -1050,8 +1050,8 @@ async fn password_reset_confirm(
     result: Result<Json<ResetConfirmBody>, JsonRejection>,
 ) -> Result<Response, ApiError> {
     let req = body(result)?;
-    // One generic error for every failure mode — unknown,
-    // used or expired token — so the endpoint is not an
+    // One generic error for every failure mode - unknown,
+    // used or expired token - so the endpoint is not an
     // oracle for which links are live.
     let invalid = || {
         ApiError::new(
@@ -1081,7 +1081,7 @@ async fn password_reset_confirm(
         .ok_or_else(invalid)?;
     validate_password(&req.new_password, &user.username).map_err(ApiError::validation)?;
     // Consume first: if anything below fails, the link is
-    // dead and the user requests a fresh one — failing safe.
+    // dead and the user requests a fresh one - failing safe.
     state
         .repos
         .password_resets
@@ -1148,7 +1148,7 @@ fn session_json(row: &crate::repo::SessionRow, current: &str) -> serde_json::Val
     })
 }
 
-/// GET /me/sessions — the signed-in user's browser sessions
+/// GET /me/sessions - the signed-in user's browser sessions
 /// (cookie sessions only; a bearer token is not a session).
 async fn list_sessions(
     State(state): State<AppState>,
@@ -1162,7 +1162,7 @@ async fn list_sessions(
     Ok(Json(serde_json::json!({ "sessions": sessions })).into_response())
 }
 
-/// DELETE /me/sessions/{ref} — revoke one of the user's
+/// DELETE /me/sessions/{ref} - revoke one of the user's
 /// sessions by its public ref. Revoking the current session
 /// is a logout. Unknown or ambiguous refs are a 404 (the ref
 /// is only ever shown to the owner, so this is not an oracle).

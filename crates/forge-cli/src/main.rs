@@ -104,7 +104,7 @@ const LONG_VERSION: &str = concat!(
     name = "forgehub",
     version,
     long_version = LONG_VERSION,
-    about = "ForgeHub — a cloud home for shell command snippets",
+    about = "ForgeHub - a cloud home for shell command snippets",
     long_about = "Save shell command snippets once, run them anywhere with `fg <name>`. \
                   Local commands work fully offline; cloud commands (login, push, pull, fork) sync with your ForgeHub server."
 )]
@@ -798,7 +798,7 @@ fn dispatch_cloud(
 }
 
 /// `forgehub ui` (Step 18): browse in the TUI, then execute
-/// the chosen action through the normal command functions —
+/// the chosen action through the normal command functions -
 /// the run/trust confirmation path is the CLI's own.
 fn dispatch_ui(
     store: &store::Store,

@@ -74,7 +74,7 @@ export default function DashboardPage() {
       await navigator.clipboard.writeText(text);
       toast({ message });
     } catch {
-      toast({ message: 'Copy failed — your browser blocked clipboard access' });
+      toast({ message: 'Copy failed - your browser blocked clipboard access' });
     }
   };
 

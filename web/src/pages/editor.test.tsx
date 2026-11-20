@@ -65,7 +65,7 @@ describe('EditorPage (new)', () => {
     renderEditor('/new');
     setField('Name', 'ubuntu-setup');
     fireEvent.change(bodyArea(), { target: { value: 'sudo apt-get update\necho $region' } });
-    await waitFor(() => expect(screen.getByText(/Valid — ready to save/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Valid - ready to save/)).toBeTruthy());
     expect(document.querySelector('md-assist-chip[label="region"]')).toBeTruthy();
     expect(screen.getAllByText(/Uses sudo/).length).toBeGreaterThanOrEqual(1);
   });
@@ -90,7 +90,7 @@ describe('EditorPage (new)', () => {
     renderEditor('/new');
     setField('Name', 'ubuntu-setup');
     fireEvent.change(bodyArea(), { target: { value: 'echo ok\nexport KEY=AKIAEXAMPLEVALUE' } });
-    await waitFor(() => expect(screen.getByText(/Secrets found — saving is blocked/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Secrets found - saving is blocked/)).toBeTruthy());
     expect(screen.getByText(/Line 2: possible aws access key/)).toBeTruthy();
     const save = screen.getByText('Save snippet').closest('md-filled-button') as HTMLElement & { disabled?: boolean };
     expect(save.disabled === true || save.hasAttribute('disabled')).toBe(true);
@@ -116,7 +116,7 @@ describe('EditorPage (new)', () => {
     renderEditor('/new');
     setField('Name', 'ubuntu-setup');
     fireEvent.change(bodyArea(), { target: { value: 'sudo apt-get update' } });
-    await waitFor(() => expect(screen.getByText(/Valid — ready to save/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Valid - ready to save/)).toBeTruthy());
     fireEvent.click(screen.getByText('Save snippet'));
     await waitFor(() => expect(screen.getByText('DETAIL PAGE')).toBeTruthy());
     expect((posted as { name: string }).name).toBe('ubuntu-setup');
@@ -167,7 +167,7 @@ describe('EditorPage (edit, optimistic concurrency)', () => {
     renderEditor('/ada/ubuntu-setup/edit');
     await waitFor(() => expect(bodyArea().value).toBe('echo v3'));
     fireEvent.change(bodyArea(), { target: { value: 'echo mine' } });
-    await waitFor(() => expect(screen.getByText(/Valid — ready to save/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Valid - ready to save/)).toBeTruthy());
     fireEvent.click(screen.getByText('Save new version'));
     await waitFor(() => expect(screen.getByText('Someone saved a newer version')).toBeTruthy());
     fireEvent.click(screen.getByText('Overwrite with mine'));

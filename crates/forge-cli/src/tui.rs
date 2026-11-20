@@ -1,11 +1,11 @@
-//! `forgehub ui` — a terminal browser for local and cloud
+//! `forgehub ui` - a terminal browser for local and cloud
 //! snippets (Step 18).
 //!
 //! The state machine is deliberately separated from the
 //! terminal: [`TuiState::handle`] consumes abstract [`Key`]s
 //! and produces [`Action`]s, so the whole interaction is
 //! unit-tested without a TTY. The runner only translates
-//! crossterm events, draws with ratatui, and — for actions —
+//! crossterm events, draws with ratatui, and - for actions -
 //! restores the terminal and hands back to `main`, which runs
 //! the action through the *same* command functions the CLI
 //! uses (run/trust confirmations included). The TUI never
@@ -96,7 +96,7 @@ impl TuiItem {
 
 /// What the TUI asks `main` to do after the terminal is
 /// restored. Every variant maps onto an existing command
-/// function — the safety path is shared, never duplicated.
+/// function - the safety path is shared, never duplicated.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
     Run(TuiItem),
@@ -443,7 +443,7 @@ fn items_from_json(values: &[serde_json::Value]) -> Vec<TuiItem> {
 }
 
 /// Hard stop for [`fetch_all_pages`]: 50 pages × 100 rows is
-/// 5 000 snippets — ten times the server's per-user cap — so
+/// 5 000 snippets - ten times the server's per-user cap - so
 /// hitting it means the server is misbehaving, not that the
 /// list is really that long.
 const MAX_CLOUD_PAGES: usize = 50;
@@ -529,7 +529,7 @@ fn draw(frame: &mut ratatui::Frame, state: &TuiState, palette: &Palette) {
     let area = frame.area();
     if area.width < 60 || area.height < 20 {
         frame.render_widget(
-            Paragraph::new("Terminal too small — the UI needs at least 60×20.")
+            Paragraph::new("Terminal too small - the UI needs at least 60×20.")
                 .style(Style::default().fg(palette.warn)),
             area,
         );
@@ -975,7 +975,7 @@ mod tests {
     #[test]
     fn rendered_output_neutralises_hostile_text() {
         // Step 19 (T-EXEC-3): names/descriptions/commands are
-        // untrusted text rendered into a terminal buffer — the
+        // untrusted text rendered into a terminal buffer - the
         // rendered frame must contain no raw ESC or bidi
         // controls anywhere.
         let mut hostile = item("evil", "desc \u{1b}[31m red \u{202e}flip");

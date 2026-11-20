@@ -423,7 +423,7 @@ pub trait SnippetRepo: Send + Sync {
     /// is a *sanitised* FTS5 MATCH string built by the handler
     /// (quoted prefix terms only); `sort` is relevance|stars|
     /// updated. Only public, live, unhidden snippets are ever
-    /// returned — the predicates are enforced here as well as by
+    /// returned - the predicates are enforced here as well as by
     /// FTS membership, as defence in depth.
     async fn search_public(
         &self,
@@ -617,7 +617,7 @@ fn map_unique(err: sqlx::Error) -> RepoError {
 
 /// `?,?,?` for an `IN (...)` list of `n` ids (Step 20 bulk
 /// reads). The SQL built with it contains only `?` placeholders
-/// — ids are always bound as parameters, never interpolated —
+/// (ids are always bound as parameters, never interpolated),
 /// which is why the call sites may use `AssertSqlSafe`.
 fn in_placeholders(n: usize) -> String {
     std::iter::repeat_n("?", n).collect::<Vec<_>>().join(",")
@@ -994,7 +994,7 @@ type FtsSnapshot = (String, String, String, String, String);
 
 /// Read the snippet's current FTS snapshot inside `tx`, applying
 /// exactly the "public, latest version, not hidden, not deleted"
-/// rule from spec-data-model §3 — in one place.
+/// rule from spec-data-model §3 - in one place.
 async fn fts_snapshot(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     snippet_id: i64,

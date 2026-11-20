@@ -1,4 +1,4 @@
-# ForgeHub — multi-stage build: web app + Rust server, slim runtime.
+# ForgeHub - multi-stage build: web app + Rust server, slim runtime.
 # Build:  docker build -t forgehub .
 # Run:    docker run -p 8080:8080 -e FORGEHUB_SECRET_KEY=<48+ random chars> -v forgehub-data:/data forgehub
 

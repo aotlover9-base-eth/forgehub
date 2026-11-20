@@ -1,5 +1,5 @@
 //! Sessions list/revoke tests (Step 17): the settings
-//! security screen's endpoints — list with the current session
+//! security screen's endpoints - list with the current session
 //! flagged, revoke another session, cross-user isolation,
 //! bearer rejection, CSRF enforcement.
 

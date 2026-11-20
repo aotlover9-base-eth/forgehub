@@ -93,12 +93,12 @@ function Shell() {
   const logout = useLogout();
   const [helpOpen, setHelpOpen] = useState(false);
   // Which nav item is "here": Profile on your own profile
-  // page, otherwise the matching section — and nothing on
+  // page, otherwise the matching section - and nothing on
   // pages that belong to no section (another user's profile,
   // a snippet, settings). Home is the in-app /home page; the
   // public landing at '/' lives outside this shell entirely
   // (the two were separated on 2026-11-20 at the user's
-  // direction — Home used to bounce people to the landing).
+  // direction - Home used to bounce people to the landing).
   const active: string | null =
     me.data && location.pathname === `/${me.data.username}`
       ? 'profile'
@@ -182,7 +182,7 @@ function Shell() {
         </Suspense>
       </ErrorBoundary>
       <footer className="fh-footer">
-        <span>ForgeHub — save a command once, run it anywhere.</span>
+        <span>ForgeHub - save a command once, run it anywhere.</span>
         <a href="https://github.com/aotlover9-base-eth/forgehub" target="_blank" rel="noreferrer">
           Source
         </a>
@@ -194,13 +194,13 @@ function Shell() {
         content={
           <ul>
             <li>
-              <strong>n</strong> — new snippet
+              <strong>n</strong> - new snippet
             </li>
             <li>
-              <strong>/</strong> — focus search (on the dashboard)
+              <strong>/</strong> - focus search (on the dashboard)
             </li>
             <li>
-              <strong>?</strong> — this help
+              <strong>?</strong> - this help
             </li>
           </ul>
         }
@@ -215,7 +215,7 @@ function Shell() {
 
 const router = createBrowserRouter([
   // The landing page is a standalone full-viewport scene with
-  // its own glass nav (the Observe theme) — it does not render
+  // its own glass nav (the Observe theme) - it does not render
   // inside the app shell.
   { path: '/', element: <LandingPage /> },
   {

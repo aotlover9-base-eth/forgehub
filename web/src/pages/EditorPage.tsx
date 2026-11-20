@@ -329,7 +329,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
       {secrets.length > 0 ? (
         <div role="alert">
           <p style={{ color: 'var(--md-sys-color-error)', fontWeight: 500 }}>
-            Secrets found — saving is blocked. The values are never shown or sent anywhere else.
+            Secrets found - saving is blocked. The values are never shown or sent anywhere else.
           </p>
           <ul>
             {secrets.map((f, i) => (
@@ -353,7 +353,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
           </ul>
         </div>
       ) : null}
-      {validation?.valid ? <p>✓ Valid — ready to save.</p> : null}
+      {validation?.valid ? <p>✓ Valid - ready to save.</p> : null}
       {validation?.summary ? (
         <ul style={{ paddingLeft: 'var(--fh-space-4)' }}>
           <li>
@@ -363,7 +363,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
           </li>
           <li>
             Size: {bodyBytes.toLocaleString()} / {MAX_BODY_BYTES.toLocaleString()} bytes
-            {overSize ? ' — too large' : ''}
+            {overSize ? ' - too large' : ''}
           </li>
           {validation.summary.uses_sudo ? <li>Uses sudo</li> : null}
           {validation.summary.variables.length > 0 ? (
@@ -421,7 +421,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
             <label key={v.id} style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start', cursor: 'pointer' }}>
               <md-radio name="visibility" value={v.id} checked={visibility === v.id || undefined} onChange={() => setVisibility(v.id)} />
               <span>
-                <strong>{v.label}</strong> — {v.help}
+                <strong>{v.label}</strong> - {v.help}
               </span>
             </label>
           ))}
@@ -555,7 +555,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
       <ConfirmDialog
         open={conflict}
         headline="Someone saved a newer version"
-        content="This snippet changed since you opened it — probably from the CLI. You can view their version, overwrite it with yours, or copy your text and decide later."
+        content="This snippet changed since you opened it - probably from the CLI. You can view their version, overwrite it with yours, or copy your text and decide later."
         confirmLabel="Overwrite with mine"
         cancelLabel="Copy my text"
         onConfirm={overwriteConflict}

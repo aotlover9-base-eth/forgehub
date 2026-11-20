@@ -15,7 +15,7 @@ pub struct CacheEntry {
     pub name: String,
     pub version: i64,
     pub bytes: u64,
-    /// Seconds since the epoch (mtime — the LRU key).
+    /// Seconds since the epoch (mtime - the LRU key).
     pub modified: u64,
 }
 
@@ -218,7 +218,7 @@ mod tests {
         let store = Store::from_root(dir.path().to_path_buf());
         // Three bodies, increasing mtimes via explicit writes
         // in sequence (mtime granularity is seconds; sizes
-        // drive the test, order is by the recorded mtimes —
+        // drive the test, order is by the recorded mtimes -
         // equal mtimes keep insertion order from read_dir,
         // so use sizes that evict deterministically by count).
         for name in ["a--one--v1.yaml", "a--two--v1.yaml", "a--three--v1.yaml"] {

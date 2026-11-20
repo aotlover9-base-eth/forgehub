@@ -3,9 +3,9 @@
 ## Reporting a vulnerability
 
 Please report suspected vulnerabilities **privately** to the maintainer
-(GitHub user `aotlover9-base-eth`) — for example via a private GitHub
+(GitHub user `aotlover9-base-eth`) - for example via a private GitHub
 security advisory on this repository ("Security" tab → "Report a
-vulnerability") — rather than opening a public issue.
+vulnerability") - rather than opening a public issue.
 
 Please include:
 
@@ -25,7 +25,7 @@ Only the latest `0.1.x` release receives security fixes. There is no LTS.
 ## Scope notes
 
 - ForgeHub is **not a sandbox**: a snippet you confirm runs with your full
-  user privileges. The safety model is visibility and consent — see
+  user privileges. The safety model is visibility and consent - see
   `docs/security.md` for the user-facing guidance.
 - The server operator can read the database, including private snippet
   bodies (they are not end-to-end encrypted).

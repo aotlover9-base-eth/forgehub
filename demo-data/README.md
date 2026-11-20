@@ -1,6 +1,6 @@
 # Demo data pack
 
-**105 ready-to-use snippets** for a new ForgeHub library — system
+**105 ready-to-use snippets** for a new ForgeHub library - system
 administration, files, logs, network, Docker, git, monitoring,
 dev workflows, backups, security and media one-liners. Some use
 variables (`{{PORT}}`, `{{DIR}}`, …) with defaults, so they prompt
@@ -15,7 +15,7 @@ sh demo-data/load.sh
 1. Imports every file in `snippets/` into your local library.
    Names you already have are skipped, never overwritten.
 2. If you're logged in (`forgehub whoami`), pushes each snippet
-   that isn't on your server yet — **private by default**, under
+   that isn't on your server yet - **private by default**, under
    your account.
 
 Local only, no server: `sh demo-data/load.sh --local-only`
@@ -34,7 +34,7 @@ Local: `forgehub delete <name>` · Server: `forgehub remote delete <name>`
 
 ## Notes
 
-- Snippets are plain forge files (`snippets/*.yml`) — read them,
+- Snippets are plain forge files (`snippets/*.yml`) - read them,
   edit them, take only the ones you like:
   `forgehub import demo-data/snippets/<name>.yml`
 - Distro-specific ones are tagged (`apt`, `pacman`, `dnf`) so you

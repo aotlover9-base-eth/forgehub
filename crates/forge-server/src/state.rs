@@ -29,7 +29,7 @@ pub struct AppState {
     /// rows). 60-second TTL per the roadmap.
     pub explore_cache: Arc<ExploreCache>,
     /// Outgoing mail (password resets): SMTP, the dev console
-    /// mailer, or disabled — from the configuration.
+    /// mailer, or disabled - from the configuration.
     pub mailer: Arc<dyn crate::mail::Mailer>,
 }
 

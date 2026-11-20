@@ -249,7 +249,7 @@ pub fn cache_put(
     Ok(())
 }
 
-/// Load a specific cached version body (no hash verification —
+/// Load a specific cached version body (no hash verification -
 /// callers verify against the hash they expect).
 #[must_use]
 pub fn cache_body(store: &Store, owner: &str, name: &str, version: i64) -> Option<String> {

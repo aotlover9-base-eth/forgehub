@@ -5,7 +5,7 @@ kind of person others want to build with.
 
 ## Expected
 
-- Be respectful and constructive — critique code and ideas,
+- Be respectful and constructive - critique code and ideas,
   not people.
 - Assume good faith; ask before concluding.
 - Keep discussions on-topic and welcoming to newcomers.
@@ -19,7 +19,7 @@ kind of person others want to build with.
 - Deliberately disruptive behaviour in issues, PRs or
   community spaces.
 - Using project spaces to distribute malicious snippets or
-  to solicit credentials — this project exists to make
+  to solicit credentials - this project exists to make
   running shared commands *safer*, and abusing its trust
   model is the fastest way to be banned.
 

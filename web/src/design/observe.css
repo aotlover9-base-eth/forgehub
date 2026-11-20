@@ -1,6 +1,6 @@
 /* Observe landing theme (user-directed, 2026-11-20).
    A single-screen, dark, glassmorphic scene for the public
-   landing page only — adapted from the "Observe" design
+   landing page only - adapted from the "Observe" design
    prompt the user supplied. Every colour, shadow, gradient
    and the display size come from the --fh-observe-* tokens
    in tokens.css; this file stays literal-free like the rest
@@ -93,7 +93,7 @@
 }
 
 /* The circle variant drops the fill and uses a rim that
-   never reaches zero opacity — on a 56px circle the panel
+   never reaches zero opacity - on a 56px circle the panel
    gradient's transparent band would erase the ring's sides. */
 .liquid-glass-circle {
   background-blend-mode: luminosity;
@@ -218,7 +218,7 @@
 }
 
 /* Compact landing nav (mobile fix, 2026-11-20): at phone
-   widths the wordmark collided with the Log in link — brand
+   widths the wordmark collided with the Log in link - brand
    plus actions simply did not fit inside the pill. The wrap
    and pill paddings shrink, the wordmark drops a typescale
    step and the action gaps tighten. */
@@ -340,7 +340,7 @@
   transform: scale(1.05);
 }
 
-/* Bottom row: three glass circles — source, explore, guide. */
+/* Bottom row: three glass circles - source, explore, guide. */
 .observe-social {
   position: relative;
   z-index: 10;
@@ -370,13 +370,13 @@
 }
 
 /* ---- The app scene: the same Observe world inside the
-   shell (user-directed, 2026-11-20 — "after creating account
+   shell (user-directed, 2026-11-20 - "after creating account
    all sections must be of same theme"). The drifting smoke
    backdrop sits fixed behind everything, dimmed by a scrim
    so dense pages stay readable; the top bar and bottom nav
    become glass; cards pick up a blur over the scene. Colour
    itself comes from the .observe-app token scope in
-   tokens.css — this section only does glass and layout. */
+   tokens.css - this section only does glass and layout. */
 
 body:has(.observe-app) {
   background: var(--fh-observe-bg);
@@ -437,7 +437,7 @@ body:has(.observe-app) {
   border-top: 1px solid var(--fh-observe-line);
   /* Mobile fix (2026-11-20): the bar was an in-flow grid
      row, so on any page taller than the viewport it sank
-     below the fold — navigation unreachable while scrolling.
+     below the fold - navigation unreachable while scrolling.
      Pin it to the viewport bottom; the main column gets
      matching bottom padding so nothing hides behind it. */
   position: fixed;
@@ -462,7 +462,7 @@ body:has(.observe-app) {
 }
 
 /* Headings inside the app use the default UI typeface, NOT
-   the landing's Instrument Serif — the serif is a
+   the landing's Instrument Serif - the serif is a
    landing-only treatment (user clarification, 2026-11-20;
    an earlier change that put serif headings in the app was
    reverted on the same day). */

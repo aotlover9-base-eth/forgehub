@@ -233,7 +233,7 @@ function TokensTab() {
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)', maxWidth: 720 }}>
       <p style={{ margin: 0 }}>
         Tokens let the CLI and scripts act as you. A token is shown <strong>once</strong>, when it is
-        created — after that, only its first characters are visible.
+        created - after that, only its first characters are visible.
       </p>
       <p style={{ margin: 0 }}>
         <Button variant="filled" icon="add" onClick={() => setCreateOpen(true)}>
@@ -243,7 +243,7 @@ function TokensTab() {
 
       {fresh ? (
         <Card variant="filled">
-          <h2 style={{ marginTop: 0 }}>Your new token — copy it now</h2>
+          <h2 style={{ marginTop: 0 }}>Your new token - copy it now</h2>
           <p>
             This is the only time the full token is shown. Store it somewhere safe; anyone with it
             can act as you within its scopes.
@@ -257,7 +257,7 @@ function TokensTab() {
                   await navigator.clipboard.writeText(fresh.token);
                   setCopied(true);
                 } catch {
-                  toast({ message: 'Copy failed — select the token text and copy it manually' });
+                  toast({ message: 'Copy failed - select the token text and copy it manually' });
                 }
               }}
             >
@@ -319,11 +319,11 @@ function TokensTab() {
         <div slot="content" style={{ display: 'grid', gap: 'var(--fh-space-3)', minWidth: 320 }}>
           <TextField label="Name" value={tokenName} onChange={setTokenName} supportingText="What is this token for? e.g. Laptop CLI" />
           <label style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
-            <md-checkbox checked={readScope || undefined} onChange={() => setReadScope(!readScope)} /> Read — view
+            <md-checkbox checked={readScope || undefined} onChange={() => setReadScope(!readScope)} /> Read - view
             and run snippets
           </label>
           <label style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
-            <md-checkbox checked={writeScope || undefined} onChange={() => setWriteScope(!writeScope)} /> Write —
+            <md-checkbox checked={writeScope || undefined} onChange={() => setWriteScope(!writeScope)} /> Write -
             create and change snippets (includes read)
           </label>
           <label style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
@@ -391,7 +391,7 @@ function CliTab() {
           The CLI runs your snippets from any terminal. Install instructions are in the ForgeHub
           README (installer packages arrive with the first release).
         </p>
-        <p>Sign in once — your browser approves it on the device page:</p>
+        <p>Sign in once - your browser approves it on the device page:</p>
         <CodeBlock label="Terminal" code={'fg login\nfg ubuntu-setup'} />
         <p style={{ margin: 0 }}>
           <code>fg login</code> shows a short code and opens <code>/device</code>. Nothing is granted

@@ -485,7 +485,7 @@ async fn device_lookup_bruteforce_lockout() {
             .unwrap();
         assert_eq!(resp.status(), 404, "wrong guess {i}");
     }
-    // Eleventh attempt from the same IP is locked out — even
+    // Eleventh attempt from the same IP is locked out - even
     // before the code is checked.
     let resp = s
         .client

@@ -4,40 +4,40 @@ Generated from the binary's own `--help` output (Step 22); the normative contrac
 
 ## Commands at a glance
 
-- `forgehub init` — Create the `ForgeHub` home and config
-- `forgehub record` — Record a shell session as a snippet
-- `forgehub run` — Run a snippet by name
-- `forgehub list` — List local snippets
-- `forgehub show` — Show a snippet (card + numbered commands)
-- `forgehub search` — Search local snippets (name, description, tags, commands)
-- `forgehub tag` — Add or remove tags: fg tag <name> add|remove <tag>…
-- `forgehub rename` — Rename a local snippet
-- `forgehub delete` — Delete a local snippet
-- `forgehub edit` — Edit a snippet in $EDITOR; invalid edits are rolled back
-- `forgehub parameterize` — Turn repeated literals into variables
-- `forgehub clone` — Duplicate a local snippet under a new name
-- `forgehub import` — Import snippet file(s) (`ForgeHub` or Forgenesis format)
-- `forgehub export` — Export a snippet as YAML (to stdout or a file)
-- `forgehub analyze` — Mine shell history for repeated command sequences
-- `forgehub stats` — Show run statistics from history.db
-- `forgehub backup` — Write a backup archive (default: backups/forgehub-backup-<timestamp>.tar)
-- `forgehub restore` — Restore snippets from a backup archive
-- `forgehub login` — Log in to a `ForgeHub` server (device-code flow in the browser)
-- `forgehub logout` — Log out: delete the stored credential for a registry
-- `forgehub whoami` — Show the current login (username, registry, token, scopes)
-- `forgehub push` — Push a local snippet to the cloud (create or new version)
-- `forgehub pull` — Pull a cloud snippet into the local library
-- `forgehub status` — Compare local snippets with the cloud (ahead/behind/diverged)
-- `forgehub diff` — Unified diff of a local snippet against the cloud latest
-- `forgehub fork` — Fork someone's snippet into your account (server-side)
-- `forgehub remote` — Inspect and manage your cloud snippets
-- `forgehub trust` — Manage execution trust for cloud snippets (Step 13): `trust list`, `trust revoke <owner/name>`, or approve an exact snippet directly: `trust <owner/name@hash>`
-- `forgehub doctor` — Check the environment and library health
-- `forgehub alias` — Manage the `fg` shell alias (install|uninstall|show)
-- `forgehub completions` — Print shell completions (dynamic: local snippet names included)
-- `forgehub ui` — Browse snippets in a terminal UI (Local · Mine · Explore)
-- `forgehub cache` — Inspect and manage the cloud run cache
-- `forgehub update` — Check whether a newer `ForgeHub` is available (never downloads or replaces anything)
+- `forgehub init` - Create the `ForgeHub` home and config
+- `forgehub record` - Record a shell session as a snippet
+- `forgehub run` - Run a snippet by name
+- `forgehub list` - List local snippets
+- `forgehub show` - Show a snippet (card + numbered commands)
+- `forgehub search` - Search local snippets (name, description, tags, commands)
+- `forgehub tag` - Add or remove tags: fg tag <name> add|remove <tag>…
+- `forgehub rename` - Rename a local snippet
+- `forgehub delete` - Delete a local snippet
+- `forgehub edit` - Edit a snippet in $EDITOR; invalid edits are rolled back
+- `forgehub parameterize` - Turn repeated literals into variables
+- `forgehub clone` - Duplicate a local snippet under a new name
+- `forgehub import` - Import snippet file(s) (`ForgeHub` or Forgenesis format)
+- `forgehub export` - Export a snippet as YAML (to stdout or a file)
+- `forgehub analyze` - Mine shell history for repeated command sequences
+- `forgehub stats` - Show run statistics from history.db
+- `forgehub backup` - Write a backup archive (default: backups/forgehub-backup-<timestamp>.tar)
+- `forgehub restore` - Restore snippets from a backup archive
+- `forgehub login` - Log in to a `ForgeHub` server (device-code flow in the browser)
+- `forgehub logout` - Log out: delete the stored credential for a registry
+- `forgehub whoami` - Show the current login (username, registry, token, scopes)
+- `forgehub push` - Push a local snippet to the cloud (create or new version)
+- `forgehub pull` - Pull a cloud snippet into the local library
+- `forgehub status` - Compare local snippets with the cloud (ahead/behind/diverged)
+- `forgehub diff` - Unified diff of a local snippet against the cloud latest
+- `forgehub fork` - Fork someone's snippet into your account (server-side)
+- `forgehub remote` - Inspect and manage your cloud snippets
+- `forgehub trust` - Manage execution trust for cloud snippets (Step 13): `trust list`, `trust revoke <owner/name>`, or approve an exact snippet directly: `trust <owner/name@hash>`
+- `forgehub doctor` - Check the environment and library health
+- `forgehub alias` - Manage the `fg` shell alias (install|uninstall|show)
+- `forgehub completions` - Print shell completions (dynamic: local snippet names included)
+- `forgehub ui` - Browse snippets in a terminal UI (Local · Mine · Explore)
+- `forgehub cache` - Inspect and manage the cloud run cache
+- `forgehub update` - Check whether a newer `ForgeHub` is available (never downloads or replaces anything)
 
 ## Per-command help
 

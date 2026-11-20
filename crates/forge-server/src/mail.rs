@@ -2,14 +2,14 @@
 //!
 //! Three modes, chosen by [`crate::config::Config::mail_mode`]:
 //!
-//! - **SMTP** — real delivery through `FORGEHUB_SMTP_URL`
+//! - **SMTP** - real delivery through `FORGEHUB_SMTP_URL`
 //!   (lettre). The URL usually carries a password; it is never
 //!   logged or printed.
-//! - **Console** — dev only: the reset link is written to the
+//! - **Console** - dev only: the reset link is written to the
 //!   server log so local testing works with zero setup. This
 //!   is the standard console-mail backend pattern; it exists
 //!   only when `FORGEHUB_ENV=dev` and no SMTP URL is set.
-//! - **Disabled** — prod without SMTP: requests are accepted
+//! - **Disabled** - prod without SMTP: requests are accepted
 //!   (the endpoint must not reveal whether mail exists) and a
 //!   warning is logged; nothing is delivered.
 //!
@@ -38,7 +38,7 @@ pub trait Mailer: Send + Sync {
 
 /// Build the mailer a configuration calls for. An SMTP URL
 /// that lettre cannot parse degrades to the disabled mailer
-/// with a loud error log — mail must never stop the server
+/// with a loud error log - mail must never stop the server
 /// from booting, but the operator must be told.
 #[must_use]
 pub fn mailer_from_config(config: &Config) -> Arc<dyn Mailer> {
@@ -138,7 +138,7 @@ fn reset_email_body(reset_url: &str) -> String {
          Reset it within the next hour:\n\
          {reset_url}\n\
          \n\
-         If that was not you, ignore this email — your password has not changed.\n"
+         If that was not you, ignore this email - your password has not changed.\n"
     )
 }
 

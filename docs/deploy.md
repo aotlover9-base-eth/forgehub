@@ -5,7 +5,7 @@ Docker path (recommended), a Fly.io variant, and the operating
 basics. Configuration reference: `docs/running.md`. Day-2
 operations (backup, abuse, upgrades): `docs/operations.md`.
 
-## Option A — single VPS with Docker + Caddy (recommended)
+## Option A - single VPS with Docker + Caddy (recommended)
 
 You need: a VPS with Docker + the compose plugin, a domain
 pointed at it (for HTTPS), and 5 minutes.
@@ -16,7 +16,7 @@ cd forgehub
 cp .env.example .env
 ```
 
-Edit `.env` — at minimum:
+Edit `.env` - at minimum:
 
 ```ini
 FORGEHUB_DOMAIN=hub.example.com
@@ -35,7 +35,7 @@ at all. The database lives in the `forgehub-data` volume.
 
 ### First run / first admin
 
-There is no built-in admin account — the operator is whoever
+There is no built-in admin account - the operator is whoever
 controls the host and the database. Recommended sequence:
 
 1. Start with `FORGEHUB_ALLOW_SIGNUP=false`.
@@ -46,12 +46,12 @@ controls the host and the database. Recommended sequence:
 3. Moderation is the server binary's admin subcommand against
    the same database:
    `docker compose exec forgehub forge-server admin list-reports`
-   (plus `hide-snippet`, `ban-user` — see `docs/operations.md`).
+   (plus `hide-snippet`, `ban-user` - see `docs/operations.md`).
 
-## Option B — Fly.io
+## Option B - Fly.io
 
 ```toml
-# fly.toml (sketch — adjust app/region)
+# fly.toml (sketch - adjust app/region)
 app = "your-forgehub"
 primary_region = "iad"
 
@@ -104,7 +104,7 @@ on `FORGEHUB_BIND` (default `127.0.0.1:8080`).
 ## Backups, upgrades, migrations, secrets
 
 - **Backups**: `scripts/backup-db.sh` against the database
-  file (safe while running) — cron example and the restore
+  file (safe while running) - cron example and the restore
   drill are in `docs/operations.md`. Back up before every
   upgrade.
 - **Upgrades**: pull the new image/source, back up, restart.
@@ -115,7 +115,7 @@ on `FORGEHUB_BIND` (default `127.0.0.1:8080`).
   rollback.
 - **Secrets**: `FORGEHUB_SECRET_KEY` comes from the
   environment/compose `.env` (never commit `.env`). It is not
-  used to encrypt the database — protect the volume like any
+  used to encrypt the database - protect the volume like any
   credential store (see `docs/security.md`, operator section).
 - **Signup policy**: closed (`false`) for private instances;
   open for public ones, with the report queue reviewed via the
@@ -125,7 +125,7 @@ on `FORGEHUB_BIND` (default `127.0.0.1:8080`).
 
 The image and compose file are maintained with the code and
 statically reviewed, but they have **not** been built on the
-development machine (no Docker available there) — the first
+development machine (no Docker available there) - the first
 `docker compose up --build` on a real host is the smoke test:
 check `/api/v1/health`, sign up in the web UI, and run the CLI
 against it (`fg login` with `FORGEHUB_REGISTRY` set to the

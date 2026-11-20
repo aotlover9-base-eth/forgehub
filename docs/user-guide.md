@@ -13,7 +13,7 @@ library. The format both speak is the *forge file*
 Sign up with a username (2–39 chars, lowercase letters,
 digits, hyphens), an email, and a password of 10+ characters.
 There is **no email verification and no password reset** in
-v0.1.0 — no mail is ever sent (see `docs/known-gaps.md`); if
+v0.1.0 - no mail is ever sent (see `docs/known-gaps.md`); if
 you lose your password on a self-hosted instance, the operator
 is your recovery path.
 
@@ -26,14 +26,14 @@ lets you revoke any of them, or sign out everywhere.
 **New snippet** (or `/:owner/:name/edit`): name (immutable
 except via rename in the editor), description (≤ 280 chars),
 visibility (**Private** by default; Public means anyone can
-read, star, fork and run it), up to 20 tags, and the body —
+read, star, fork and run it), up to 20 tags, and the body -
 **Script** mode (one shell script) or **Steps** mode (named
 steps with per-step retry/timeout, written as YAML).
 
 While you type, the editor validates against the server:
 secret findings (kind + line) **block saving**; danger lints
 (`sudo`, `rm -rf`, pipe-to-shell, …) warn but do not block.
-Saving an edit creates a new **version** — versions are
+Saving an edit creates a new **version** - versions are
 immutable, and the Versions tab diffs any two of them.
 
 ### Sharing and discovery
@@ -51,7 +51,7 @@ it, and a safety banner when it isn't yours.
 **Settings → Tokens** creates API tokens (`fgh_…`, scopes
 read / read+write, optional expiry). A token is **shown once**;
 store it in a password manager. The CLI normally doesn't need
-one: `fg login` uses the **device flow** — the CLI shows a
+one: `fg login` uses the **device flow** - the CLI shows a
 short code, you open the server's `/device` page, sign in, and
 approve. **Settings → CLI** explains both paths.
 
@@ -114,7 +114,7 @@ Then:
 `fg trust list` shows what you've approved (owner, name, hash,
 runs); `fg trust revoke owner/name` forgets an approval.
 Without an interactive terminal, unskippable confirmations
-refuse with exit code 2 — scripts should run their own or
+refuse with exit code 2 - scripts should run their own or
 pre-trusted snippets.
 
 ### Offline

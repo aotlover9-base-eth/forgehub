@@ -2,7 +2,7 @@
 # {$FORGEHUB_DOMAIN}, reverse-proxied to the server container.
 # Caddy terminates TLS, so the app's Secure cookies apply, and
 # adds HSTS at the edge (the app itself sets CSP and the other
-# security headers — see docs/security.md).
+# security headers - see docs/security.md).
 
 {$FORGEHUB_DOMAIN} {
 	encode zstd gzip

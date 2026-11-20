@@ -195,7 +195,7 @@ impl Config {
     /// Load and validate configuration from the process environment.
     ///
     /// # Errors
-    /// On invalid values, an unparseable bind address, or — in prod —
+    /// On invalid values, an unparseable bind address, or - in prod -
     /// a missing/short secret key.
     pub fn from_env() -> Result<Self> {
         Self::from_vars(&|k| env_var(k))

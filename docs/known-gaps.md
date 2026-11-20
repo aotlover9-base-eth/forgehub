@@ -21,7 +21,7 @@ account. Delivery is SMTP via `FORGEHUB_SMTP_URL`
   undeliverable; the operator fallback remains replacing the
   `password_hash` row directly. In dev (`FORGEHUB_ENV=dev`,
   no SMTP), reset links are written to the server log
-  instead — the console mailer — so local testing needs no
+  instead - the console mailer - so local testing needs no
   mail setup.
 - **Email addresses are still not verified at signup.**
   They are format-checked only, so an account can be
@@ -39,7 +39,7 @@ single-node deployments (the v1 target) are exact.
 ## Docker image build-verified 2026-11-19; CI builds and smokes it since 2026-11-20
 
 The first real `docker compose up --build` on a user machine
-(2026-11-19) built the image and started Caddy fine — and
+(2026-11-19) built the image and started Caddy fine - and
 caught a real bug: `docker-compose.yml` carried a literal
 `<redacted>` placeholder as `FORGEHUB_DATABASE_URL` (a
 redaction artifact introduced when the file was written in
@@ -60,7 +60,7 @@ instead of reaching a user.
 - **OAuth / third-party login.** Username + password only; no
   "Sign in with …" providers.
 - **Admin web UI.** Moderation is the operator CLI
-  (`forge-server admin …`) by design — no privileged web
+  (`forge-server admin …`) by design - no privileged web
   surface exists to attack.
 - **OS keyring storage for CLI credentials** (landed
   2026-11-20, with honest limits). `FORGEHUB_CREDENTIAL_STORE`
@@ -69,7 +69,7 @@ instead of reaching a user.
   Manager. On Linux the secret-service backend is a
   `linux-keyring` cargo feature, **off in the release
   binaries**: it links the system D-Bus library, which the
-  static musl builds cannot do — Linux release builds keep
+  static musl builds cannot do - Linux release builds keep
   using `~/.config/forgehub/credentials.toml` (directory
   0700, file 0600, reads refuse looser permissions), and
   auto mode falls back to that file on every platform when
@@ -91,16 +91,16 @@ instead of reaching a user.
 ignores in `deny.toml`, all "unmaintained" (not vulnerability)
 advisories:
 
-- **chrono** (RUSTSEC-2026-0543) — used only to format/parse
+- **chrono** (RUSTSEC-2026-0543) - used only to format/parse
   UTC timestamps. Post-v1: migrate to `time` or `jiff` and drop
   the ignore.
-- **unsafe-libyaml via serde_yaml 0.9** (RUSTSEC-2024-0449) —
+- **unsafe-libyaml via serde_yaml 0.9** (RUSTSEC-2024-0449) -
   the YAML stack implements the canonical snippet format; it
   only ever parses size-capped (≤ 64 KiB), pre-scanned input
   (anchors/aliases/tags rejected, depth ≤ 16). Post-v1:
   evaluate a maintained YAML implementation against the
   byte-identical hash contract before switching.
-- **paste** (RUSTSEC-2024-0436) — a compile-time proc-macro
+- **paste** (RUSTSEC-2024-0436) - a compile-time proc-macro
   pulled in by ratatui; no runtime exposure. Resolves itself
   when ratatui drops it.
 

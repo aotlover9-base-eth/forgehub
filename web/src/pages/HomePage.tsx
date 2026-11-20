@@ -6,7 +6,7 @@ import { relativeTime } from '../validation';
 
 /**
  * The signed-in Home: a command centre, deliberately NOT
- * the public landing page (user-directed, 2026-11-20 — the
+ * the public landing page (user-directed, 2026-11-20 - the
  * nav's Home used to bounce people out to the marketing
  * scene). Home answers "where was I and what's worth
  * running"; the Library stays the full searchable list and
@@ -48,7 +48,7 @@ export default function HomePage() {
             <Skeleton lines={3} />
           ) : recent.length === 0 ? (
             <>
-              <p>Nothing saved yet. Your first command is the hardest one to re-type from memory — save it once.</p>
+              <p>Nothing saved yet. Your first command is the hardest one to re-type from memory - save it once.</p>
               <Button variant="tonal" onClick={() => navigate('/new')}>
                 Save your first snippet
               </Button>
@@ -72,7 +72,7 @@ export default function HomePage() {
           {popular.isPending ? (
             <Skeleton lines={3} />
           ) : trending.length === 0 ? (
-            <p>No public snippets yet — yours could be the first everyone reaches for.</p>
+            <p>No public snippets yet - yours could be the first everyone reaches for.</p>
           ) : (
             <>
               <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
@@ -91,7 +91,7 @@ export default function HomePage() {
       <Card variant="filled">
         <h2 style={{ marginTop: 0 }}>Run it anywhere</h2>
         <p>
-          Every snippet you save is one short command away, on any machine signed in to ForgeHub — shown in full
+          Every snippet you save is one short command away, on any machine signed in to ForgeHub - shown in full
           first, and run only when you say yes.
         </p>
         <CodeBlock label="Terminal" code="$ fg ubuntu-setup" />

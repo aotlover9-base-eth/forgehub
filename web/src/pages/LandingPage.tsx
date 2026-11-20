@@ -6,7 +6,7 @@ const GUIDE = `${REPO}/blob/main/docs/user-guide.md`;
 
 /**
  * The public home page: a single full-viewport "Observe"
- * scene (user-directed theme, 2026-11-20) — dark glass over
+ * scene (user-directed theme, 2026-11-20) - dark glass over
  * a drifting abstract backdrop, an Instrument Serif headline,
  * and the canonical command in a glass pill. It renders
  * OUTSIDE the app shell (its own route in App.tsx): the scene
@@ -16,8 +16,8 @@ const GUIDE = `${REPO}/blob/main/docs/user-guide.md`;
  */
 
 function LogoMark() {
-  // A ring resolving from dots into a solid arc — the noise
-  // becoming a command — with a run chevron at its centre.
+  // A ring resolving from dots into a solid arc - the noise
+  // becoming a command - with a run chevron at its centre.
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="24" height="24">
       <path
@@ -159,7 +159,7 @@ export default function LandingPage() {
           Save a command once, run it <em>anywhere</em>.
         </h1>
         <p className="observe-sub">
-          The shell commands you keep re-typing — stored once, shown in full, and run only with
+          The shell commands you keep re-typing - stored once, shown in full, and run only with
           your approval.
         </p>
         <div className="observe-pill-wrap">

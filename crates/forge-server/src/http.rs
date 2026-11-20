@@ -3,7 +3,7 @@
 //! rate limiting, and static hosting of the web app with an SPA
 //! fallback.
 //!
-//! The CSP lives in exactly one place — [`CSP`] — and is asserted by
+//! The CSP lives in exactly one place - [`CSP`] - and is asserted by
 //! the HTTP tests.
 
 use crate::error::ApiError;
@@ -22,7 +22,7 @@ use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
 /// The Content-Security-Policy for every response. The web app is
-/// self-hosted (no CDNs, no third-party scripts or fonts — agent.md
+/// self-hosted (no CDNs, no third-party scripts or fonts - agent.md
 /// §2), so `'self'` suffices; `'unsafe-inline'` for styles is needed
 /// by Material Web's injected styles.
 pub const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \

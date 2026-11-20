@@ -15,7 +15,7 @@
 #      and the offer is skipped when stdin is not a terminal.
 #
 # It refuses to run as root unless FORGEHUB_ALLOW_ROOT=1.
-# Read it before you run it — that is the ForgeHub way.
+# Read it before you run it - that is the ForgeHub way.
 #
 # Environment overrides:
 #   FORGEHUB_VERSION       release tag (default: latest)
@@ -112,7 +112,7 @@ expected="$(awk -v a="$asset" '$2 == a {print $1}' "$tmp/SHA256SUMS")"
 [ -n "$expected" ] || die "no checksum for $asset in SHA256SUMS"
 actual="$(checksum "$tmp/$asset")"
 if [ "$actual" != "$expected" ]; then
-    die "CHECKSUM MISMATCH for $asset (expected $expected, got $actual) — refusing to install"
+    die "CHECKSUM MISMATCH for $asset (expected $expected, got $actual) - refusing to install"
 fi
 say "Checksum verified: $actual"
 

@@ -2,8 +2,8 @@
 
 ### Is it safe to run someone else's snippet?
 
-Safer than copy-pasting from a web page — which is the
-alternative ForgeHub replaces — but never "safe" in absolute
+Safer than copy-pasting from a web page - which is the
+alternative ForgeHub replaces - but never "safe" in absolute
 terms, and ForgeHub does not claim sandboxing. What you get:
 the **full command list before anything runs**, the owner's
 name, version and content hash; a typed `yes` for a first run;
@@ -28,7 +28,7 @@ is the reliable route. `forgehub alias install` writes a
 clearly marked block to your shell's rc file (backing it up
 first) defining `fg` for ForgeHub and `jobs-fg` for the
 builtin; `alias uninstall` removes exactly that block. The
-installer script offers to run it — it never edits rc files
+installer script offers to run it - it never edits rc files
 itself.
 
 ### I forgot my password. Now what?
@@ -40,7 +40,7 @@ password you store in a password manager.
 
 ### Can I use ForgeHub without the cloud?
 
-Yes — the local library is complete on its own (record, run,
+Yes - the local library is complete on its own (record, run,
 analyze, backup, TUI). Cloud commands simply stay unused;
 `--offline` makes the CLI refuse network access up front.
 Your snippets live as plain YAML files in `~/.forgehub`,
@@ -50,8 +50,8 @@ readable and greppable without ForgeHub at all.
 
 No. No telemetry, no analytics, no third-party requests from
 the web app (fonts and icons are self-hosted). The CLI talks
-only to the registry you configure, plus — for
-`fg update --check`, only when you run it — the release API.
+only to the registry you configure, plus - for
+`fg update --check`, only when you run it - the release API.
 `update` never downloads or replaces anything by itself.
 
 ### What happens if the server is down mid-push?

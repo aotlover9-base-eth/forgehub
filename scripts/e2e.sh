@@ -77,7 +77,7 @@ stop_server() {
     SERVER_PID=""
 }
 
-# fg <home> <args...> — run the CLI against an isolated HOME.
+# fg <home> <args...> - run the CLI against an isolated HOME.
 fg() {
     local home="$1"; shift
     env -i PATH="$PATH" HOME="$home" FORGEHUB_HOME="$home/.forgehub" \
@@ -85,7 +85,7 @@ fg() {
         "$ROOT/target/debug/forgehub" "$@"
 }
 
-# fg_pty <home> <input-line> <args...> — same, but under a PTY
+# fg_pty <home> <input-line> <args...> - same, but under a PTY
 # (scripts/ptyrun.py): the trust prompts refuse piped stdin by
 # design, so interactive confirmations need a terminal.
 fg_pty() {

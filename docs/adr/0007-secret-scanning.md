@@ -1,4 +1,4 @@
-# ADR 0007 — Secret scanning: one shared scanner, patterns + context, never echoing values
+# ADR 0007 - Secret scanning: one shared scanner, patterns + context, never echoing values
 
 - **Status:** Accepted (Step 2, 2026-11-19)
 
@@ -13,13 +13,13 @@ happen **before** persistence, at every entry point: `fg record`, the CLI's
 One scanner in `forge-core` (Step 3), used by all four call sites, combining:
 1. **Known-format patterns:** private-key blocks (`-----BEGIN … PRIVATE KEY-----`), AWS access key ids, GitHub/GitLab/Slack/Stripe-style token prefixes, generic bearer tokens.
 2. **Assignment context:** `password=` / `--password` / `passwd` literals and `KEY=value` assignments whose key name suggests a secret (`token`, `secret`, `password`, `api_key`, …) with a non-placeholder value.
-3. **High-entropy strings in assignment context only** (never free-floating — command lines are full of hashes and ids that are not secrets).
+3. **High-entropy strings in assignment context only** (never free-floating - command lines are full of hashes and ids that are not secrets).
 
 Findings carry `{kind, line}` and **never the matched value**. The scanner
 offers a redaction function (replace the value with `{{VARIABLE}}` guidance)
 for the recorder. Behaviour: client-side `record`/`push` **refuse**;
 server-side create/update **rejects 422** with findings; the web editor
-blocks Save. There is no "save anyway" override in v1 — a user who truly
+blocks Save. There is no "save anyway" override in v1 - a user who truly
 needs a literal can split it through a variable, which is the documented
 workaround.
 

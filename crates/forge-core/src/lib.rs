@@ -1,17 +1,17 @@
 #![forbid(unsafe_code)]
-//! `forge-core` — the shared `ForgeHub` library used by the CLI and the
+//! `forge-core` - the shared `ForgeHub` library used by the CLI and the
 //! server. No network access and no filesystem side effects: everything
 //! here is pure computation over text and values.
 //!
 //! Modules:
-//! - [`model`] — the snippet document (both modes) and its limits.
-//! - [`parse`] — strict parsing: `Snippet::from_yaml` / `from_bytes`.
-//! - [`names`] — snippet-name, username and tag rules, reserved words.
-//! - [`vars`] — `{{VAR}}` substitution, resolution order, durations.
-//! - [`hash`] — canonical serialisation (spec §9) and SHA-256 hashing.
-//! - [`scan`] — secret scanning (ADR 0007).
-//! - [`lint`] — danger lints (warnings only).
-//! - [`import`] — the Forgenesis conversion layer.
+//! - [`model`] - the snippet document (both modes) and its limits.
+//! - [`parse`] - strict parsing: `Snippet::from_yaml` / `from_bytes`.
+//! - [`names`] - snippet-name, username and tag rules, reserved words.
+//! - [`vars`] - `{{VAR}}` substitution, resolution order, durations.
+//! - [`hash`] - canonical serialisation (spec §9) and SHA-256 hashing.
+//! - [`scan`] - secret scanning (ADR 0007).
+//! - [`lint`] - danger lints (warnings only).
+//! - [`import`] - the Forgenesis conversion layer.
 //!
 //! # Examples
 //!

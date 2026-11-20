@@ -1,6 +1,6 @@
 //! In-memory token-bucket rate limiting (spec: openapi + roadmap
 //! Step 6). Keyed by a hash of the `Authorization` header when
-//! present, else the client IP. Single-node only — a multi-node
+//! present, else the client IP. Single-node only - a multi-node
 //! deployment needs a shared store (accepted limitation, recorded in
 //! the threat model).
 

@@ -7,8 +7,8 @@
 //! a SHA-256 hash; the short `user_code` is stored in plaintext
 //! (it is a lookup key the user types, protected by attempt
 //! lockouts per code and per IP, a 10-minute expiry, and single
-//! use). The API token is minted at *delivery* time — approval
-//! only records who approved — so its plaintext never needs to be
+//! use). The API token is minted at *delivery* time - approval
+//! only records who approved - so its plaintext never needs to be
 //! stored anywhere.
 
 use crate::auth::{
@@ -208,8 +208,8 @@ async fn poll_token(
     match row.status.as_str() {
         "denied" => Ok(pending("denied", "access_denied")),
         "approved" => {
-            // Mint the token now — the only moment its plaintext
-            // exists — then burn the code atomically (single use:
+            // Mint the token now - the only moment its plaintext
+            // exists - then burn the code atomically (single use:
             // a racing poll that loses the consume revokes its
             // own minted token and reports the code as spent).
             let user_id = row.user_id.ok_or_else(ApiError::internal)?;

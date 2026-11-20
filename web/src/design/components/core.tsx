@@ -110,7 +110,7 @@ export function Fab({
 }
 
 /**
- * A neutral tag chip (outlined, surface colours only — the
+ * A neutral tag chip (outlined, surface colours only - the
  * colour-restraint rule: tags are never colourful).
  */
 export function Chip({

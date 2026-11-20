@@ -1,7 +1,7 @@
 /**
  * Client-side validation hints mirroring the server rules
  * (docs/spec-snippet-format.md; forge-core names.rs). The
- * server is always the authority — these exist so the user
+ * server is always the authority - these exist so the user
  * gets feedback while typing, not after submitting.
  */
 

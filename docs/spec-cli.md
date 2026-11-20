@@ -1,8 +1,8 @@
-# Spec — CLI (`forgehub`, aliased to `fg`)
+# Spec - CLI (`forgehub`, aliased to `fg`)
 
 - **Status:** Normative for Steps 4, 5, 11, 12, 13, 18. **Version:** 1 (Step 2, 2026-11-19)
 - **Binary:** `forgehub`. `fg` is a shell alias/function installed by `alias install` (roadmap §6); non-interactive scripts must call `forgehub`.
-- **Local state:** `$FORGEHUB_HOME` or `~/.forgehub/` — `config.yaml`, `snippets/`, `cache/`, `trust.db`, `history.db`, `backups/`. (Step 5 correction: the Step 2 draft said `config.toml`/`workflows/`; Steps 4–5 shipped YAML config and `snippets/` — the config *keys* are unchanged. See `reports/report_Step5.md`, Corrections.) **Credentials:** `$XDG_CONFIG_HOME/forgehub/credentials.toml` or `~/.config/forgehub/credentials.toml`, directory `0700`, file `0600`.
+- **Local state:** `$FORGEHUB_HOME` or `~/.forgehub/` - `config.yaml`, `snippets/`, `cache/`, `trust.db`, `history.db`, `backups/`. (Step 5 correction: the Step 2 draft said `config.toml`/`workflows/`; Steps 4–5 shipped YAML config and `snippets/` - the config *keys* are unchanged. See `reports/report_Step5.md`, Corrections.) **Credentials:** `$XDG_CONFIG_HOME/forgehub/credentials.toml` or `~/.config/forgehub/credentials.toml`, directory `0700`, file `0600`.
 
 ## 1. Global flags
 
@@ -16,7 +16,7 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 |------|---------|
 | 0 | Success |
 | 1 | Failure (a step failed, a server error, invalid input) |
-| 2 | Refused / not confirmed — the fail-safe path: prompt declined, non-TTY without permission to run, trust not established |
+| 2 | Refused / not confirmed - the fail-safe path: prompt declined, non-TTY without permission to run, trust not established |
 | 3 | Not found (name resolution found nothing, §6) |
 | 4 | Authentication required or expired (`forgehub login` is the fix, and the error says so) |
 | 130 | Interrupted (SIGINT) |
@@ -25,11 +25,11 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 
 - **Human (default):** plain aligned columns for lists; rounded "surface" cards (box-drawing, ASCII fallback) for `show`, `whoami` and the run confirmation (§7). Colour per agent.md §8.4: one accent, dim secondary, red/amber/green only for error/warning/success; no colour when non-TTY, `NO_COLOR`, or `--color=never`.
 - **`--json`:** one JSON object on stdout, no other stdout output. Stable keys per command:
-  - `list`: `{ "workflows": [{ "name", "description", "tags", "mode", "origin" }] }` (local) — cloud lists add `"owner"`, `"version"`, `"hash"`, `"visibility"`.
+  - `list`: `{ "workflows": [{ "name", "description", "tags", "mode", "origin" }] }` (local) - cloud lists add `"owner"`, `"version"`, `"hash"`, `"visibility"`.
   - `show`: `{ "name", "description", "tags", "mode", "shell", "variables", "commands" }` where `commands` is the ordered list of command strings that would run.
   - `stats`: `{ "runs", "commands", "total_ms", "failures", "estimated_saved_ms", "workflows": [{ "name", "runs", "commands", "total_ms", "failures", "last_run" }] }`.
   - `doctor`: `{ "checks": [{ "name", "level": "ok|warn|fail", "detail" }], "ok": bool }`.
-  - `whoami`: `{ "username", "registry", "token_name", "token_prefix", "scopes", "expires_at" }` — never the token itself.
+  - `whoami`: `{ "username", "registry", "token_name", "token_prefix", "scopes", "expires_at" }` - never the token itself.
   - `push`/`pull`/`fork`: `{ "owner", "name", "version", "hash", "url" }`.
   - `status`: `{ "snippets": [{ "name", "owner", "state", "local_version", "remote_version" }] }` (states per §5).
   - `cache list`: `{ "entries": [{ "owner", "name", "version", "bytes", "modified" }], "total_bytes", "cap_bytes" }`; `cache clear`: `{ "cleared_entries", "freed_bytes", "files_removed" }`.
@@ -38,7 +38,7 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
   - Errors with `--json`: `{ "error": { "code", "message" } }` on stderr, exit code unchanged.
 - Errors (human) follow **what failed → why → how to fix**, one line each, on stderr.
 
-## 4. Commands — local (Steps 4–5)
+## 4. Commands - local (Steps 4–5)
 
 | Command | Behaviour (summary; Steps 4–5 are normative for detail) |
 |---------|----------------------------------------------------------|
@@ -61,7 +61,7 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 | `completions <bash\|zsh\|fish\|powershell\|elvish>` | Prints the registration snippet for `clap_complete`'s dynamic env protocol (`COMPLETE=<shell> forgehub`); completion of local workflow names is dynamic, served by the binary from the live library |
 | `config` | **Not a command in v1** (see forgenesis-analysis §5). Edit `config.yaml` directly |
 
-## 5. Commands — cloud (Steps 11–13, 18)
+## 5. Commands - cloud (Steps 11–13, 18)
 
 | Command | Behaviour |
 |---------|-----------|
@@ -84,10 +84,10 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 Target forms: `name`, `owner/name`, either with `@<version>` (cloud only).
 
 Order (first match wins, and the match source is always shown in the confirm card):
-1. **Built-in subcommand** — if the first argument is a subcommand name, it is never treated as a snippet. (`forgehub run <name>` bypasses this for a snippet whose name collides — impossible for cloud names, which are reserved-word-checked, but possible for legacy local files; `run` is the escape hatch.)
-2. **Local workflow** — `~/.forgehub/snippets/<name>` (project `.forgenesis/` shadowing is a dropped Forgenesis feature and does not apply).
-3. **Own cloud snippet** — if logged in, `me/<name>` at the latest version (or `@N`).
-4. **Explicit `owner/name`** — that owner's snippet (only reachable in this explicit form for other people's snippets).
+1. **Built-in subcommand** - if the first argument is a subcommand name, it is never treated as a snippet. (`forgehub run <name>` bypasses this for a snippet whose name collides - impossible for cloud names, which are reserved-word-checked, but possible for legacy local files; `run` is the escape hatch.)
+2. **Local workflow** - `~/.forgehub/snippets/<name>` (project `.forgenesis/` shadowing is a dropped Forgenesis feature and does not apply).
+3. **Own cloud snippet** - if logged in, `me/<name>` at the latest version (or `@N`).
+4. **Explicit `owner/name`** - that owner's snippet (only reachable in this explicit form for other people's snippets).
 
 If nothing matches: exit 3, print "not found" plus up to 3 suggestions (similar local names by edit distance; top `remote search` hits when logged in and online). A suggestion is **never** auto-run.
 
@@ -106,7 +106,7 @@ is given, the CLI prints the confirm card (§8) and prompts.
 | Any snippet whose hash changed since last trusted run | Diff shown first (§8), then the prompt for its case above | **Does not skip** |
 | Third-party snippet, previously trusted at this exact `(owner, name, hash)` | `[y/N]` | Skips |
 
-Trust is recorded in `trust.db` as `(owner, name, hash, first_trusted_at, last_run_at)` on an explicit `yes`/run confirmation — never silently. `forgehub trust <owner/name@hash>` records trust without running. Anything other than the exact expected answer is a **No**: exit 2, nothing runs.
+Trust is recorded in `trust.db` as `(owner, name, hash, first_trusted_at, last_run_at)` on an explicit `yes`/run confirmation - never silently. `forgehub trust <owner/name@hash>` records trust without running. Anything other than the exact expected answer is a **No**: exit 2, nothing runs.
 
 **Fail-safe without a TTY:** if stdin is not a TTY and the case above does not permit `-y` skipping (or `-y` was not given), the CLI prints the card, does **not** run, and exits 2.
 
@@ -116,9 +116,9 @@ Snippet bodies are untrusted text. Everywhere the CLI displays them (confirm
 card, `show`, `diff`, `pull` preview, TUI, `remote show`):
 
 - Lines are numbered and wrapped, never truncated.
-- ANSI/CSI/OSC escape sequences, carriage returns, backspaces, and other C0/C1 control characters (except `\n`, `\t` shown as spaces to the tab stop) are rendered visibly (e.g. `␛[31m`, `␍`) — a snippet must not be able to hide or rewrite a command line on screen.
+- ANSI/CSI/OSC escape sequences, carriage returns, backspaces, and other C0/C1 control characters (except `\n`, `\t` shown as spaces to the tab stop) are rendered visibly (e.g. `␛[31m`, `␍`) - a snippet must not be able to hide or rewrite a command line on screen.
 - Unicode bidirectional controls (U+202A–U+202E, U+2066–U+2069) and zero-width characters are rendered visibly in the same way.
-- The card header always shows: `owner/name`, version, `sha256:<short>`, visibility, mode, shell, description, and lint warnings (sudo, `rm -rf`, `curl|sh`, … from `forge-core` — warnings, never blocks).
+- The card header always shows: `owner/name`, version, `sha256:<short>`, visibility, mode, shell, description, and lint warnings (sudo, `rm -rf`, `curl|sh`, … from `forge-core` - warnings, never blocks).
 
 Reference card (roadmap §4):
 
@@ -136,7 +136,7 @@ Run this on this machine? [y/N]
 ## 9. Execution semantics
 
 - Steps mode: each step in its own shell (`<shell> -c <command>`), honouring condition, `wait`, `retry`, `timeout`, `env`, `cwd`, `background`, `quiet`, `continue_on_error`, then `always` steps. First failure stops the run unless `-k` or the step sets `continue_on_error`.
-- Script mode: per ADR 0004 — written to a file with mode `0700` inside a private (`0700`) temp directory, executed with the declared shell, deleted on every exit path including signals.
+- Script mode: per ADR 0004 - written to a file with mode `0700` inside a private (`0700`) temp directory, executed with the declared shell, deleted on every exit path including signals.
 - `--dry`: print the numbered commands (variables substituted where values are known) and exit 0 without running or prompting.
 - `--step`: confirm before each step in addition to §7.
 - Run summary on completion: exit status of the run, duration, and (for failures) which step failed. Runs are recorded in `history.db` (interrupted runs marked as such).

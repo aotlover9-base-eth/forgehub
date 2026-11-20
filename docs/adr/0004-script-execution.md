@@ -1,4 +1,4 @@
-# ADR 0004 — Script mode executes from a private temp file, not stdin
+# ADR 0004 - Script mode executes from a private temp file, not stdin
 
 - **Status:** Accepted (Step 2, 2026-11-19)
 
@@ -17,15 +17,15 @@ from the user; and some shells behave differently for non-file input
 Write the body to a file created with `O_EXCL` inside a fresh private temp
 directory (directory mode `0700`, file mode `0700`), run `<shell> <file>`
 with the terminal inherited, and delete the file and directory on **every**
-exit path — success, failure, and signal handling (SIGINT/SIGTERM set a
+exit path - success, failure, and signal handling (SIGINT/SIGTERM set a
 cleanup flag; a panic hook performs the same cleanup). The directory lives
 under the system temp dir or `$FORGEHUB_HOME/tmp` when the system temp dir
-is world-writable without a sticky bit — `doctor` reports a bad temp dir.
+is world-writable without a sticky bit - `doctor` reports a bad temp dir.
 
 ## Alternatives rejected
 - **`shell -s` / `shell -c <body>`:** the stdin-consumption bug above for
   `-s`; for `-c`, very large bodies hit argv limits and the body appears in
-  the process list (`ps`) for the whole run — a confidentiality regression
+  the process list (`ps`) for the whole run - a confidentiality regression
   for private snippets.
 - **Named pipe:** same stdin semantics as `-s`, plus writer-blocking
   failure modes.

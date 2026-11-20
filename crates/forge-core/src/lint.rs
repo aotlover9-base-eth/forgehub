@@ -1,4 +1,4 @@
-//! Danger lints (warnings only, never blocking — ADR 0007 separates
+//! Danger lints (warnings only, never blocking - ADR 0007 separates
 //! these from secret findings). Each warning names the line and says
 //! plainly what is dangerous.
 
@@ -12,7 +12,7 @@ pub enum LintKind {
     RmRfRoot,
     /// `dd` writing to a block device.
     DdToBlockDevice,
-    /// `mkfs` — formatting a filesystem.
+    /// `mkfs` - formatting a filesystem.
     Mkfs,
     /// The classic fork bomb.
     ForkBomb,

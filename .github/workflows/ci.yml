@@ -94,7 +94,7 @@ jobs:
       # The gap this closes (docs/known-gaps.md): until now CI
       # never built the image, so a broken docker-compose /
       # Dockerfile / runtime-env combination could ship green
-      # — and did (the v0.1.0 compose file carried a literal
+      # - and did (the v0.1.0 compose file carried a literal
       # placeholder as its database URL and crash-looped on
       # first real use). Booting the image and demanding a
       # healthy response plus a real signup exercises the

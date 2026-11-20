@@ -1,7 +1,7 @@
 /**
  * Unified diff renderer. Additions and deletions are told
  * apart by the +/- gutter symbol AND a tonal background shift
- * (design-spec §1) — never by colour alone, and never
+ * (design-spec §1) - never by colour alone, and never
  * red/green. All diff text renders as text.
  */
 export function DiffView({ diff }: { diff: string }) {

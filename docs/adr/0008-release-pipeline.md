@@ -1,4 +1,4 @@
-# ADR 0008 — Release pipeline: hand-written matrix over cargo-dist
+# ADR 0008 - Release pipeline: hand-written matrix over cargo-dist
 
 Date: 2026-11-19 · Step 21
 
@@ -32,10 +32,10 @@ same event.
   creation (against the deliberate-publish rule above), its
   generated workflow changes shape between cargo-dist
   versions (harder to keep SHA-pinned and reviewable), and
-  ForgeHub needs no per-platform installer generation — one
+  ForgeHub needs no per-platform installer generation - one
   tarball/zip per target plus `scripts/install.sh` covers it.
   Revisit if the target matrix or installer formats grow.
-- **Fully manual releases**: rejected — unrepeatable and
+- **Fully manual releases**: rejected - unrepeatable and
   error-prone; the matrix build is exactly what CI is for.
 
 ## Consequences
@@ -62,8 +62,8 @@ Homebrew template is Linux-only.
 
 ## Addendum (2026-11-20, later): attestations dropped
 
-The v0.1.3 workflow run — the first whose build legs all
-passed — failed in the collect job: GitHub build-provenance
+The v0.1.3 workflow run - the first whose build legs all
+passed - failed in the collect job: GitHub build-provenance
 attestations are "not available for user-owned private
 repositories". The attestation step is removed; SHA256SUMS
 remains the integrity contract and `scripts/install.sh`

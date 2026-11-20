@@ -76,7 +76,7 @@ export function DialogActions({
 
 // ---------------------------------------------------------------------------
 // Confirmation dialog (md-dialog). `danger` styles the confirm
-// action with the error colour — reserved for destructive
+// action with the error colour - reserved for destructive
 // confirmations.
 // ---------------------------------------------------------------------------
 

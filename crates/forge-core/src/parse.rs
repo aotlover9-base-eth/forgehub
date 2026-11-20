@@ -244,7 +244,7 @@ mod tests {
     fn tags_are_folded_on_parse() {
         // Per spec §8 tags fold; the document-level validate() then sees
         // the folded form. (Programmatically built snippets with raw
-        // uppercase tags fail validate() — see model tests.)
+        // uppercase tags fail validate() - see model tests.)
         let s = Snippet::from_yaml("name: demo\ntags: [Ubuntu, CI]\nsteps: [echo hi]\n").unwrap();
         assert_eq!(s.tags, vec!["ubuntu".to_string(), "ci".to_string()]);
     }

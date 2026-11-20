@@ -119,7 +119,7 @@ struct Manifest {
     files: BTreeMap<String, String>, // name -> sha256 hex
 }
 
-/// `fg backup [name] [--out file]` — write an archive of the config
+/// `fg backup [name] [--out file]` - write an archive of the config
 /// plus all snippets (or one named snippet). The default location is
 /// the store's `backups/` directory with a timestamped name
 /// (spec-cli §4). Archives never contain credentials: the config
@@ -213,7 +213,7 @@ pub fn newest_backup(store: &Store) -> Option<PathBuf> {
     candidates.pop().map(|(_, p)| p)
 }
 
-/// `fg restore` — verify an archive against its manifest, then write
+/// `fg restore` - verify an archive against its manifest, then write
 /// the snippets back (and the config only with `with_config`).
 /// Returns the number of snippets restored.
 pub fn cmd_restore(store: &Store, archive: &PathBuf, with_config: bool) -> Result<usize> {

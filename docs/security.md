@@ -2,12 +2,12 @@
 
 This document is the user- and operator-facing companion to
 `docs/threat-model.md` (the engineering threat model, re-verified with
-evidence in Step 19 — see the verification log at the bottom of that file).
+evidence in Step 19 - see the verification log at the bottom of that file).
 
 ## The one thing to understand
 
-**ForgeHub is not a sandbox.** When you run a snippet — yours or someone
-else's — its commands execute in your shell, with your permissions, on your
+**ForgeHub is not a sandbox.** When you run a snippet - yours or someone
+else's - its commands execute in your shell, with your permissions, on your
 machine. ForgeHub's job is to make sure you always know *exactly* what will
 run and *whose* it is before anything executes, and that nothing runs
 silently or changes underneath you. It cannot make a command you approved
@@ -21,7 +21,7 @@ safe.
   invisible characters are neutralised), so a command cannot hide behind
   terminal tricks.
 - **Typed `yes` for strangers.** Running someone else's snippet for the
-  first time requires typing `yes` — a reflexive Enter is not enough, and
+  first time requires typing `yes` - a reflexive Enter is not enough, and
   `-y` never skips this.
 - **Trust is pinned to content.** If a snippet you ran before changes, the
   next run shows a diff against the version you last ran and asks again.
@@ -76,7 +76,7 @@ you no longer recognise.
   `Referrer-Policy` on every response.
 - Client IPs for throttling and rate limiting come from the socket, never
   from `X-Forwarded-For`; if you front the server with a proxy, all users
-  behind it share one throttle identity — size limits accordingly.
+  behind it share one throttle identity - size limits accordingly.
 - Abuse handling: `forge-server admin list-reports`,
   `admin hide-snippet <owner>/<name>`, `admin ban-user <username>`
   (banning revokes the user's sessions and tokens immediately).

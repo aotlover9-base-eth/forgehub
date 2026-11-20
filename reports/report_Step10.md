@@ -1,4 +1,4 @@
-# Report — Step 10: Search, tags, stars, forks, profiles
+# Report - Step 10: Search, tags, stars, forks, profiles
 
 ## 1. Summary
 
@@ -9,10 +9,10 @@ popular-this-week, 60-second cache); public user profiles that never
 expose email; stars (idempotent, transactional counter); forks with
 recorded provenance; a pull counter with per-IP hourly dedup; abuse
 reports; and an operator admin CLI (`hide-snippet`, `ban-user`,
-`list-reports` — no admin web UI, per the roadmap). The 10k-snippet
+`list-reports` - no admin web UI, per the roadmap). The 10k-snippet
 performance bench passes the 50 ms p95 budget for snippet reads
 (p95 ≈ 1.5–1.7 ms) and, on re-run, for search (p95 ≈ 35 ms; first run
-68 ms under shared-CPU contention — both runs recorded in §4).
+68 ms under shared-CPU contention - both runs recorded in §4).
 
 ## 2. What I built
 
@@ -22,7 +22,7 @@ performance bench passes the 50 ms p95 budget for snippet reads
     whitespace, keep only alphanumeric/`_` characters, cap 10 terms;
     each term becomes a quoted prefix query (`"term"*`), AND-joined.
     Highlights are byte-offset ranges into the stored fields (first
-    occurrence per term per field, capped at 20) — plain text, never
+    occurrence per term per field, capped at 20) - plain text, never
     HTML, so the client renders them safely.
   - Explore: first page of each feed served from a 60 s in-memory
     cache of 100 rows; popular = stars received in the last 7 days,
@@ -34,7 +34,7 @@ performance bench passes the 50 ms p95 budget for snippet reads
     private snippet, records `forked_from` + source version + hash,
     increments the source's fork count in the same transaction.
   - Report: reason 1–500 chars; one open report per (reporter,
-    snippet) — duplicates are a silent 204.
+    snippet) - duplicates are a silent 204.
 - `crates/forge-server/src/admin.rs` (new): `forge-server admin
   hide-snippet|unhide-snippet <owner>/<name>`,
   `ban-user|unban-user <username>` (ban also deletes sessions and
@@ -82,14 +82,14 @@ performance bench passes the 50 ms p95 budget for snippet reads
 
 ## 4. Verification
 
-- `cargo fmt --all --check` — clean.
-- `cargo clippy --workspace --all-targets -- -D warnings` — exit 0,
+- `cargo fmt --all --check` - clean.
+- `cargo clippy --workspace --all-targets -- -D warnings` - exit 0,
   zero errors (full output inspected, not truncated).
-- `cargo test --workspace` — **336 passed, 0 failed** (325 at Step 9
+- `cargo test --workspace` - **336 passed, 0 failed** (325 at Step 9
   + 9 discovery HTTP tests + 2 discovery unit tests).
-- Web gates — lint, typecheck, test (1 passed), build all pass
+- Web gates - lint, typecheck, test (1 passed), build all pass
   (web UI itself is unchanged this step).
-- `scripts/scan-staged.sh` — clean.
+- `scripts/scan-staged.sh` - clean.
 - Discovery tests cover: search returns public only with correct
   highlight byte ranges; an FTS-injection suite (9 hostile queries,
   including `'; DROP TABLE snippets; --`, all return 200 with only
@@ -106,9 +106,9 @@ performance bench passes the 50 ms p95 budget for snippet reads
   repositories.
 - Performance (`cargo test --release -p forge-server --test perf --
   --ignored --nocapture`, 10,000 seeded public snippets, this
-  machine — a shared 1.5-CPU cell, so variance is expected):
+  machine - a shared 1.5-CPU cell, so variance is expected):
   - Run 1: seed 12.77 s; snippet read p50 0.97 ms, **p95 1.74 ms**;
-    search `q=docker` (matches all 10k — worst case) p50 34.14 ms,
+    search `q=docker` (matches all 10k - worst case) p50 34.14 ms,
     **p95 68.22 ms** (over budget in this run).
   - Run 2 (with repo-level split): seed 12.61 s; repo
     `search_public` alone 13.13 ms avg; snippet read p50 0.95 ms,
@@ -126,30 +126,30 @@ performance bench passes the 50 ms p95 budget for snippet reads
 ## 5. Acceptance criteria
 
 - FTS5 search over public snippets only, BM25 + prefix, sanitised
-  queries, plain-text highlights — done, tested incl. injection.
+  queries, plain-text highlights - done, tested incl. injection.
 - `GET /tags`, `GET /explore` (recent + popular-this-week, 60 s
-  cache) — done.
+  cache) - done.
 - Stars PUT/DELETE, one per user, transactional counter,
-  `GET /me/stars` — done.
-- Fork with provenance + fork count; private fork only by owner —
+  `GET /me/stars` - done.
+- Fork with provenance + fork count; private fork only by owner -
   done.
 - Profiles without email; profile snippet lists public only,
-  paginated — done.
-- Pull counter on `?intent=run` with hourly per-IP dedup — done.
-- Reports stored and deduplicated; admin CLI hide/ban/list — done.
-- p95 bench at 10k snippets — done (see §4 for both runs).
+  paginated - done.
+- Pull counter on `?intent=run` with hourly per-IP dedup - done.
+- Reports stored and deduplicated; admin CLI hide/ban/list - done.
+- p95 bench at 10k snippets - done (see §4 for both runs).
 
 ## 6. Security notes
 
 - Search is the classic FTS5-injection surface: user input never
-  reaches the MATCH expression raw — terms are character-filtered
+  reaches the MATCH expression raw - terms are character-filtered
   and quoted, and the injection suite proves table-drop and
   boolean-tautology attempts return ordinary results.
 - Discovery SQL enforces public visibility predicates independently
   of handler logic (defence in depth).
 - Profiles serialise an explicit allow-list shape; a test asserts
   the email string and the key name never appear.
-- Raw IPs are never stored for pull dedup — only SHA-256 hashes,
+- Raw IPs are never stored for pull dedup - only SHA-256 hashes,
   in memory only.
 - Admin operations are local CLI only (database access required);
   there is no admin HTTP surface to attack.
@@ -190,7 +190,7 @@ None.
   `.github/workflows/ci.yml`. A `gh auth refresh -s workflow`
   approval was pending with the user at commit time; once granted,
   steps 1–10 push together and CI runs for the first time. Nothing
-  in this report claims a successful push or a CI result — both
+  in this report claims a successful push or a CI result - both
   will be reported with real output when they happen.
 - Explore first page can show a just-hidden snippet for up to the
   60 s cache TTL (see §3).
@@ -199,9 +199,9 @@ None.
 
 ## 10. Deferred / ideas
 
-- Search result rendering optimisation (summary cache) — Step 20
+- Search result rendering optimisation (summary cache) - Step 20
   performance pass candidate.
-- Periodic (not just startup) retention purge — Step 19/21
+- Periodic (not just startup) retention purge - Step 19/21
   hardening, noted in the Step 9 report as well.
 
 ## 11. Next step

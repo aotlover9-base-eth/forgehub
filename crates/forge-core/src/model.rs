@@ -2,7 +2,7 @@
 //!
 //! Portions of the step/condition/retry/param normalisation are ported
 //! from Forgenesis (`src/model.rs`, MIT, Copyright (c) 2026 Aotlover9, the
-//! same author) — see `docs/forgenesis-analysis.md`. `ForgeHub` adds script
+//! same author) - see `docs/forgenesis-analysis.md`. `ForgeHub` adds script
 //! mode, strict limits and canonical hashing on top of that model.
 //!
 //! The schema is defined by `docs/spec-snippet-format.md`; this module is
@@ -326,7 +326,7 @@ pub struct Param {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum ParamSpec {
-    /// `PROJECT: myapp` — just a default.
+    /// `PROJECT: myapp` - just a default.
     Default(String),
     /// Full declaration.
     Detailed(Param),

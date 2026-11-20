@@ -1,6 +1,6 @@
 //! `forgehub update --check` (Step 18): ask the registry's
 //! `/version` (or GitHub releases) whether a newer `ForgeHub`
-//! exists. It NEVER downloads or replaces anything — it
+//! exists. It NEVER downloads or replaces anything - it
 //! prints where to get the upgrade.
 
 use anyhow::Result;
@@ -128,7 +128,7 @@ pub fn cmd_update_check(store: &Store, registry_flag: Option<&str>, json: bool) 
                     serde_json::json!({ "current": current, "latest": current, "update_available": false })
                 );
             } else {
-                println!("forgehub {current} — you are on the latest known version.");
+                println!("forgehub {current} - you are on the latest known version.");
             }
             Ok(0)
         }

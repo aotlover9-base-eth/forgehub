@@ -1,12 +1,12 @@
-# Step 12 Report — CLI push, pull, remote list, fork
+# Step 12 Report - CLI push, pull, remote list, fork
 
 ## 1. Summary
 The CLI can now sync with the cloud: `push` (create/new version
 with real optimistic concurrency), `pull` (with provenance
 sidecars and overwrite protection), `status` (ahead/behind/
 diverged by hash), `diff`, the `remote` management family,
-`fork`, and a `record --push` hook. The critical acceptance —
-CLI hash == server hash for the same content — is asserted by
+`fork`, and a `record --push` hook. The critical acceptance -
+CLI hash == server hash for the same content - is asserted by
 integration tests against the real server.
 
 ## 2. What was built
@@ -20,15 +20,15 @@ integration tests against the real server.
   - `push_one`: local `validate()` + forge-core secret scan
     first (findings refuse the push, exit 2, nothing uploaded);
     create defaults to private; updates send `If-Match` with the
-    **last-synced version from the provenance sidecar** — not
-    the version just read — so a remote that moved since the
+    **last-synced version from the provenance sidecar** - not
+    the version just read - so a remote that moved since the
     sync produces the server's real 412. No sidecar baseline +
     differing remote → local conflict error naming the recovery
     commands. Identical hash → "up to date" (visibility PATCH
     still applied when a flag was given). `push --all` prints a
     per-snippet summary and continues past failures.
   - `pull`: parses `owner/name` or bare name; fetched body is
-    treated as untrusted — parsed and validated with forge-core
+    treated as untrusted - parsed and validated with forge-core
     before saving; overwriting an existing local snippet shows
     the escaped preview card and requires confirmation, or
     `--force`; non-TTY without either → exit 2. Writes the
@@ -62,12 +62,12 @@ integration tests against the real server.
 ## 3. Design decisions
 - **If-Match baseline = sidecar version.** Using the freshly
   read remote version as the ETag would make conflicts
-  impossible and silently overwrite other machines' work —
+  impossible and silently overwrite other machines' work -
   the exact failure optimistic concurrency exists to prevent.
   The first sync test caught this (a stale push succeeded);
   the semantics were fixed and the conflict test now passes.
 - Pull preview is shown only when overwriting (a fresh pull
-  cannot destroy anything); JSON mode never prompts — it
+  cannot destroy anything); JSON mode never prompts - it
   refuses instead, so scripts fail safe.
 - `status` without a sidecar can only say unchanged/diverged;
   that limitation is documented in the code.
@@ -88,7 +88,7 @@ integration tests against the real server.
   matrix, record-push decisions, URL encoding).
 - **Workspace total: 361 passed, 0 failed** (was 349).
 
-## 5. Gates (agent.md §9) — real output
+## 5. Gates (agent.md §9) - real output
 ```text
 $ cargo fmt --all --check            → clean
 $ cargo clippy --workspace --all-targets -- -D warnings
@@ -127,7 +127,7 @@ $ scripts/scan-staged.sh             → clean
   `ApiFailure`). All were fixed at the root (boxed details,
   extracted helpers, `write!` over `push_str(&format!)`,
   `clone_from`, dispatch split) and the gates re-run in the
-  foreground to a verified 0 errors before this commit — the
+  foreground to a verified 0 errors before this commit - the
   AGENTS.md lesson applied to itself.
 
 ## 9. Push / CI status
@@ -137,7 +137,7 @@ $ scripts/scan-staged.sh             → clean
   commit per the run instructions).
 
 ## 10. Next step
-Step 13 — run from cloud with the full safety UX (trust store,
+Step 13 - run from cloud with the full safety UX (trust store,
 typed `yes`, changed-hash diffs, offline cache). Per the
 user's checkpoint override for this run, Step 13's report
 will carry a "Checkpoint review" section instead of stopping.

@@ -1,6 +1,6 @@
 # Contributing to ForgeHub
 
-Contributions are welcome — issues, discussions and pull
+Contributions are welcome - issues, discussions and pull
 requests. ForgeHub was built step by step under strict rules;
 keeping them is what makes the project trustworthy.
 
@@ -16,7 +16,7 @@ keeping them is what makes the project trustworthy.
   snippet display, confirmations, trust, secrets or auth
   needs failure-path tests and a note in the PR about which
   threat-model row (`docs/threat-model.md`) it affects.
-- **Design discipline (web).** Material You 3 tokens only —
+- **Design discipline (web).** Material You 3 tokens only -
   no hardcoded colours, radii or font sizes outside the token
   files; the token check runs in lint and will fail the PR.
 
@@ -46,7 +46,7 @@ shellcheck scripts/*.sh
 ```
 
 Do not truncate gate output when checking it, and never
-weaken a test to make it pass — fix the code or, if the test
+weaken a test to make it pass - fix the code or, if the test
 is wrong, explain why in the PR.
 
 ## Pull requests
@@ -56,5 +56,5 @@ is wrong, explain why in the PR.
 - Update the docs your change touches (`docs/`), the
   changelog's Unreleased section, and `docs/known-gaps.md`
   if you close or open a gap.
-- Security-sensitive reports do **not** go in public issues —
+- Security-sensitive reports do **not** go in public issues -
   see `SECURITY.md`.

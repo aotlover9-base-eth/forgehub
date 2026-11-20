@@ -6,7 +6,7 @@ is in `docs/security.md`.
 
 ## Backup
 
-ForgeHub's whole state is one SQLite database (plus nothing else —
+ForgeHub's whole state is one SQLite database (plus nothing else -
 snippet bodies, versions, users, sessions and tokens are all rows).
 Back it up with the online backup API, which is safe while the
 server is live and produces a transactionally consistent copy
@@ -62,11 +62,11 @@ server, and verifies the data is served.
 
 - Database locked by another writer: reads continue (WAL); writes
   wait up to the 5 s busy timeout and then return a generic
-  `500 {"error":{"code":"internal_error",...}}` — no storage
+  `500 {"error":{"code":"internal_error",...}}` - no storage
   details leak, and writes succeed again once the lock clears.
 - Server restart: in-flight requests fail, everything else is in
   the database; sessions survive (they are rows, not memory).
-  Rate limits and login throttles are per-process and reset —
+  Rate limits and login throttles are per-process and reset -
   see `docs/known-gaps.md`.
 - Disk full: writes fail as generic 500s; the server keeps
   serving reads. Free space or restore onto a larger volume.

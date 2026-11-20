@@ -1,4 +1,4 @@
-//! Run from cloud (Step 13) — the headline flow with the full
+//! Run from cloud (Step 13) - the headline flow with the full
 //! safety UX:
 //!
 //! - Resolution: explicit `owner/name[@version]`, else the
@@ -147,7 +147,7 @@ fn verify_body(
     let local_hash = forge_core::hash::content_hash(&snippet);
     if local_hash != server_hash {
         return Err(CliError::failure(format!(
-            "forgehub: hash mismatch — refusing to run\n  what: the server claims sha256:{} but the received body hashes to sha256:{}\n  why: the content may have been altered in transit or the server is misbehaving\n  fix: do not run this snippet; try again later or contact the registry operator",
+            "forgehub: hash mismatch - refusing to run\n  what: the server claims sha256:{} but the received body hashes to sha256:{}\n  why: the content may have been altered in transit or the server is misbehaving\n  fix: do not run this snippet; try again later or contact the registry operator",
             server_hash.get(..12).unwrap_or(&server_hash),
             local_hash.get(..12).unwrap_or(&local_hash),
         ))
@@ -261,7 +261,7 @@ pub fn flag_yes_may_skip(kind: &ConfirmKind, changed: bool) -> bool {
 // ---------------------------------------------------------------------------
 
 /// Wrap one display line at `width` columns (char-based, with a
-/// continuation indent) — long lines are wrapped, never
+/// continuation indent) - long lines are wrapped, never
 /// truncated, so nothing can hide past the edge of the screen.
 fn wrap_line(line: &str, width: usize, indent: &str) -> Vec<String> {
     if line.chars().count() <= width {
@@ -328,7 +328,7 @@ pub fn render_card(fetched: &Fetched, own: bool, changed: bool, diff: Option<&st
         }
     );
     if fetched.from_cache {
-        out.push_str("  (from the local cache — offline replay)\n");
+        out.push_str("  (from the local cache - offline replay)\n");
     }
     if !own {
         let _ = writeln!(
@@ -763,14 +763,14 @@ pub fn cmd_trust_revoke(store: &Store, reference: &str, json: bool) -> Result<i3
         println!("Trust revoked for {}/{}.", owner, refr.name);
     } else {
         println!(
-            "No trust recorded for {}/{} — nothing to revoke.",
+            "No trust recorded for {}/{} - nothing to revoke.",
             owner, refr.name
         );
     }
     Ok(0)
 }
 
-/// `forgehub trust <owner/name@hash|@version>` — approve an
+/// `forgehub trust <owner/name@hash|@version>` - approve an
 /// exact piece of content without running it. The fetched
 /// content is shown (card) and confirmed under the same rules
 /// as a run; the approval is recorded only after confirmation.
@@ -937,7 +937,7 @@ mod tests {
     #[test]
     fn changed_diff_in_card_is_escaped() {
         // Step 19 (T-EXEC-3): the changed-hash diff is the one
-        // display an attacker most wants to corrupt — a hostile
+        // display an attacker most wants to corrupt - a hostile
         // added line must not smuggle raw ANSI/bidi into it.
         let snippet =
             forge_core::Snippet::from_yaml("name: tool\nmode: script\nscript: |\n  echo hi\n")

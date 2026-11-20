@@ -1,5 +1,5 @@
 //! End-to-end auth tests (Step 7): signup/login/logout, sessions,
-//! CSRF, throttling, password change, account deletion — against
+//! CSRF, throttling, password change, account deletion - against
 //! the real router on an ephemeral port.
 
 use forge_server::config::Config;

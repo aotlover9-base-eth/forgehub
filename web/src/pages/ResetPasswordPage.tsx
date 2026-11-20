@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
       { token, new_password: password },
       {
         onSuccess: () => {
-          toast({ message: 'Password updated — log in with your new password' });
+          toast({ message: 'Password updated - log in with your new password' });
           navigate('/login', { replace: true });
         },
         onError: (error) => {

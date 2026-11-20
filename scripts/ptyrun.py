@@ -4,7 +4,7 @@ once, and relay output + exit code (Step 20 e2e helper).
 
 Usage: ptyrun.py <input-line> <command...>
 
-ForgeHub's trust prompts require a real TTY (by design — a
+ForgeHub's trust prompts require a real TTY (by design - a
 pipe must never be able to confirm running someone else's
 code). This driver gives the e2e script a TTY: it feeds
 <input-line> to the child as soon as a confirmation prompt

@@ -6,8 +6,8 @@
  * Material 3 default scheme).
  *
  * Outputs (committed; regenerate with `npm run tokens`):
- *   src/design/tokens.css — --md-sys-color-* + --fh-* tokens
- *   src/design/tokens.ts  — the same values for tests/tooling
+ *   src/design/tokens.css - --md-sys-color-* + --fh-* tokens
+ *   src/design/tokens.ts  - the same values for tests/tooling
  *
  * No colour is chosen by hand anywhere else in the web app;
  * check-tokens.mjs enforces that.

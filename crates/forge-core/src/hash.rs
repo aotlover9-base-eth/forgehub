@@ -25,7 +25,7 @@ pub fn canonical_text(raw: &str) -> String {
 
 /// Canonicalise a script body: line endings normalised, then exactly one
 /// trailing `\n`. Trailing spaces and blank lines **inside** the body are
-/// preserved — shell heredocs can depend on them.
+/// preserved - shell heredocs can depend on them.
 #[must_use]
 pub fn canonical_script_body(raw: &str) -> String {
     let normalized = raw.replace("\r\n", "\n").replace('\r', "\n");
@@ -236,7 +236,7 @@ pub fn content_hash(snippet: &Snippet) -> String {
     sha256_hex(&canonical_bytes(snippet))
 }
 
-/// The first 8 hex chars of the content hash — the display identity of a
+/// The first 8 hex chars of the content hash - the display identity of a
 /// version (spec §9).
 #[must_use]
 pub fn short_hash(snippet: &Snippet) -> String {

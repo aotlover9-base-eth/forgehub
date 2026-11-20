@@ -3,7 +3,7 @@
 ## Configuration
 
 The server is configured entirely through environment variables
-(see `.env.example`). Nothing secret is ever printed at startup —
+(see `.env.example`). Nothing secret is ever printed at startup -
 the startup log shows the secret key only as set/unset + length.
 
 | Variable | Default | Meaning |
@@ -11,10 +11,10 @@ the startup log shows the secret key only as set/unset + length.
 | `FORGEHUB_ENV` | `dev` | `dev` (pretty logs) or `prod` (JSON logs; secret required) |
 | `FORGEHUB_BIND` | `127.0.0.1:8080` | Listen address |
 | `FORGEHUB_BASE_URL` | `http://127.0.0.1:8080` | Public base URL (password-reset links, device flow) |
-| `FORGEHUB_SMTP_URL` | — | SMTP submission URL for outgoing mail, e.g. `smtps://user:pass@smtp.example.com:465` (carries a password — never logged) |
+| `FORGEHUB_SMTP_URL` | - | SMTP submission URL for outgoing mail, e.g. `smtps://user:pass@smtp.example.com:465` (carries a password - never logged) |
 | `FORGEHUB_MAIL_FROM` | `ForgeHub <no-reply@localhost>` | From address for outgoing mail |
 | `FORGEHUB_DATABASE_URL` | `sqlite://forgehub.db` | SQLite URL or path; `sqlite::memory:` works |
-| `FORGEHUB_SECRET_KEY` | — | ≥ 32 bytes; **required in prod**, warned-about in dev |
+| `FORGEHUB_SECRET_KEY` | - | ≥ 32 bytes; **required in prod**, warned-about in dev |
 | `FORGEHUB_ALLOW_SIGNUP` | `true` | Set `false` to close public registration |
 | `FORGEHUB_WEB_DIR` | `web/dist` | Built web app; API-only mode with a warning when absent |
 | `FORGEHUB_BODY_LIMIT_KIB` | `256` | Max API request body |
@@ -31,10 +31,10 @@ the startup log shows the secret key only as set/unset + length.
 ## Development
 
 ```sh
-# Terminal 1 — API server (migrations run automatically at start)
+# Terminal 1 - API server (migrations run automatically at start)
 cargo run -p forge-server
 
-# Terminal 2 — web app with hot reload; Vite proxies /api to :8080
+# Terminal 2 - web app with hot reload; Vite proxies /api to :8080
 cd web && npm install && npm run dev
 ```
 
@@ -60,7 +60,7 @@ FORGEHUB_WEB_DIR=web/dist \
 The server serves the API under `/api/v1` and the web app from
 `FORGEHUB_WEB_DIR` (hashed assets are cached immutably; `index.html`
 is `no-cache`). Put a TLS-terminating reverse proxy in front for
-public deployments. Shut down with SIGINT/SIGTERM — connections
+public deployments. Shut down with SIGINT/SIGTERM - connections
 drain gracefully.
 
 ## Docker
@@ -90,7 +90,7 @@ forge-server admin unban-user <username>
 
 ## Notes
 
-- **Backups:** the whole deployment state is the SQLite file —
+- **Backups:** the whole deployment state is the SQLite file -
   copy it (WAL checkpoint first: `sqlite3 forgehub.db .backup`).
 - **Rate limiting** is in-memory and per-process; a multi-node
   deployment needs a shared limiter (recorded limitation).

@@ -196,7 +196,7 @@ async fn forwarded_for_spoofing_does_not_reset_login_throttle() {
             .unwrap();
         assert_eq!(resp.status(), 401, "failure {i}");
     }
-    // Locked now — even the correct password is refused with
+    // Locked now - even the correct password is refused with
     // 429 before any password check.
     let resp = s
         .client
@@ -245,7 +245,7 @@ async fn control_characters_in_content_never_500() {
     let (_, cookie, csrf) = signup(&s, "mallory").await;
     // NUL, ESC and a bidi override in the description; a NUL in
     // the body. The API may accept (stored as inert text) or
-    // reject with a 4xx — never a 500, and a stored value must
+    // reject with a 4xx - never a 500, and a stored value must
     // round-trip as the same JSON string.
     let description = "evil \u{0} desc \u{1b}[31m \u{202e}flip";
     let resp = s

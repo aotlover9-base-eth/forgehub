@@ -9,7 +9,7 @@
 #      (~/.forgehub). Names that already exist locally are skipped.
 #   2. If you are logged in (`forgehub whoami`), pushes each snippet
 #      that is not already on your server. Pushes are PRIVATE by
-#      default — nothing becomes public.
+#      default - nothing becomes public.
 #
 # Safe to re-run: both phases skip what is already there.
 # Uses the `forgehub` binary explicitly (never the `fg` alias, which
@@ -31,7 +31,7 @@ fi
 echo "==> Step 1/2: importing the pack into your local library"
 tmp=$(mktemp)
 # Note: `forgehub import` exits 1 when everything was skipped (nothing
-# new) — for this loader a full skip is success, so judge by the
+# new) - for this loader a full skip is success, so judge by the
 # summary line, not the exit code. Only its absence means real failure.
 "$FH" import snippets >"$tmp" 2>&1
 if grep -qE '^Imported [0-9]+ snippet' "$tmp"; then

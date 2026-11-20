@@ -4,7 +4,7 @@ import './design/md';
 import './index.css';
 import App from './App.tsx';
 
-// ForgeHub ships exactly one theme — the dark Observe theme —
+// ForgeHub ships exactly one theme - the dark Observe theme -
 // pinned as data-theme="dark" on <html> in index.html. There
 // is no runtime theme switching (removed 2026-11-20: inside
 // the Observe app the old light/dark toggle changed nothing,

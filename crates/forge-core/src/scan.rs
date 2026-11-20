@@ -1,7 +1,7 @@
 //! Secret scanning (ADR 0007): known token formats, credential
 //! assignments, and high-entropy values in assignment context.
 //!
-//! Findings carry a kind and a 1-based line number — **never the matched
+//! Findings carry a kind and a 1-based line number - **never the matched
 //! value**, so findings are safe to show, log and return from the API.
 //! The scanner is deliberately conservative about free-floating entropy:
 //! command lines are full of hashes and ids that are not secrets, so
@@ -179,7 +179,7 @@ fn is_pure_hex(value: &str) -> bool {
 
 /// Could this value be a token at all? Tokens use a restricted charset
 /// (base64/base64url/hex plus `. _ ~ + / = -`). Prose (spaces, commas)
-/// and code expressions (brackets, parens, quotes) are never tokens —
+/// and code expressions (brackets, parens, quotes) are never tokens -
 /// without this rule the entropy check false-positives on both.
 fn has_token_charset(value: &str) -> bool {
     !value.is_empty()
@@ -269,7 +269,7 @@ pub fn scan(text: &str) -> Vec<Finding> {
             }
             // Code-shaped values (`secret_key = get("…")`,
             // `bucket.tokens = f(x, y)`) are expressions, not
-            // literal secrets — same rule as PasswordLiteral.
+            // literal secrets - same rule as PasswordLiteral.
             if value.contains(['(', ')', ',']) || value.contains("::") {
                 continue;
             }

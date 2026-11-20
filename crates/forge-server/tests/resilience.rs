@@ -1,5 +1,5 @@
 //! Resilience checks (Step 20): a locked database must surface
-//! as a graceful, generic 5xx — never a hang, a panic, or a
+//! as a graceful, generic 5xx - never a hang, a panic, or a
 //! response that leaks storage internals.
 
 use forge_server::config::Config;

@@ -1,27 +1,27 @@
-# Report — Step 9: Snippet and version API
+# Report - Step 9: Snippet and version API
 
 - **Date/time:** 2026-11-19T12:52:54+05:30
-- **Commit:** this report is part of the Step 9 commit — see `git log --oneline -n 1` (tag `step-9`)
-- **Status:** ⚠️ Done with caveats — all Step 9 acceptance criteria met and proven below; the caveat is the carried-over push blocker (§9), unchanged since Step 5.
+- **Commit:** this report is part of the Step 9 commit - see `git log --oneline -n 1` (tag `step-9`)
+- **Status:** ⚠️ Done with caveats - all Step 9 acceptance criteria met and proven below; the caveat is the carried-over push blocker (§9), unchanged since Step 5.
 
 ## 1. Summary
-The core data API is complete: snippets can be created, read, versioned, metadata-patched, renamed (with a 30-day redirect), soft-deleted, diffed and downloaded raw, with all parsing/validation/hashing done by `forge-core` so server hashes are byte-identical to CLI hashes (asserted in tests against `forge_core::hash::content_hash`). Every write is secret-scanned (422 with kinds + line numbers, never values); danger lints ride along as warnings. The authorisation matrix — every endpoint × {anonymous, other user, owner, read token, write token} × {private, unlisted, public} — is tested, with private existence never leaking (404 everywhere, including writes by non-owners). 325 workspace tests pass.
+The core data API is complete: snippets can be created, read, versioned, metadata-patched, renamed (with a 30-day redirect), soft-deleted, diffed and downloaded raw, with all parsing/validation/hashing done by `forge-core` so server hashes are byte-identical to CLI hashes (asserted in tests against `forge_core::hash::content_hash`). Every write is secret-scanned (422 with kinds + line numbers, never values); danger lints ride along as warnings. The authorisation matrix - every endpoint × {anonymous, other user, owner, read token, write token} × {private, unlisted, public} - is tested, with private existence never leaking (404 everywhere, including writes by non-owners). 325 workspace tests pass.
 
 ## 2. What I built
 - **`src/snippets.rs`** (~1,100 lines incl. unit tests): all openapi snippet routes plus `POST /snippets/validate` (Step 2 contract; shares the submission pipeline, persists nothing) and `GET /me/snippets` (visibility/tag filters, updated/created/name sorts, opaque base64url cursors).
-  - **Submission pipeline** (`parse_submission`): 64 KiB cap (413) → forge-file parse, or wrap-as-script for plain text (a forge-looking but broken YAML is a 400, not silently wrapped — the `looks_like_forge_file` heuristic) → name must match the request name → request description/tags override the file's → `validate()` → secret scan of the *submitted* text (so finding line numbers match the user's file) → canonical YAML via `to_yaml()` + spec §9 hash. Stored bodies are therefore always canonical forge files.
+  - **Submission pipeline** (`parse_submission`): 64 KiB cap (413) → forge-file parse, or wrap-as-script for plain text (a forge-looking but broken YAML is a 400, not silently wrapped - the `looks_like_forge_file` heuristic) → name must match the request name → request description/tags override the file's → `validate()` → secret scan of the *submitted* text (so finding line numbers match the user's file) → canonical YAML via `to_yaml()` + spec §9 hash. Stored bodies are therefore always canonical forge files.
   - **Reads**: `GET /snippets/{owner}/{name}[?version=N]` with ETag/`If-None-Match` (304), versions list (metadata only), single version, server-side unified diff via the `similar` crate (3 lines of context, 256 KiB output cap → 413), `raw` as `text/plain`. Responses carry the parsed summary (mode, steps count, variables, `uses_sudo`, lint warnings) and fork provenance.
   - **Writes**: POST (201; duplicate name 409; per-user cap), PUT (new immutable version; `If-Match` required; identical hash → 200 `unchanged: true`), PATCH (metadata only, no version; rename with redirect), DELETE (soft delete). Cookie writes need CSRF; bearer writes need the `write` scope (read token → 403 `insufficient_scope`).
   - **Rename policy** (documented in the module docs): redirect lives 30 days, is stored against the snippet id so rename chains resolve to the current name, reads follow it (response carries `renamed_from`), writes do not, and creating a new snippet with the old name shadows it.
   - **Delete policy**: soft delete hides the snippet from everyone including the owner; the name stays reserved during the 30-day retention (recreate → 409), then the startup purge hard-deletes it (cascading versions/tags/stars) and drops expired rename redirects.
-- **Repository additions** (`src/repo.rs`): `update_metadata` now reconciles tags too; new `rename`, `resolve_rename`, `count_for_owner`, `list_for_owner` (QueryBuilder, fixed sort fragments only), `purge_deleted`; **`add_version` gained transactional optimistic concurrency** — an optional expected-latest is re-checked *inside* the write transaction, so two racing PUTs with the same `If-Match` cannot both append (self-review fix, §8; covered by a repo test).
+- **Repository additions** (`src/repo.rs`): `update_metadata` now reconciles tags too; new `rename`, `resolve_rename`, `count_for_owner`, `list_for_owner` (QueryBuilder, fixed sort fragments only), `purge_deleted`; **`add_version` gained transactional optimistic concurrency** - an optional expected-latest is re-checked *inside* the write transaction, so two racing PUTs with the same `If-Match` cannot both append (self-review fix, §8; covered by a repo test).
 - **Config**: `FORGEHUB_MAX_SNIPPETS_PER_USER` (500), `FORGEHUB_MAX_VERSIONS_PER_SNIPPET` (200); documented in `.env.example` and `docs/running.md`. Retention purge runs at startup in `main.rs` and logs what it removed.
-- **Route/spec sync**: openapi.yaml already described this step exactly (including required `If-Match`, 412, and the validate endpoint) — verified route-by-route against the implementation while writing the handlers; no spec changes were needed. A literal route-list-diff test was judged brittle (path templates vs axum patterns); instead every route family is exercised by HTTP tests asserting handler-specific error codes (`snippet_not_found` vs the fallback's `not_found`).
+- **Route/spec sync**: openapi.yaml already described this step exactly (including required `If-Match`, 412, and the validate endpoint) - verified route-by-route against the implementation while writing the handlers; no spec changes were needed. A literal route-list-diff test was judged brittle (path templates vs axum patterns); instead every route family is exercised by HTTP tests asserting handler-specific error codes (`snippet_not_found` vs the fallback's `not_found`).
 
 ## 3. Decisions made
 - **PUT applies description/tags from the body** (a PUT carries a full file) via `update_metadata` after the version append, without creating an extra version; visibility is *not* changed by PUT (PATCH-only, per openapi).
 - **Plain-script detection**: text that fails forge parsing and doesn't start with forge keys within its first 40 lines is a script; anything that looks like a forge file but fails to parse is a 400 with the parser's message. This keeps `fg push` of a raw shell script working while never silently mangling a broken forge file.
-- **Cursors are offsets in base64url** — opaque to clients, stable under the three fixed orderings, and trivially verifiable; keyset cursors can replace them if lists ever outgrow offset sanity.
+- **Cursors are offsets in base64url** - opaque to clients, stable under the three fixed orderings, and trivially verifiable; keyset cursors can replace them if lists ever outgrow offset sanity.
 
 ## 4. Verification
 | Gate | Command | Result |
@@ -40,12 +40,12 @@ The core data API is complete: snippets can be created, read, versioned, metadat
 | Validate | suite | valid → `valid: true` + hash; secret → 422 + `secret_findings`; broken file → `valid: false` + errors, nothing persisted |
 
 ## 5. Acceptance criteria
-- [x] Private snippets never leak (404 for non-owners) — tested across all endpoints (detail, versions, version, diff, raw, and every write verb).
-- [x] Every write creates an immutable version with a stable hash identical to what the CLI will compute. — version rows are append-only (no update path exists in the repo layer); hash parity asserted against forge-core in tests.
-- [x] Secret scanning rejects; lints warn. — 422 with findings on create/PUT; lint warnings present in every snippet summary, never blocking.
+- [x] Private snippets never leak (404 for non-owners) - tested across all endpoints (detail, versions, version, diff, raw, and every write verb).
+- [x] Every write creates an immutable version with a stable hash identical to what the CLI will compute. - version rows are append-only (no update path exists in the repo layer); hash parity asserted against forge-core in tests.
+- [x] Secret scanning rejects; lints warn. - 422 with findings on create/PUT; lint warnings present in every snippet summary, never blocking.
 
 ## 6. Security notes
-Advances T-EXEC-2 (server never stores a secret-shaped body; findings leak neither value nor existence), T-ACCT-2/T-DOS-1 (owner-only writes, scope-gated bearer writes, body/version/count caps), and the privacy rule that private existence is indistinguishable from absence — including on rename resolution, where lookup of another user's old name yields the same 404. The transactional If-Match closes the lost-update race the roadmap called out. `intent=run` pull counting deliberately lands in Step 10 with its dedup/rate-limit design, as the roadmap sequences it.
+Advances T-EXEC-2 (server never stores a secret-shaped body; findings leak neither value nor existence), T-ACCT-2/T-DOS-1 (owner-only writes, scope-gated bearer writes, body/version/count caps), and the privacy rule that private existence is indistinguishable from absence - including on rename resolution, where lookup of another user's old name yields the same 404. The transactional If-Match closes the lost-update race the roadmap called out. `intent=run` pull counting deliberately lands in Step 10 with its dedup/rate-limit design, as the roadmap sequences it.
 
 ## 7. Dependencies added
 Runtime: `similar` 2 (unified diffs). Dev-only: `forge-core` path dependency for the integration tests (hash-parity assertions).
@@ -63,4 +63,4 @@ Runtime: `similar` 2 (unified diffs). Dev-only: `forge-core` path dependency for
 None.
 
 ## 11. Next step
-Step 10 — discovery: FTS5 search with injection-safe query handling, popular tags, explore, stars, forks, public profiles, the `intent=run` pull counter with per-IP dedup, snippet reports, and the minimal `forge-server admin` CLI; closes with the 10k-snippet p95 benchmark.
+Step 10 - discovery: FTS5 search with injection-safe query handling, popular tags, explore, stars, forks, public profiles, the `intent=run` pull counter with per-IP dedup, snippet reports, and the minimal `forge-server admin` CLI; closes with the 10k-snippet p95 benchmark.

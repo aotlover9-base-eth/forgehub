@@ -1,5 +1,5 @@
 //! Step 13 integration tests: run-from-cloud against the real
-//! server — own snippets, the third-party trust model, changed
+//! server - own snippets, the third-party trust model, changed
 //! hashes, version pins, offline replay, display defences,
 //! shadowing and suggestions.
 
@@ -249,7 +249,7 @@ fn third_party_needs_trust_then_flag_yes_works() {
     cli_login(&b, &token_b);
     // Untrusted: even -y must refuse (typed yes required). The
     // snippet's marker path points at A's home (it was authored
-    // there) — execution anywhere writes that file.
+    // there) - execution anywhere writes that file.
     let (code, _, stderr) = b.run(&["run", "anna/shared", "-y"]);
     assert_eq!(code, 2, "{stderr}");
     assert!(stderr.contains("not yours"), "{stderr}");
@@ -346,7 +346,7 @@ fn malicious_display_is_escaped() {
     cli_login(&a, &token_a);
     // The attack arrives as a raw script body through the API
     // (a forge file with raw control characters cannot even be
-    // written locally — the parser rejects them). ANSI
+    // written locally - the parser rejects them). ANSI
     // clear-line, CR overwrite and a bidi override try to
     // disguise the real command in the description and body.
     let client = reqwest::blocking::Client::new();

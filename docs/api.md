@@ -1,7 +1,7 @@
 # API
 
 The normative contract is **[openapi.yaml](openapi.yaml)**
-(OpenAPI 3.1) — this page is the orientation, not a second
+(OpenAPI 3.1) - this page is the orientation, not a second
 source of truth.
 
 ## Shape
@@ -26,16 +26,16 @@ Two mechanisms, one identity:
    device approval, session list) reject bearer tokens with
    `403 session_required`.
 2. **Bearer token** (CLI/scripts):
-   `Authorization: Bearer fgh_…`. Tokens have scopes — `read`,
-   or `read write` (write implies read) — optional expiry, are
+   `Authorization: Bearer fgh_…`. Tokens have scopes - `read`,
+   or `read write` (write implies read) - optional expiry, are
    shown once at creation, and are stored SHA-256-hashed.
    `DELETE /tokens/current` revokes the token used to call it.
 
 When both are present, the `Authorization` header wins.
 
 **Password reset** (2026-11-20): `POST /auth/password-reset/request`
-with `{ "email": "…" }` always answers `204` — registered or
-not — and mails a single-use link (one live link per account,
+with `{ "email": "…" }` always answers `204` - registered or
+not - and mails a single-use link (one live link per account,
 one-hour expiry, token stored SHA-256-hashed, throttled per IP
 and per address). `POST /auth/password-reset/confirm` with
 `{ "token": "…", "new_password": "…" }` answers `204` on

@@ -34,7 +34,7 @@ describe('App navigation (signed in)', () => {
     // Home is the home page even when signed in (it used to
     // redirect to the dashboard, i.e. "Home goes to Library").
     // Since the Observe theme it is a standalone scene with no
-    // shell nav at all — the CTA is the way into the app.
+    // shell nav at all - the CTA is the way into the app.
     expect(
       await screen.findByText(/Save a command once/, undefined, { timeout: 4000 }),
     ).toBeInTheDocument();

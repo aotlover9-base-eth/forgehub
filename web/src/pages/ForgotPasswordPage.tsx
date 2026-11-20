@@ -5,7 +5,7 @@ import { usePasswordResetRequest } from '../api/hooks';
 
 /**
  * Ask for a reset link. The confirmation state is shown for
- * every submitted address — the server answers identically
+ * every submitted address - the server answers identically
  * whether or not the account exists, and this page must not
  * become an account oracle either.
  */

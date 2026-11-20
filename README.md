@@ -4,7 +4,7 @@
 
 A cloud home for shell command snippets: a server + web app to
 store and share them, and a Rust CLI (`forgehub`, alias `fg`) to
-run them — with the full commands, owner, version and hash shown
+run them - with the full commands, owner, version and hash shown
 **before** anything executes.
 
 | | |
@@ -13,9 +13,9 @@ run them — with the full commands, owner, version and hash shown
 | Snippets | Text only, ≤ 64 KiB. No file uploads, no binaries |
 | Status | v0.1.4 · 428 Rust + 50 web tests · MIT |
 
-![ForgeHub home — the Observe theme](docs/screenshots/home-observe.jpg)
+![ForgeHub home - the Observe theme](docs/screenshots/home-observe.jpg)
 
-## Quickstart — server (Docker)
+## Quickstart - server (Docker)
 
 ```console
 git clone https://github.com/aotlover9-base-eth/forgehub.git
@@ -27,7 +27,7 @@ docker compose up -d --build
 Open `https://<FORGEHUB_DOMAIN>` (default `https://localhost`),
 create an account. Details: [docs/deploy.md](docs/deploy.md).
 
-## Quickstart — CLI
+## Quickstart - CLI
 
 ```console
 cargo install --path crates/forge-cli   # from the clone; Rust 1.x
@@ -48,15 +48,15 @@ fg run alice/docker-setup   # run anyone's public snippet (trust flow below)
 
 Prebuilt binaries (Linux x86_64/aarch64, Windows x86_64) are on
 the [Releases page](https://github.com/aotlover9-base-eth/forgehub/releases).
-This repository is private, so download them signed in — in the
-browser, or with `gh release download v0.1.4` — and verify
+This repository is private, so download them signed in - in the
+browser, or with `gh release download v0.1.4` - and verify
 against the release's `SHA256SUMS`. (`scripts/install.sh` uses
 unauthenticated downloads and only works once a repository is
 public.)
 
 ## Screenshots
 
-One theme — dark glass — from the home page through every
+One theme - dark glass - from the home page through every
 signed-in section. (The serif display type lives on the
 public landing page only.)
 
@@ -100,7 +100,7 @@ check) · `fg cache list|clear` · `fg update --check` ·
 `fg completions <shell>` · `fg alias show`
 
 **Flags that matter:** `--json` (list/show/stats/doctor) ·
-`-y` (skip `[y/N]` on your own snippets — never skips trust
+`-y` (skip `[y/N]` on your own snippets - never skips trust
 prompts) · `--offline` (run from cache) · `-v` (request log).
 
 Full reference: [docs/cli-reference.md](docs/cli-reference.md) ·
@@ -128,7 +128,7 @@ Detail: [docs/security.md](docs/security.md) ·
 | `FORGEHUB_REGISTRY` | CLI: server URL (or `--registry`, or config) |
 | `FORGEHUB_HOME` | CLI: local library location (default `~/.forgehub`) |
 | `FORGEHUB_TOKEN` | CLI: token from the environment, for scripts |
-| `FORGEHUB_CREDENTIAL_STORE` | CLI: `auto` (default) / `file` / `keyring` — OS keyring vs credentials file |
+| `FORGEHUB_CREDENTIAL_STORE` | CLI: `auto` (default) / `file` / `keyring` - OS keyring vs credentials file |
 | `FORGEHUB_SECRET_KEY` | Server: session secret, ≥ 32 random bytes (`.env`) |
 | `FORGEHUB_DOMAIN` | Server (compose/Caddy): domain to serve, default `localhost` |
 | `FORGEHUB_SMTP_URL` | Server: SMTP URL for password-reset mail, e.g. `smtps://user:pass@host:465` |
@@ -142,7 +142,7 @@ Detail: [docs/security.md](docs/security.md) ·
 [Operations](docs/operations.md) · [FAQ](docs/faq.md) ·
 [Known gaps](docs/known-gaps.md) · [Forgenesis migration](docs/forgenesis-migration.md) ·
 [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) ·
-[Changelog](CHANGELOG.md) · [Demo data pack](demo-data/) — 105 starter snippets + loader
+[Changelog](CHANGELOG.md) · [Demo data pack](demo-data/) - 105 starter snippets + loader
 
 ## Development
 
@@ -153,9 +153,9 @@ cargo test --workspace
 cd web && npm run lint && npm run typecheck && npm test && npm run build
 ```
 
-History: 22 build steps, one commit + report each —
+History: 22 build steps, one commit + report each -
 [PROGRESS.md](PROGRESS.md), [reports/](reports/).
 
 ## License
 
-MIT — [LICENSE](LICENSE)
+MIT - [LICENSE](LICENSE)

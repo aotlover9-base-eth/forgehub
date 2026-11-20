@@ -89,7 +89,7 @@ fn filter_step(value: &Value, notes: &mut Vec<String>) -> Value {
 ///
 /// # Errors
 /// A parse/validation error if the converted document still breaks a
-/// `ForgeHub` rule — the message says which.
+/// `ForgeHub` rule - the message says which.
 pub fn import_forgenesis(text: &str) -> Result<ImportOutcome> {
     let normalized = crate::parse::normalize_newlines(text);
     if normalized.len() > crate::model::MAX_BODY_BYTES {
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn forgenesis_features_survive() {
-        // Conditions, retries, variables with `def`, always-steps — the
+        // Conditions, retries, variables with `def`, always-steps - the
         // Forgenesis feature set the analysis said to keep.
         let out = import_forgenesis(
             "name: ci\nvars:\n  BRANCH: { def: main }\nretry: 2\nsteps:\n  - command: git checkout {{BRANCH}}\n    if: .git\nalways: [echo done]\n",

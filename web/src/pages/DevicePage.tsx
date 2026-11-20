@@ -5,7 +5,7 @@ import { ApiError } from '../api/client';
 import { useDeviceDecision, useDeviceLookup, useMe } from '../api/hooks';
 
 /**
- * The CLI login approval page — security-critical. It never
+ * The CLI login approval page - security-critical. It never
  * auto-approves: a human reads the client name and chooses.
  * The code arrives prefilled from verification_uri_complete
  * (?code=) or is typed by hand. Brute-force protection is
@@ -52,13 +52,13 @@ export default function DevicePage() {
       {outcome === 'approved' ? (
         <Card variant="filled">
           <p style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', margin: 0 }}>
-            <Icon name="check" /> Approved. You can close this tab — the CLI is signed in now.
+            <Icon name="check" /> Approved. You can close this tab - the CLI is signed in now.
           </p>
         </Card>
       ) : outcome === 'denied' ? (
         <Card variant="filled">
           <p style={{ margin: 0 }}>
-            Denied. The CLI will not be signed in. If this was not you, your account is still safe —
+            Denied. The CLI will not be signed in. If this was not you, your account is still safe -
             nothing was granted.
           </p>
         </Card>
@@ -102,7 +102,7 @@ export default function DevicePage() {
             <strong>{lookup.data.client_name}</strong> is asking to sign in.
           </p>
           <p>
-            Approving creates a CLI token that can <strong>read and write your snippets</strong> —
+            Approving creates a CLI token that can <strong>read and write your snippets</strong> -
             the same access as <code>fg push</code> and <code>fg pull</code>. You can revoke it any
             time in Settings → Tokens.
           </p>

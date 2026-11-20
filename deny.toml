@@ -7,7 +7,7 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
 ignore = [
     # Note: RUSTSEC-2026-0459 (SQLite WAL page-cache,
-    # CVE-2026-119375) is NOT ignored — Step 19 upgraded
+    # CVE-2026-119375) is NOT ignored - Step 19 upgraded
     # rusqlite to 0.41 and sqlx to 0.9 so the whole graph
     # unified on libsqlite3-sys 0.39.1 (SQLite 3.54.1,
     # patched). The vulnerable 0.30.x is gone from the tree.
@@ -44,7 +44,7 @@ allow = [
     # data; CDLA-Permissive-2.0 is a permissive data licence.
     "CDLA-Permissive-2.0",
     # quoted_printable (via lettre, for outgoing mail) is
-    # BSD Zero Clause — public-domain-equivalent terms.
+    # BSD Zero Clause - public-domain-equivalent terms.
     "0BSD",
 ]
 confidence-threshold = 0.8

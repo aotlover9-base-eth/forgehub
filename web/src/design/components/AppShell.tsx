@@ -12,7 +12,7 @@ export type NavItem = {
 /**
  * The app shell: top app bar everywhere; navigation as a
  * bottom bar (compact), a rail (medium), or an extended rail
- * (expanded) — the Material 3 adaptive pattern. Exactly one
+ * (expanded) - the Material 3 adaptive pattern. Exactly one
  * navigation element is rendered per width class.
  */
 export function AppShell({

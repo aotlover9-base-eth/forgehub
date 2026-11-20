@@ -4,7 +4,7 @@
 //! (≈256 bits). Only its SHA-256 is stored, plus the first 8
 //! characters of the random part as a display prefix. The
 //! plaintext is returned exactly once, at creation. Management
-//! endpoints require a cookie session ([`RequireSession`]) — a
+//! endpoints require a cookie session ([`RequireSession`]) - a
 //! token can never mint or revoke tokens.
 
 use crate::auth::{body, random_from_alphabet, sha256_hex, RequireSession};
@@ -195,7 +195,7 @@ async fn revoke_token(
 
 /// Token management routes (merged under `/api/v1`).
 /// `DELETE /tokens/current` (Step 11): a bearer token revokes
-/// ITSELF. This is what `fg logout --revoke` calls — the CLI holds
+/// ITSELF. This is what `fg logout --revoke` calls - the CLI holds
 /// no session, and token management is otherwise session-only by
 /// design. The credential being destroyed is its own proof; a
 /// session calling this has no "current token" and gets a 400.

@@ -1,4 +1,4 @@
-# Homebrew formula TEMPLATE (Step 21) — not published.
+# Homebrew formula TEMPLATE (Step 21) - not published.
 # To publish: copy to a tap repository as Formula/forgehub.rb,
 # fill the sha256 values from the release's SHA256SUMS file,
 # and open the usual homebrew-core/tap PR. The version and

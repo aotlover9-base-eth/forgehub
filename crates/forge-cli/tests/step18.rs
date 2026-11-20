@@ -99,7 +99,7 @@ fn ui_refuses_without_a_terminal() {
     let dir = tempfile::tempdir().unwrap();
     // The test harness pipes stdout, so the TUI must refuse
     // cleanly (and the run path it would have used is the
-    // plain `run` command — dispatch shares cmd_run).
+    // plain `run` command - dispatch shares cmd_run).
     let out = run(forgehub(dir.path()).arg("ui"), "");
     assert!(!out.status.success());
     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
@@ -198,7 +198,7 @@ fn update_check_latest_when_fake_github_matches() {
 fn login_warns_about_plain_http_registries() {
     // Step 19: before any credential is sent, a non-loopback
     // http:// registry earns a clear stderr warning. The host
-    // does not resolve, so login itself fails — the warning
+    // does not resolve, so login itself fails - the warning
     // must already have been printed.
     let dir = tempfile::tempdir().unwrap();
     let out = run(

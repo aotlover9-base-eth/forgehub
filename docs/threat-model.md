@@ -1,8 +1,8 @@
 # Threat model
 
 - **Status:** Living document. Written in Step 2; every row is re-verified with evidence in Step 19.
-- **Assets:** user accounts and passwords; session cookies; API/device tokens; snippet content (private snippets are confidential); the user's local machine (the CLI runs code there — the highest-value asset); the server's database; the project's supply chain.
-- **Actors:** malicious snippet author; account attacker; network observer (limited — TLS is assumed at deployment, Step 21); abusive registered user; curious non-owner user; compromised dependency.
+- **Assets:** user accounts and passwords; session cookies; API/device tokens; snippet content (private snippets are confidential); the user's local machine (the CLI runs code there - the highest-value asset); the server's database; the project's supply chain.
+- **Actors:** malicious snippet author; account attacker; network observer (limited - TLS is assumed at deployment, Step 21); abusive registered user; curious non-owner user; compromised dependency.
 - **Method:** STRIDE per threat. "Step" is the step that implements the mitigation; Step 19 verifies all of them.
 
 | ID | Threat (STRIDE) | Scenario | Mitigation | Step |
@@ -38,10 +38,10 @@ the unit/property suites, and `reports/report_Step19.md`.
 | ID | Attack attempted | Result |
 |----|------------------|--------|
 | T-EXEC-1 | Reviewed the run path end to end | Card shows owner/version/hash + every command numbered; typed `yes` for third parties; `-y` matrix unit-tested (Steps 13/18 suites green) |
-| T-EXEC-2 | Hash-change flow re-tested | Changed hash → diff + re-confirm; `-y` never bypasses (Step 13 tests); the diff display itself was found **unescaped** — fixed this step (see T-EXEC-3) |
-| T-EXEC-3 | ANSI/CR/bidi/zero-width payloads in names, descriptions, bodies, diffs — at every display site (`show`, card, `diff`, `pull`, `remote`, TUI) | **Three holes found and fixed:** the changed-hash diff in the confirmation card, `fg diff` human output, and all TUI rendering (ratatui `TestBackend` test proves no raw ESC/bidi reaches the frame). `escape_display` extended to bidi isolates U+2066–2069, U+061C, U+180E, U+00AD |
+| T-EXEC-2 | Hash-change flow re-tested | Changed hash → diff + re-confirm; `-y` never bypasses (Step 13 tests); the diff display itself was found **unescaped** - fixed this step (see T-EXEC-3) |
+| T-EXEC-3 | ANSI/CR/bidi/zero-width payloads in names, descriptions, bodies, diffs - at every display site (`show`, card, `diff`, `pull`, `remote`, TUI) | **Three holes found and fixed:** the changed-hash diff in the confirmation card, `fg diff` human output, and all TUI rendering (ratatui `TestBackend` test proves no raw ESC/bidi reaches the frame). `escape_display` extended to bidi isolates U+2066–2069, U+061C, U+180E, U+00AD |
 | T-EXEC-4 | Lookalike names | Names/usernames are ASCII-lowercase by validation on both tiers; card always shows the exact owner; suggestions never auto-run (Step 13) |
-| T-ACCT-1 | Credential stuffing simulation; X-Forwarded-For rotation to reset the throttle | Throttle keys on the socket address (ConnectInfo), never XFF — rotating XFF does not buy attempts; 6th attempt is 429 even with the correct password (`security.rs`). Generic failures + dummy hash (Step 7 tests) |
+| T-ACCT-1 | Credential stuffing simulation; X-Forwarded-For rotation to reset the throttle | Throttle keys on the socket address (ConnectInfo), never XFF - rotating XFF does not buy attempts; 6th attempt is 429 even with the correct password (`security.rs`). Generic failures + dummy hash (Step 7 tests) |
 | T-ACCT-2 | Session fixation (planted cookie at login); cookie-flag audit in prod mode | Login always issues a fresh id (test); prod cookies carry `Secure; HttpOnly; SameSite=Lax; Path=/` (test) |
 | T-ACCT-3 | Forged bearer tokens; token scope abuse | Forged/malformed tokens → generic 401 (test); tokens cannot manage tokens or change password (`session_required` 403, Step 8/17 tests); CLI never prints tokens; credential-file permission checks (Step 11) |
 | T-ACCT-4 | Device-code guessing / approval confusion | Lookup lockout per IP (Step 8 tests); approval page shows client name + plain-language scope, never auto-approves (Step 17); poll `slow_down` enforced (Step 8) |
@@ -49,7 +49,7 @@ the unit/property suites, and `reports/report_Step19.md`.
 | T-WEB-2 | CSRF: missing token, another session's token, mismatched Origin | All rejected 403 (tests, incl. two new cross-session/Origin cases in `security.rs`) |
 | T-WEB-3 | Private-snippet probing on read/versions/diff/raw/star/fork | Uniform 404 (Step 9/10 tests); hidden-by-admin snippets also 404 and leave explore (live admin smoke, Step 19) |
 | T-WEB-4 | Signup/login enumeration | Generic errors; username-taken is the documented exception (Step 7) |
-| T-DOS-1 | 300 KiB request body; quota checks | Rejected by the 256 KiB limit — the rejection surfaced as **400, fixed to 413 `body_too_large`** this step (test). Quotas enforced (Step 9/10) |
+| T-DOS-1 | 300 KiB request body; quota checks | Rejected by the 256 KiB limit - the rejection surfaced as **400, fixed to 413 `body_too_large`** this step (test). Quotas enforced (Step 9/10) |
 | T-DOS-2 | Billion-laughs YAML, 200-deep nesting, hostile FTS queries (`OR`/`NEAR`/unbalanced quotes/10k chars/`DROP TABLE` string) | All rejected or handled without 500 (new forge-core bomb tests; `security.rs` search tests). Anchors/aliases/tags rejected pre-parse; depth ≤ 16 |
 | T-DOS-3 | Scanner/lints on hostile input | Bounded patterns over ≤ 64 KiB; proptest no-panic properties (parser, scanner, lints) green |
 | T-SECRET-1 | Pushing snippets with planted secrets | Scanner refuses at record/push; server 422 with kind+line only (Steps 3/9/12 tests); findings never contain values (corpus tests) |

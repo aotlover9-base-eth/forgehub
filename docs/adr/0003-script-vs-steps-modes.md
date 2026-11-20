@@ -1,4 +1,4 @@
-# ADR 0003 — Two snippet modes: `script` and `steps`
+# ADR 0003 - Two snippet modes: `script` and `steps`
 
 - **Status:** Accepted (Step 2, 2026-11-19)
 

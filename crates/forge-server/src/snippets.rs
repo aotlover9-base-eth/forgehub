@@ -541,7 +541,7 @@ async fn get_snippet(
     let mut resolved = resolve_readable(&state, &owner, &name, viewer_user.as_ref()).await?;
     // Pull counting (Step 10): a public snippet fetched with
     // intent=run by a non-owner counts once per IP per hour. It
-    // is a popularity number only — nothing per-user is stored.
+    // is a popularity number only - nothing per-user is stored.
     if query.intent.as_deref() == Some("run")
         && resolved.snippet.visibility == "public"
         && viewer_user.as_ref().map(|u| u.id) != Some(resolved.snippet.owner_id)
@@ -1187,7 +1187,7 @@ mod tests {
         let parsed = parse_submission("demo", None, None, None, "echo hello\n").unwrap();
         assert_eq!(parsed.mode, "script");
         assert!(parsed.canonical_body.contains("echo hello"));
-        // The hash equals forge-core's own hash of the same file —
+        // The hash equals forge-core's own hash of the same file -
         // the CLI will compute the identical value.
         let snippet = forge_core::Snippet::from_yaml(&parsed.canonical_body).unwrap();
         assert_eq!(parsed.hash, forge_core::hash::content_hash(&snippet));

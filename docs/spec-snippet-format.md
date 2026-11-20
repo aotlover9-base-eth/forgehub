@@ -1,4 +1,4 @@
-# Spec — Snippet format (the "forge file")
+# Spec - Snippet format (the "forge file")
 
 - **Status:** Normative for Steps 3, 4, 9, 12, 13. **Version:** 1 (Step 2, 2026-11-19)
 - **Source:** `roadmap.md` Appendix A, refined. Where this spec and Appendix A differ, this spec wins and the difference is recorded in §13 and in the Step 2 report.
@@ -31,21 +31,21 @@ parser provides it, line/column. Nothing is silently truncated.
 
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
-| `name` | string | yes | — | §8. In a stored file it must equal the address name; on import a filename stem may supply it (Forgenesis behaviour) only when `name` is absent — see §12 |
+| `name` | string | yes | - | §8. In a stored file it must equal the address name; on import a filename stem may supply it (Forgenesis behaviour) only when `name` is absent - see §12 |
 | `description` | string | no | empty | ≤ 280 chars |
 | `tags` | list of string | no | `[]` | §8; duplicates removed in canonical form (§9) |
 | `mode` | `script` \| `steps` | no | `script` if `script:` present, else `steps` | Explicit `mode` conflicting with the body present is an error |
-| `script` | string (block scalar) | in script mode | — | The shell text, §3 |
-| `steps` | list of step (§5) | in steps mode | — | At least 1 step unless `parallel`/`always` present |
-| `parallel` | list of string | no | — | Top-level shorthand: appended as one parallel step after `steps` (Forgenesis) |
+| `script` | string (block scalar) | in script mode | - | The shell text, §3 |
+| `steps` | list of step (§5) | in steps mode | - | At least 1 step unless `parallel`/`always` present |
+| `parallel` | list of string | no | - | Top-level shorthand: appended as one parallel step after `steps` (Forgenesis) |
 | `shell` | string | no | `bash` | One of `bash`, `sh`, `zsh`, `fish` for script mode; steps run via the configured shell (§6 of `spec-cli.md`). The executable must exist locally at run time |
 | `variables` | map name → param (§7) | no | `{}` | Aliases accepted on parse: `vars`, `params` |
 | `env` | map string → string | no | `{}` | Applied to every step / the script process |
 | `cwd` | string | no | caller's cwd | Supports `~` and `{{VAR}}`; relative paths resolve against the caller's cwd |
 | `retry` | retry spec (§5) | no | none | Default retry for steps without their own |
 | `always` | list of step | no | `[]` | Run at the end even after a failure; failures in `always` are reported but do not mask the original failure |
-| `created` | string (RFC 3339) | no | — | Informational; excluded from the content hash |
-| `source` | string | no | — | Informational provenance (e.g. `record`, import path); excluded from the content hash |
+| `created` | string (RFC 3339) | no | - | Informational; excluded from the content hash |
+| `source` | string | no | - | Informational provenance (e.g. `record`, import path); excluded from the content hash |
 
 Unknown top-level fields are an **error** (`deny_unknown_fields` semantics),
 except in the Forgenesis import path (§12), which drops the fields it maps to
@@ -76,22 +76,22 @@ no effect on later steps; recorders convert a leading `cd` into `cwd`
 ## 5. Step fields
 
 A step is a bare string, a boolean (YAML reads unquoted `true`/`false` as a
-command — accepted, as in Forgenesis), or a map:
+command - accepted, as in Forgenesis), or a map:
 
 | Field | Type | Aliases | Notes |
 |-------|------|---------|-------|
 | `command` | string | `run`, `cmd`, `exec` | Exactly one of `command` / `parallel` per step |
-| `parallel` | list of string | — | Commands run concurrently, chunked by `parallel_limit` (config, default 4) |
-| `name` | string | — | Display label, ≤ 120 chars |
-| `if` | condition (§6) | — | Step is skipped when the condition is false |
-| `wait` | duration | — | Sleep **after** the step succeeds |
+| `parallel` | list of string | - | Commands run concurrently, chunked by `parallel_limit` (config, default 4) |
+| `name` | string | - | Display label, ≤ 120 chars |
+| `if` | condition (§6) | - | Step is skipped when the condition is false |
+| `wait` | duration | - | Sleep **after** the step succeeds |
 | `retry` | integer 1–10, or `{times, delay}` | `attempts`, `count` for `times` | Retries the step on non-zero exit |
 | `cwd` | string | `workdir` | Relative to the workflow `cwd` |
-| `env` | map string → string | — | Step-only environment |
+| `env` | map string → string | - | Step-only environment |
 | `continue_on_error` | bool | `ignore_errors` | Default `false` |
-| `background` | bool | — | Detach; exit status is not collected |
-| `quiet` | bool | — | Suppress the step's stdout/stderr |
-| `timeout` | duration | — | Kill the step after this long; counts as a failure |
+| `background` | bool | - | Detach; exit status is not collected |
+| `quiet` | bool | - | Suppress the step's stdout/stderr |
+| `timeout` | duration | - | Kill the step after this long; counts as a failure |
 
 Unknown step fields are an error, as at the top level.
 
@@ -114,7 +114,7 @@ exactly the applicable keys; all set keys must hold (logical AND):
 
 Syntax: `{{NAME}}` (optional inner spaces: `{{ NAME }}`), matched by
 `\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}`. Substitution is **whole-placeholder
-only** — there is no partial or nested expansion, and `{{` inside a value is
+only** - there is no partial or nested expansion, and `{{` inside a value is
 never re-expanded.
 
 Declaration forms:
@@ -130,7 +130,7 @@ variables:
 
 **Resolution order** (first hit wins):
 
-1. CLI arguments `KEY=value` (and, for the web, nothing — the web never runs snippets)
+1. CLI arguments `KEY=value` (and, for the web, nothing - the web never runs snippets)
 2. Declared `default`
 3. Built-ins: `HOME`, `PWD`, `DIRNAME` (basename of `PWD`), `DATE` (`YYYY-MM-DD`), `TIME` (`HH:MM:SS`), `TIMESTAMP` (`YYYYMMDD-HHMMSS`), `USER`
 4. Interactive prompt (TTY only, Step 5)
@@ -144,7 +144,7 @@ Substitution applies to: step commands and parallel branches, workflow and
 step `cwd`, workflow and step `env` values, condition `equals` operands, and
 the script body in script mode.
 
-`$VAR` / `${VAR}` are **not** substituted by ForgeHub — they are left for the
+`$VAR` / `${VAR}` are **not** substituted by ForgeHub - they are left for the
 shell, which expands them at run time from the process environment (including
 workflow `env`). Path expansion of a leading `~` applies only to `cwd`
 fields, never to command text.
@@ -159,15 +159,15 @@ fields, never to command text.
 
 Names are case-sensitive storage keys that are only ever valid in lowercase:
 mixed-case snippet names and usernames are **rejected**, not folded (folding
-would create silent collisions — see the Step 2 consistency notes).
+would create silent collisions - see the Step 2 consistency notes).
 
 **Reserved words** (cannot be snippet names; usernames additionally cannot be
-any of these): every CLI subcommand — `run`, `init`, `record`, `login`,
+any of these): every CLI subcommand - `run`, `init`, `record`, `login`,
 `logout`, `whoami`, `push`, `pull`, `fork`, `status`, `diff`, `list`, `show`,
 `search`, `tag`, `rename`, `clone`, `delete`, `edit`, `import`, `export`,
 `analyze`, `parameterize`, `stats`, `backup`, `restore`, `doctor`, `alias`,
 `completions`, `ui`, `cache`, `update`, `trust`, `remote`, `help`, `version`,
-`config` — plus `me`, `api`, `admin`, `settings`, `explore`, `new`, `device`,
+`config` - plus `me`, `api`, `admin`, `settings`, `explore`, `new`, `device`,
 `signup`, `static`, `assets`, `health`, `tokens`, `users`, `snippets`.
 
 This list is the single source: `forge-core` owns it (Step 3), the CLI's
@@ -183,7 +183,7 @@ The content hash is `SHA-256` over the **canonical bytes**, defined exactly:
 3. Build a JSON object (this is a serialisation for hashing, not a storage
    format) with keys in this fixed order, omitting absent/empty fields
    (`description` when empty, `tags` when empty, `env`/`variables` when
-   empty, `cwd`/`shell` when at their defaults `null`/`bash` — `shell` is
+   empty, `cwd`/`shell` when at their defaults `null`/`bash` - `shell` is
    **included** when explicitly set, even to `bash`):
    `name, description, tags, mode, shell, variables, env, cwd, retry, steps, parallel, script, always`.
    `created` and `source` are **excluded**.
@@ -197,7 +197,7 @@ The content hash is `SHA-256` over the **canonical bytes**, defined exactly:
    then forced to end with exactly one `\n`.
 6. Numbers serialise as bare integers. Booleans as `true`/`false`.
 7. Serialise the JSON with no insignificant whitespace, UTF-8, keys in the
-   orders above (not alphabetical — the lists above are the order).
+   orders above (not alphabetical - the lists above are the order).
 8. `hash = lowercase_hex(SHA-256(canonical_bytes))`. Short hash = first 8
    hex characters, displayed as `sha256:<short>`.
 
@@ -210,7 +210,7 @@ step order, tag set, or variable default does.
 
 - YAML 1.2 core schema via `serde_yaml` (Step 3). Duplicate mapping keys are
   an error. Anchors/aliases are **rejected** (they are a billion-laughs /
-  expansion vector and never needed in a forge file — see threat model T-DOS-2).
+  expansion vector and never needed in a forge file - see threat model T-DOS-2).
 - Tags/directives (`!!str`, `%YAML`, …) are rejected.
 - The document must be a single mapping at the top level.
 

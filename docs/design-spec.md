@@ -1,4 +1,4 @@
-# Spec — Design (Material You / Material Design 3)
+# Spec - Design (Material You / Material Design 3)
 
 - **Status:** Normative for Steps 14–17. **Version:** 1 (Step 2, 2026-11-19)
 - **Law:** `agent.md` §8 wins over this document on any conflict. This spec expands roadmap §4 into screens and states.
@@ -34,7 +34,7 @@
 
 App shell: top app bar (small) with wordmark, search entry (from Step 17), theme menu and account menu; navigation by width class (§5): bar (compact), rail (medium), rail or drawer + list-detail (expanded). A FAB ("New snippet") appears on dashboard and profile when logged in.
 
-## 3. Page inventory — layout and states per width class
+## 3. Page inventory - layout and states per width class
 
 For every screen: **compact** < 600 px, **medium** 600–839 px, **expanded** ≥ 840 px (content max ~1200 px, centred).
 
@@ -54,7 +54,7 @@ For every screen: **compact** < 600 px, **medium** 600–839 px, **expanded** �
 ## 4. Tokens (implemented in Step 14 in `web/src/design/tokens.css` + `tokens.ts`)
 
 - **Colour roles:** `primary, on-primary, primary-container, on-primary-container, secondary, on-secondary, secondary-container, on-secondary-container, tertiary, on-tertiary, tertiary-container, on-tertiary-container, error, on-error, error-container, on-error-container, surface, surface-dim, surface-bright, surface-container-lowest, surface-container-low, surface-container, surface-container-high, surface-container-highest, on-surface, on-surface-variant, outline, outline-variant, inverse-surface, inverse-on-surface, inverse-primary, scrim, shadow`.
-- **Type:** Roboto Flex (fallback Roboto), self-hosted; Roboto Mono for code. Scale: display L/M/S, headline L/M/S, title L/M/S, body L/M/S, label L/M/S — values from the M3 type scale, as tokens.
+- **Type:** Roboto Flex (fallback Roboto), self-hosted; Roboto Mono for code. Scale: display L/M/S, headline L/M/S, title L/M/S, body L/M/S, label L/M/S - values from the M3 type scale, as tokens.
 - **Shape:** extra-small 4, small 8, medium 12, large 16, extra-large 28, full 9999 (px, in tokens only).
 - **Elevation:** tonal containers first; shadow levels 0–3 only for menus/dialogs.
 - **State layers:** hover 8%, focus 10%, pressed 10%, dragged 16%; disabled content 38%, container 12%.
@@ -75,4 +75,4 @@ WCAG 2.2 AA: contrast verified programmatically for the key role pairs in both s
 
 ## 7. Content design (microcopy)
 
-Calm, direct, plain. No jokes in error or security contexts. Errors say what failed, why, and how to fix it. Security copy is informative, not frightening: e.g. on a third-party snippet — "Review commands before you run them. `fg` will ask you to confirm." Destructive actions name the thing being destroyed ("Delete `ubuntu-setup`?"). The device page states plainly what approval grants: "This will let the CLI on `<client_name>` read and write your snippets."
+Calm, direct, plain. No jokes in error or security contexts. Errors say what failed, why, and how to fix it. Security copy is informative, not frightening: e.g. on a third-party snippet - "Review commands before you run them. `fg` will ask you to confirm." Destructive actions name the thing being destroyed ("Delete `ubuntu-setup`?"). The device page states plainly what approval grants: "This will let the CLI on `<client_name>` read and write your snippets."
