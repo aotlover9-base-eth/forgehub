@@ -1,21 +1,55 @@
+![ForgeHub - save a command once, run it anywhere](docs/banner.jpg)
+
+<div align="center">
+
 # ForgeHub
 
-**Save a shell command once. Run it anywhere.**
+**Save a shell command once. Run it anywhere.** ⚒️
 
-A cloud home for shell command snippets: a server + web app to
-store and share them, and a Rust CLI (`forgehub`, alias `fg`) to
-run them - with the full commands, owner, version and hash shown
-**before** anything executes.
+![Release](https://img.shields.io/badge/release-v0.1.4-FFFFFF?style=flat-square&labelColor=0D1117)
+![Tests](https://img.shields.io/badge/tests-478%20passing-2EA043?style=flat-square&labelColor=0D1117)
+![License](https://img.shields.io/badge/license-MIT-9E9E9E?style=flat-square&labelColor=0D1117)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-6E7F8D?style=flat-square&labelColor=0D1117)
+
+![Rust](https://img.shields.io/badge/Rust-DEA584?style=flat-square&logo=rust&logoColor=black&labelColor=0D1117)
+![axum](https://img.shields.io/badge/axum-0.8-5B8DEF?style=flat-square&labelColor=0D1117)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black&labelColor=0D1117)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white&labelColor=0D1117)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white&labelColor=0D1117)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white&labelColor=0D1117)
+
+</div>
+
+You know that one perfect command - the one with six flags you
+can never quite remember? ForgeHub is its home. 🏠 Save it once
+in the web app or the terminal, and it is one short `fg` away on
+every machine you own - with the full commands, owner, version
+and hash shown **before** anything executes. No more digging
+through shell history, no more "it worked on my old laptop".
+
+## ⚡ Overview
+
+- **Total cost: $0** - self-hosted, one `docker compose up` and
+  the whole thing (server + web app) is yours
+- **One command, every machine** - `fg ubuntu-setup` fetches,
+  shows, asks, runs. That is the whole trick, done properly
+- **Safety is the product** - other people's snippets need a
+  typed `yes`, a changed snippet shows a diff and asks again,
+  and nothing runs silently, ever
+- **Tested like it matters** - 428 Rust + 50 web tests, CI on
+  every push, secret scanning on every save
+- **Featherweight** - the CLI download is ~4.5 MB, the server
+  is a single SQLite file, the snippets are text only
+  (≤ 64 KiB - no uploads, no binaries)
 
 | | |
 |---|---|
-| Stack | Rust (CLI + axum/SQLite server) · React + Material You 3 web |
-| Snippets | Text only, ≤ 64 KiB. No file uploads, no binaries |
-| Status | v0.1.4 · 428 Rust + 50 web tests · MIT |
+| Stack | Rust (CLI + axum/SQLite server) · React 19 web |
+| Status | v0.1.4 · 478 tests green · MIT |
 
 ![ForgeHub home - the Observe theme](docs/screenshots/home-observe.jpg)
 
-## Quickstart - server (Docker)
+## 🚀 Quickstart - server (Docker)
 
 ```console
 git clone https://github.com/aotlover9-base-eth/forgehub.git
@@ -27,7 +61,7 @@ docker compose up -d --build
 Open `https://<FORGEHUB_DOMAIN>` (default `https://localhost`),
 create an account. Details: [docs/deploy.md](docs/deploy.md).
 
-## Quickstart - CLI
+## ⌨️ Quickstart - CLI
 
 ```console
 cargo install --path crates/forge-cli   # from the clone; Rust 1.x
@@ -54,7 +88,7 @@ against the release's `SHA256SUMS`. (`scripts/install.sh` uses
 unauthenticated downloads and only works once a repository is
 public.)
 
-## Screenshots
+## 📸 Screenshots
 
 One theme - dark glass - from the home page through every
 signed-in section. (The serif display type lives on the
@@ -68,7 +102,7 @@ public landing page only.)
 |---|---|
 | ![Profile](docs/screenshots/profile-observe.jpg) | ![Snippet page](docs/screenshots/snippet-observe.jpg) |
 
-## Commands
+## 🧰 Commands
 
 **Local** (offline, in `~/.forgehub`):
 
@@ -106,7 +140,7 @@ prompts) · `--offline` (run from cache) · `-v` (request log).
 Full reference: [docs/cli-reference.md](docs/cli-reference.md) ·
 [docs/user-guide.md](docs/user-guide.md)
 
-## Safety rules (enforced, not optional)
+## 🛡️ Safety rules (enforced, not optional)
 
 - Nothing runs unseen: every run prints the full command list first.
 - Your snippet: `[y/N]`. Someone else's, first time: type `yes`.
@@ -121,7 +155,7 @@ Full reference: [docs/cli-reference.md](docs/cli-reference.md) ·
 Detail: [docs/security.md](docs/security.md) ·
 [docs/threat-model.md](docs/threat-model.md)
 
-## Configuration
+## ⚙️ Configuration
 
 | Variable | Meaning |
 |---|---|
@@ -134,7 +168,7 @@ Detail: [docs/security.md](docs/security.md) ·
 | `FORGEHUB_SMTP_URL` | Server: SMTP URL for password-reset mail, e.g. `smtps://user:pass@host:465` |
 | `FORGEHUB_MAIL_FROM` | Server: From address for outgoing mail |
 
-## Documentation
+## 📚 Documentation
 
 [User guide](docs/user-guide.md) · [CLI reference](docs/cli-reference.md) ·
 [API](docs/api.md) · [OpenAPI](docs/openapi.yaml) ·
@@ -144,7 +178,7 @@ Detail: [docs/security.md](docs/security.md) ·
 [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) ·
 [Changelog](CHANGELOG.md) · [Demo data pack](demo-data/) - 105 starter snippets + loader
 
-## Development
+## 🔧 Development
 
 ```console
 cargo fmt --all --check
