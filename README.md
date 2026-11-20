@@ -13,7 +13,7 @@ run them — with the full commands, owner, version and hash shown
 | Snippets | Text only, ≤ 64 KiB. No file uploads, no binaries |
 | Status | v0.1.0 · 411 Rust + 47 web tests · MIT |
 
-![ForgeHub dashboard](docs/screenshots/dashboard-expanded.png)
+![ForgeHub home — the Observe theme](docs/screenshots/home-observe.jpg)
 
 ## Quickstart — server (Docker)
 
@@ -48,6 +48,19 @@ fg run alice/docker-setup   # run anyone's public snippet (trust flow below)
 
 A checksum-verifying installer (`scripts/install.sh`) ships with
 each GitHub Release.
+
+## Screenshots
+
+One theme — dark glass, serif headlines — from the home page
+through every signed-in section.
+
+| Library | Explore |
+|---|---|
+| ![Library](docs/screenshots/library-observe.jpg) | ![Explore](docs/screenshots/explore-observe.jpg) |
+
+| Profile | A snippet |
+|---|---|
+| ![Profile](docs/screenshots/profile-observe.jpg) | ![Snippet page](docs/screenshots/snippet-observe.jpg) |
 
 ## Commands
 
