@@ -335,8 +335,8 @@
   --fh-nav-active-text: #000000;
   --fh-code-bg: rgb(0 0 0 / 0.45);
   --fh-focus-ring: #ffffff;
-  /* Headings speak in the landing's serif inside the app
-     too (user-directed, 2026-11-20): Material Web takes its
-     headline typeface from the brand token. */
-  --md-ref-typeface-brand: 'Instrument Serif', Georgia, serif;
+  /* The brand typeface is deliberately NOT overridden here:
+     the Instrument Serif belongs to the landing page only.
+     Inside the app, headings use the default UI typeface
+     (user clarification, 2026-11-20). */
 }

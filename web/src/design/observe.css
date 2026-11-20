@@ -461,17 +461,11 @@ body:has(.observe-app) {
   background: transparent;
 }
 
-/* Headings in the serif, matching the landing (the second
-   half of the user's edit request). Instrument Serif ships
-   only a regular weight, so headings drop their 500 weight
-   rather than letting the browser fake a bold. */
-.observe-app h1,
-.observe-app h2,
-.observe-app .fh-page-header__title {
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-}
+/* Headings inside the app use the default UI typeface, NOT
+   the landing's Instrument Serif — the serif is a
+   landing-only treatment (user clarification, 2026-11-20;
+   an earlier change that put serif headings in the app was
+   reverted on the same day). */
 
 /* ------------------------------------------------------------------ */
 /* Motion (user-directed, 2026-11-20): the UI felt too static.        */
