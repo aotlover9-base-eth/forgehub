@@ -28,7 +28,6 @@ import {
   useTokens,
 } from '../api/hooks';
 import type { CreatedToken } from '../api/types';
-import { readThemePreference, setThemePreference, type ThemePreference } from '../design/theme';
 import { passwordIssue, relativeTime } from '../validation';
 
 const TAB_IDS = ['profile', 'security', 'tokens', 'cli', 'danger'] as const;
@@ -68,7 +67,6 @@ function ProfileTab() {
   const toast = useToast();
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [bio, setBio] = useState<string | null>(null);
-  const [theme, setTheme] = useState<ThemePreference>(() => readThemePreference());
   const name = displayName ?? me.data?.display_name ?? '';
   const bioText = bio ?? me.data?.bio ?? '';
   return (
@@ -92,25 +90,6 @@ function ProfileTab() {
           Save profile
         </Button>
       </p>
-      <Card variant="outlined">
-        <h2 style={{ marginTop: 0 }}>Theme</h2>
-        <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
-          {(['system', 'light', 'dark'] as ThemePreference[]).map((t) => (
-            <label key={t} style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', cursor: 'pointer' }}>
-              <md-radio
-                name="theme"
-                value={t}
-                checked={theme === t || undefined}
-                onChange={() => {
-                  setTheme(t);
-                  setThemePreference(t);
-                }}
-              />
-              <span style={{ textTransform: 'capitalize' }}>{t === 'system' ? 'Match system' : t}</span>
-            </label>
-          ))}
-        </div>
-      </Card>
     </div>
   );
 }

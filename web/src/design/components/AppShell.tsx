@@ -1,8 +1,6 @@
 import { type ReactNode } from 'react';
 import { useWidthClass } from '../hooks';
-import { readThemePreference, setThemePreference, type ThemePreference } from '../theme';
-import { Icon, IconButton } from './core';
-import { useState } from 'react';
+import { Icon } from './core';
 
 export type NavItem = {
   id: string;
@@ -33,14 +31,6 @@ export function AppShell({
   children: ReactNode;
 }) {
   const widthClass = useWidthClass();
-  const [theme, setTheme] = useState<ThemePreference>(() => readThemePreference());
-  const cycleTheme = () => {
-    const order: ThemePreference[] = ['system', 'light', 'dark'];
-    const next = order[(order.indexOf(theme) + 1) % order.length];
-    setTheme(next);
-    setThemePreference(next);
-  };
-  const themeIcon = theme === 'light' ? 'light_mode' : theme === 'dark' ? 'dark_mode' : 'contrast';
   const navButton = (item: NavItem, showLabelBeside = false) => {
     const active = item.id === activeId;
     return (
@@ -62,14 +52,7 @@ export function AppShell({
       <div className="observe-app-bg" aria-hidden="true" />
       <header className="fh-topbar">
         <span className="fh-topbar__title">{title}</span>
-        <span className="fh-topbar__actions">
-          {actions}
-          <IconButton
-            icon={themeIcon}
-            label={`Theme: ${theme}. Activate to change.`}
-            onClick={cycleTheme}
-          />
-        </span>
+        <span className="fh-topbar__actions">{actions}</span>
       </header>
       {widthClass === 'expanded' ? (
         <nav className="fh-nav fh-nav--extended" aria-label="Main">

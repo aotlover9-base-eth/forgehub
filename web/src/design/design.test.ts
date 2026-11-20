@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SEED, darkColors, lightColors } from './tokens';
 import { widthClassFor } from './hooks';
-import { applyTheme, readThemePreference, setThemePreference } from './theme';
 
 // WCAG 2.x relative luminance + contrast ratio.
 function luminance(hex: string): number {
@@ -56,27 +55,3 @@ describe('width classes (design-spec breakpoints)', () => {
   });
 });
 
-describe('theme preference', () => {
-  it('defaults to system and round-trips through storage', () => {
-    localStorage.clear();
-    document.documentElement.removeAttribute('data-theme');
-    expect(readThemePreference()).toBe('system');
-    setThemePreference('dark');
-    expect(readThemePreference()).toBe('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    setThemePreference('system');
-    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-  });
-
-  it('ignores a corrupt stored value', () => {
-    localStorage.setItem('forgehub-theme', 'purple');
-    expect(readThemePreference()).toBe('system');
-  });
-
-  it('applyTheme sets and clears the attribute', () => {
-    applyTheme('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    applyTheme('system');
-    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-  });
-});

@@ -1,14 +1,14 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './design/md';
-import { applyTheme, readThemePreference } from './design/theme';
 import './index.css';
 import App from './App.tsx';
 
-// The pre-paint script in index.html already applied the
-// stored theme; re-applying here keeps it correct if the
-// document was served from a cache without the script.
-applyTheme(readThemePreference());
+// ForgeHub ships exactly one theme — the dark Observe theme —
+// pinned as data-theme="dark" on <html> in index.html. There
+// is no runtime theme switching (removed 2026-11-20: inside
+// the Observe app the old light/dark toggle changed nothing,
+// and a control that lies is worse than no control).
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

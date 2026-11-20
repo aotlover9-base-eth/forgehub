@@ -5,4 +5,3 @@ export * from './components/feedback';
 export * from './components/toast';
 export * from './components/AppShell';
 export * from './hooks';
-export * from './theme';

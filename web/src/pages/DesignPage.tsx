@@ -22,8 +22,8 @@ import {
 
 /**
  * The design-system review page (dev builds only, /__design):
- * every component and state in one place. Toggle the theme
- * from the app bar to review light and dark.
+ * every component and state in one place, in the product's
+ * single dark Observe theme.
  */
 export default function DesignPage() {
   const toast = useToast();
