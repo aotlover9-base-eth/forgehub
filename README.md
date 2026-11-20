@@ -11,7 +11,7 @@ run them — with the full commands, owner, version and hash shown
 |---|---|
 | Stack | Rust (CLI + axum/SQLite server) · React + Material You 3 web |
 | Snippets | Text only, ≤ 64 KiB. No file uploads, no binaries |
-| Status | v0.1.0 · 411 Rust + 47 web tests · MIT |
+| Status | v0.1.4 · 428 Rust + 50 web tests · MIT |
 
 ![ForgeHub home — the Observe theme](docs/screenshots/home-observe.jpg)
 
@@ -46,13 +46,19 @@ fg push hello --public      # publish a local snippet
 fg run alice/docker-setup   # run anyone's public snippet (trust flow below)
 ```
 
-A checksum-verifying installer (`scripts/install.sh`) ships with
-each GitHub Release.
+Prebuilt binaries (Linux x86_64/aarch64, Windows x86_64) are on
+the [Releases page](https://github.com/aotlover9-base-eth/forgehub/releases).
+This repository is private, so download them signed in — in the
+browser, or with `gh release download v0.1.4` — and verify
+against the release's `SHA256SUMS`. (`scripts/install.sh` uses
+unauthenticated downloads and only works once a repository is
+public.)
 
 ## Screenshots
 
-One theme — dark glass, serif headlines — from the home page
-through every signed-in section.
+One theme — dark glass — from the home page through every
+signed-in section. (The serif display type lives on the
+public landing page only.)
 
 | Library | Explore |
 |---|---|
