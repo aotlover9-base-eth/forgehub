@@ -163,7 +163,7 @@
   --fh-observe-aura-sub: 0 0 30px rgb(0 0 0 / 0.32), 0 1px 10px rgb(0 0 0 / 0.2);
   --fh-observe-display-size: clamp(2.9rem, 7.4vw, 6.9rem);
   --fh-observe-hover-bg: rgb(255 255 255 / 0.05);
-  --fh-observe-scrim: rgb(0 0 0 / 0.52);
+  --fh-observe-scrim: rgb(0 0 0 / 0.32);
   --fh-observe-line: rgb(255 255 255 / 0.12);
 
   /* Map the scheme onto @material/web component tokens. */
@@ -310,17 +310,17 @@
   --md-sys-color-tertiary-fixed-dim: rgb(255 255 255 / 0.8);
   --md-sys-color-on-tertiary-fixed: #000000;
   --md-sys-color-on-tertiary-fixed-variant: rgb(0 0 0 / 0.7);
-  --md-sys-color-surface: #0a0a0c;
+  --md-sys-color-surface: rgb(0 0 0 / 0.35);
   --md-sys-color-on-surface: #ffffff;
   --md-sys-color-surface-variant: rgb(255 255 255 / 0.08);
   --md-sys-color-on-surface-variant: rgb(255 255 255 / 0.7);
-  --md-sys-color-surface-dim: #060607;
+  --md-sys-color-surface-dim: rgb(0 0 0 / 0.45);
   --md-sys-color-surface-bright: rgb(255 255 255 / 0.14);
-  --md-sys-color-surface-container-lowest: rgb(0 0 0 / 0.45);
-  --md-sys-color-surface-container-low: rgb(255 255 255 / 0.04);
-  --md-sys-color-surface-container: rgb(255 255 255 / 0.06);
-  --md-sys-color-surface-container-high: rgb(255 255 255 / 0.09);
-  --md-sys-color-surface-container-highest: rgb(255 255 255 / 0.12);
+  --md-sys-color-surface-container-lowest: rgb(0 0 0 / 0.3);
+  --md-sys-color-surface-container-low: rgb(255 255 255 / 0.07);
+  --md-sys-color-surface-container: rgb(255 255 255 / 0.1);
+  --md-sys-color-surface-container-high: rgb(255 255 255 / 0.14);
+  --md-sys-color-surface-container-highest: rgb(255 255 255 / 0.18);
   --md-sys-color-inverse-surface: #ffffff;
   --md-sys-color-inverse-on-surface: #000000;
   --md-sys-color-inverse-primary: #000000;

@@ -410,8 +410,9 @@ body:has(.observe-app) {
 }
 
 .observe-app .fh-card {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--fh-observe-line);
 }
 
 .observe-app .fh-footer {
