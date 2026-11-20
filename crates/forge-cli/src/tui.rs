@@ -442,19 +442,58 @@ fn items_from_json(values: &[serde_json::Value]) -> Vec<TuiItem> {
         .collect()
 }
 
+/// Hard stop for [`fetch_all_pages`]: 50 pages × 100 rows is
+/// 5 000 snippets — ten times the server's per-user cap — so
+/// hitting it means the server is misbehaving, not that the
+/// list is really that long.
+const MAX_CLOUD_PAGES: usize = 50;
+
+/// Page through a list endpoint until `next_cursor` runs out,
+/// accumulating every page's `snippets`. (Before 2026-11-20
+/// the cloud tabs silently showed only the first page.) A
+/// cursor the server repeats ends the walk instead of
+/// looping forever.
+fn fetch_all_pages(
+    mut get: impl FnMut(&str) -> Result<serde_json::Value, String>,
+    base_path: &str,
+) -> Result<Vec<serde_json::Value>, String> {
+    let mut all = Vec::new();
+    let mut cursor: Option<String> = None;
+    for _ in 0..MAX_CLOUD_PAGES {
+        let path = match &cursor {
+            None => base_path.to_string(),
+            Some(c) => format!("{base_path}&cursor={}", sync::url_encode(c)),
+        };
+        let body = get(&path)?;
+        all.extend(body["snippets"].as_array().cloned().unwrap_or_default());
+        let next = body["next_cursor"].as_str().filter(|s| !s.is_empty());
+        match next {
+            None => return Ok(all),
+            Some(n) if cursor.as_deref() == Some(n) => return Ok(all),
+            Some(n) => cursor = Some(n.to_string()),
+        }
+    }
+    Ok(all)
+}
+
 fn load_cloud_tab(store: &Store, tab: Tab) -> Result<Vec<TuiItem>, String> {
     let mut stdin = std::io::stdin().lock();
     let sess = sync::session(store, &mut stdin, None).map_err(|e| format!("{e}"))?;
-    let path = match tab {
-        Tab::Mine => "/me/snippets?limit=100&sort=updated".to_string(),
-        Tab::Explore => "/explore?feed=recent&limit=50".to_string(),
+    let base_path = match tab {
+        Tab::Mine => "/me/snippets?limit=100&sort=updated",
+        Tab::Explore => "/explore?feed=recent&limit=100",
         Tab::Local => return Ok(Vec::new()),
     };
-    let (_, body, _) = sess
-        .client
-        .get(&path, Some(&sess.entry.token))
-        .map_err(|e| format!("could not reach {} ({e})", sess.registry))?;
-    let values = body["snippets"].as_array().cloned().unwrap_or_default();
+    let values = fetch_all_pages(
+        |path| {
+            let (_, body, _) = sess
+                .client
+                .get(path, Some(&sess.entry.token))
+                .map_err(|e| format!("could not reach {} ({e})", sess.registry))?;
+            Ok(body)
+        },
+        base_path,
+    )?;
     Ok(items_from_json(&values))
 }
 
@@ -780,6 +819,77 @@ mod tests {
             },
             ..TuiState::default()
         }
+    }
+
+    fn page(names: &[&str], next: Option<&str>) -> serde_json::Value {
+        serde_json::json!({
+            "snippets": names.iter().map(|n| serde_json::json!({ "name": n })).collect::<Vec<_>>(),
+            "next_cursor": next,
+        })
+    }
+
+    #[test]
+    fn pagination_walks_cursors_until_they_run_out() {
+        let mut requested: Vec<String> = Vec::new();
+        let values = fetch_all_pages(
+            |path| {
+                requested.push(path.to_string());
+                Ok(match requested.len() {
+                    1 => page(&["a", "b"], Some("cur 1&x")),
+                    2 => page(&["c"], Some("cur2")),
+                    _ => page(&["d"], None),
+                })
+            },
+            "/me/snippets?limit=100&sort=updated",
+        )
+        .unwrap();
+        let names: Vec<&str> = values.iter().map(|v| v["name"].as_str().unwrap()).collect();
+        assert_eq!(names, ["a", "b", "c", "d"]);
+        // The cursor is appended URL-encoded.
+        assert_eq!(
+            requested,
+            [
+                "/me/snippets?limit=100&sort=updated",
+                "/me/snippets?limit=100&sort=updated&cursor=cur%201%26x",
+                "/me/snippets?limit=100&sort=updated&cursor=cur2",
+            ]
+        );
+    }
+
+    #[test]
+    fn pagination_stops_on_a_repeated_cursor() {
+        let mut calls = 0;
+        let values = fetch_all_pages(
+            |_| {
+                calls += 1;
+                Ok(page(&["a"], Some("same")))
+            },
+            "/explore?feed=recent&limit=100",
+        )
+        .unwrap();
+        assert_eq!(values.len(), 2, "first page + one repeat, then stop");
+        assert_eq!(calls, 2);
+    }
+
+    #[test]
+    fn pagination_respects_the_page_cap() {
+        let mut calls = 0;
+        let values = fetch_all_pages(
+            |_| {
+                calls += 1;
+                Ok(page(&["a"], Some(&format!("cursor-{calls}"))))
+            },
+            "/explore?feed=recent&limit=100",
+        )
+        .unwrap();
+        assert_eq!(calls, MAX_CLOUD_PAGES);
+        assert_eq!(values.len(), MAX_CLOUD_PAGES);
+    }
+
+    #[test]
+    fn pagination_propagates_errors() {
+        let err = fetch_all_pages(|_| Err("boom".to_string()), "/x").unwrap_err();
+        assert_eq!(err, "boom");
     }
 
     #[test]

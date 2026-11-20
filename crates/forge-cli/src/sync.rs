@@ -1166,7 +1166,7 @@ pub fn cmd_remote_search(
 }
 
 /// Minimal percent-encoding for a query value.
-fn url_encode(text: &str) -> String {
+pub(crate) fn url_encode(text: &str) -> String {
     let mut out = String::new();
     for byte in text.bytes() {
         match byte {

@@ -69,9 +69,10 @@ instead of reaching a user.
 - **Windows depth.** The CLI builds and runs on Windows for
   local library management, but executing snippets assumes a
   POSIX shell and the `fg` alias is Unix-shell only.
-- **TUI cloud tabs are single-page.** The terminal UI loads
-  the first page (100) of Mine/Explore; the full `remote list`
-  command paginates completely.
+- **TUI cloud tabs paginate fully** (closed 2026-11-20).
+  The terminal UI follows `next_cursor` through Mine and
+  Explore (with a 50-page safety cap and a repeated-cursor
+  stop), like `remote list` always did.
 
 ## Unmaintained-but-sound dependencies (Step 19)
 
