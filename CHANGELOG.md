@@ -6,6 +6,22 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-20
+
+### Removed
+
+- **macOS release binaries.** ForgeHub ships Linux
+  (x86_64 + aarch64) and Windows (x86_64) builds only, by
+  the project owner's decision — macOS CI minutes on a
+  private repository are a cost the project does not
+  carry. The web app is unaffected (it runs in any
+  browser), the CLI still builds and runs on macOS from
+  source, and `scripts/install.sh` on Darwin now says
+  exactly that instead of pointing at assets that do not
+  exist. This is the first release whose build matrix can
+  go fully green, so it is the first published one;
+  v0.1.1 and v0.1.2 were tagged but never published.
+
 ## [0.1.2] - 2026-11-20
 
 ### Fixed

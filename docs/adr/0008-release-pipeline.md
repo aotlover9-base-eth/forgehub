@@ -46,3 +46,16 @@ same event.
   `SHA256SUMS`) is a public contract that `scripts/install.sh`
   and the packaging templates depend on; changing it means
   changing all three together.
+
+## Addendum (2026-11-20): macOS targets dropped
+
+By the project owner's decision, the release matrix no
+longer builds the two macOS targets: ForgeHub ships Linux
+(x86_64 + aarch64 musl) and Windows (x86_64 MSVC) binaries,
+and macOS Actions minutes on a private repository are a
+cost the project does not carry. The v0.1.0, v0.1.1 and
+v0.1.2 workflows all lost their macOS legs to runner
+cancellation for exactly this reason. macOS users build
+from source (`cargo install --path crates/forge-cli`);
+`scripts/install.sh` says so explicitly on Darwin, and the
+Homebrew template is Linux-only.

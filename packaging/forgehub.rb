@@ -3,22 +3,14 @@
 # fill the sha256 values from the release's SHA256SUMS file,
 # and open the usual homebrew-core/tap PR. The version and
 # URLs track the GitHub release asset names (ADR 0008).
+# Linux only: macOS binaries are not published (2026-11-20),
+# so this formula serves Linuxbrew; macOS users build from
+# source.
 class Forgehub < Formula
   desc "Cloud home for shell command snippets (CLI: forgehub / fg)"
   homepage "https://github.com/aotlover9-base-eth/forgehub"
   version "0.1.0"
   license "MIT"
-
-  on_macos do
-    on_arm do
-      url "https://github.com/aotlover9-base-eth/forgehub/releases/download/v0.1.0/forgehub-v0.1.0-aarch64-apple-darwin.tar.gz"
-      sha256 "REPLACE_WITH_SHA256_FROM_RELEASE_SHA256SUMS"
-    end
-    on_intel do
-      url "https://github.com/aotlover9-base-eth/forgehub/releases/download/v0.1.0/forgehub-v0.1.0-x86_64-apple-darwin.tar.gz"
-      sha256 "REPLACE_WITH_SHA256_FROM_RELEASE_SHA256SUMS"
-    end
-  end
 
   on_linux do
     on_arm do

@@ -28,12 +28,10 @@ jobs:
           - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
             cross: true
-          - target: x86_64-apple-darwin
-            os: macos-14
-            cross: false
-          - target: aarch64-apple-darwin
-            os: macos-14
-            cross: false
+          # No macOS legs (user decision, 2026-11-20): ForgeHub
+          # ships Linux + Windows binaries; macOS Actions
+          # minutes on a private repo cost money the project
+          # does not spend. macOS users build from source.
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             cross: false

@@ -49,8 +49,8 @@ os="$(uname -s)"
 arch="$(uname -m)"
 case "$os" in
     Linux)  os_part="unknown-linux-musl" ;;
-    Darwin) os_part="apple-darwin" ;;
-    *) die "unsupported OS: $os (Linux and macOS are supported; Windows uses the .zip asset)" ;;
+    Darwin) die "macOS binaries are not published (ForgeHub ships Linux and Windows builds); build from source instead: cargo install --path crates/forge-cli" ;;
+    *) die "unsupported OS: $os (Linux is supported here; Windows uses the .zip asset)" ;;
 esac
 case "$arch" in
     x86_64|amd64)   arch_part="x86_64" ;;
