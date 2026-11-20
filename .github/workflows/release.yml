@@ -28,13 +28,14 @@ jobs:
           - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
             cross: true
-          # No macOS legs (user decision, 2026-11-20): ForgeHub
-          # ships Linux + Windows binaries; macOS Actions
-          # minutes on a private repo cost money the project
-          # does not spend. macOS users build from source.
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            cross: false
+          # Linux only (user decision, 2026-11-20): the macOS
+          # legs were dropped for Actions-minutes cost, and the
+          # Windows leg was dropped the same evening after the
+          # owner fought its exe on a real laptop (a missing
+          # CRT DLL, then no HOME variable on Windows).
+          # ForgeHub ships Linux binaries; everyone else
+          # builds from source, and the web app works in any
+          # browser.
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
@@ -49,15 +50,6 @@ jobs:
         uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2
         with:
           tool: cross
-      - name: Static CRT for the Windows leg
-        if: runner.os == 'Windows'
-        shell: bash
-        run: echo 'RUSTFLAGS=-C target-feature=+crt-static' >> "$GITHUB_ENV"
-        # The v0.1.4 exe imported VCRUNTIME140.dll and died
-        # instantly on Windows machines without the VC++
-        # Redistributable installed (owner hit exactly this,
-        # 2026-11-20). A statically linked CRT makes the exe
-        # self-contained, like the musl Linux builds.
       - name: Build
         shell: bash
         run: |
@@ -71,7 +63,6 @@ jobs:
             cargo build --release -p forge-cli --target ${{ matrix.target }}
           fi
       - name: Package (unix)
-        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
@@ -84,30 +75,11 @@ jobs:
           cp docs/man/*.1 "dist/$name/man/"
           tar -czf "dist/$name.tar.gz" -C dist "$name"
           (cd dist && shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256")
-      - name: Package (windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $name = "forgehub-$env:GITHUB_REF_NAME-${{ matrix.target }}"
-          New-Item -ItemType Directory -Force "dist/$name" | Out-Null
-          Copy-Item "target/${{ matrix.target }}/release/forgehub.exe" "dist/$name/"
-          Copy-Item LICENSE, README.md "dist/$name/"
-          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip"
-          $hash = (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLower()
-          "$hash  $name.zip" | Out-File -Encoding ascii "dist/$name.zip.sha256"
-          # The bare .exe ships too (owner request, 2026-11-20):
-          # Windows users should not have to unzip anything to
-          # get the binary. Same bytes as inside the zip.
-          Copy-Item "dist/$name/forgehub.exe" "dist/$name.exe"
-          $exeHash = (Get-FileHash "dist/$name.exe" -Algorithm SHA256).Hash.ToLower()
-          "$exeHash  $name.exe" | Out-File -Encoding ascii "dist/$name.exe.sha256"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: forgehub-${{ matrix.target }}
           path: |
             dist/*.tar.gz
-            dist/*.zip
-            dist/*.exe
             dist/*.sha256
           if-no-files-found: error
 

@@ -9,7 +9,7 @@
 ![Release](https://img.shields.io/badge/release-v0.1.6-FFFFFF?style=flat-square&labelColor=0D1117)
 ![Tests](https://img.shields.io/badge/tests-478%20passing-2EA043?style=flat-square&labelColor=0D1117)
 ![License](https://img.shields.io/badge/license-MIT-9E9E9E?style=flat-square&labelColor=0D1117)
-![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-6E7F8D?style=flat-square&labelColor=0D1117)
+![Platform](https://img.shields.io/badge/platform-Linux-6E7F8D?style=flat-square&labelColor=0D1117)
 
 ![Rust](https://img.shields.io/badge/Rust-DEA584?style=flat-square&logo=rust&logoColor=black&labelColor=0D1117)
 ![axum](https://img.shields.io/badge/axum-0.8-5B8DEF?style=flat-square&labelColor=0D1117)
@@ -80,14 +80,14 @@ fg push hello --public      # publish a local snippet
 fg run alice/docker-setup   # run anyone's public snippet (trust flow below)
 ```
 
-Prebuilt binaries (Linux x86_64/aarch64 tarballs, a Windows
-zip and a direct Windows `.exe`) are on
+Prebuilt binaries (Linux x86_64 and aarch64 tarballs) are on
 the [Releases page](https://github.com/aotlover9-base-eth/forgehub/releases).
-This repository is private, so download them signed in - in the
-browser, or with `gh release download v0.1.4` - and verify
-against the release's `SHA256SUMS`. (`scripts/install.sh` uses
-unauthenticated downloads and only works once a repository is
-public.)
+ForgeHub is Linux-only - on other systems, use the web app in
+a browser or build the CLI from source. This repository is
+private, so download signed in - in the browser, or with
+`gh release download` - and verify against the release's
+`SHA256SUMS`. (`scripts/install.sh` uses unauthenticated
+downloads and only works once a repository is public.)
 
 ## 📸 Screenshots
 

@@ -64,9 +64,9 @@ instead of reaching a user.
   surface exists to attack.
 - **OS keyring storage for CLI credentials** (landed
   2026-11-20, with honest limits). `FORGEHUB_CREDENTIAL_STORE`
-  selects `auto` (default), `file` or `keyring`. macOS and
-  Windows builds store tokens in Keychain / Credential
-  Manager. On Linux the secret-service backend is a
+  selects `auto` (default), `file` or `keyring`. Source
+  builds on macOS and Windows can store tokens in Keychain /
+  Credential Manager. On Linux the secret-service backend is a
   `linux-keyring` cargo feature, **off in the release
   binaries**: it links the system D-Bus library, which the
   static musl builds cannot do - Linux release builds keep
@@ -77,9 +77,12 @@ instead of reaching a user.
   mock store is deliberately never used (detected at
   compile time): a credential that vanishes with the
   process would be worse than the file.
-- **Windows depth.** The CLI builds and runs on Windows for
-  local library management, but executing snippets assumes a
-  POSIX shell and the `fg` alias is Unix-shell only.
+- **Windows.** Not a supported platform. Brief Windows
+  builds shipped in v0.1.4-v0.1.6 and were dropped on
+  2026-11-20 (a missing CRT DLL, then the missing `HOME`
+  variable - friction all the way down for a POSIX-shell
+  tool). The web app works in any browser; the CLI runs
+  under WSL.
 - **TUI cloud tabs paginate fully** (closed 2026-11-20).
   The terminal UI follows `next_cursor` through Mine and
   Explore (with a 50-page safety cap and a repeated-cursor

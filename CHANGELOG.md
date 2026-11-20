@@ -6,6 +6,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- **Windows support.** The `x86_64-pc-windows-msvc` release
+  leg, the Windows zip and the bare `.exe` are gone, and
+  the Windows assets were removed from the v0.1.4-v0.1.6
+  releases (user decision, 2026-11-20, after a day of
+  platform friction on a real laptop: a missing CRT DLL,
+  then the missing `HOME` variable). ForgeHub is
+  Linux-only again; the web app still works in any
+  browser, and the CLI runs under WSL. The
+  `USERPROFILE`-aware home resolution stays in the code -
+  it is a few lines of robustness, not a platform.
+
 ## [0.1.6] - 2026-11-20
 
 ### Fixed

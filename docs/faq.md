@@ -64,8 +64,9 @@ retrying a push whose content already arrived answers
 
 ### Windows?
 
-The CLI builds for Windows (release matrix includes
-`x86_64-pc-windows-msvc`) and local snippet management works;
-running snippets assumes a POSIX shell, and the alias feature
-is Unix-shell only. Those limits are listed in
-`docs/known-gaps.md`.
+Not supported. ForgeHub is Linux-only: the CLI ships Linux
+binaries and the server runs on Linux. Windows builds
+existed briefly (v0.1.4-v0.1.6) and were dropped on
+2026-11-20 - too much platform friction for a tool built
+around POSIX shells. On a Windows machine, use the web app
+in the browser, or run the CLI inside WSL.

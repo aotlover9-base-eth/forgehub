@@ -70,3 +70,16 @@ remains the integrity contract and `scripts/install.sh`
 verifies downloads against it. If the repository ever goes
 public, the step can return (it is one `uses:` block,
 SHA-pinned in git history).
+
+## Addendum (2026-11-20, evening): Windows dropped too
+
+After one day of the owner fighting the Windows build on a
+real laptop - v0.1.4's exe needed a VC++ Redistributable it
+did not ship, v0.1.5 fixed that and then every store
+command failed because Windows has no `HOME` variable -
+the owner called it: ForgeHub is Linux-only. The Windows
+matrix leg, its packaging step and the bare `.exe` are
+removed from the release workflow, and the Windows assets
+were deleted from the v0.1.4-v0.1.6 releases. The web app
+remains the cross-platform surface (any browser), and the
+CLI runs under WSL.
