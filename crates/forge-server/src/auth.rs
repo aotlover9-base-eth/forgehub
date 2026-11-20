@@ -952,6 +952,154 @@ async fn login(
     Ok(resp)
 }
 
+// ---------------------------------------------------------------------------
+// Password reset (2026-11-20 increment): emailed single-use
+// tokens. Only hashes are stored; the request endpoint's
+// answer never reveals whether an account exists.
+// ---------------------------------------------------------------------------
+
+/// Reset links live for one hour.
+const RESET_TOKEN_TTL_SECS: i64 = 3600;
+/// URL-safe alphabet for reset tokens (they travel in a query
+/// string): 48 chars ≈ 285 bits of entropy.
+const RESET_ALPHABET: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+
+#[derive(Deserialize)]
+struct ResetRequestBody {
+    email: String,
+}
+
+async fn password_reset_request(
+    State(state): State<AppState>,
+    ClientIp(ip): ClientIp,
+    result: Result<Json<ResetRequestBody>, JsonRejection>,
+) -> Response {
+    // Always 204: malformed body, unknown address, throttled,
+    // mail down — the response is identical either way, so it
+    // cannot confirm that an account exists (the same rule the
+    // signup handler applies to email conflicts).
+    let Ok(Json(req)) = result else {
+        return StatusCode::NO_CONTENT.into_response();
+    };
+    let email = req.email.trim().to_lowercase();
+    // Throttled with the login throttle's budget (5 strikes,
+    // exponential backoff), keyed by source IP and by target
+    // address so one inbox cannot be bombed from many IPs.
+    // A locked key skips the work silently.
+    let ip_key = format!(
+        "reset-ip:{}",
+        ip.map_or_else(|| "unknown".into(), |a| a.ip().to_string())
+    );
+    let mail_key = format!("reset-mail:{email}");
+    if state.login_throttle.locked_for(&ip_key).is_some()
+        || state.login_throttle.locked_for(&mail_key).is_some()
+    {
+        return StatusCode::NO_CONTENT.into_response();
+    }
+    state.login_throttle.record_failure(&ip_key);
+    state.login_throttle.record_failure(&mail_key);
+    if validate_email(&email).is_err() {
+        return StatusCode::NO_CONTENT.into_response();
+    }
+    let user = match state.repos.users.by_email(&email).await {
+        Ok(found) => found.filter(|u| u.deleted_at.is_none() && u.disabled_at.is_none()),
+        Err(err) => {
+            tracing::error!(error = %err, "password reset: user lookup failed");
+            return StatusCode::NO_CONTENT.into_response();
+        }
+    };
+    let Some(user) = user else {
+        return StatusCode::NO_CONTENT.into_response();
+    };
+    let token = random_from_alphabet(RESET_ALPHABET, 48);
+    let now = chrono::Utc::now();
+    let created = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    let expires = (now + chrono::Duration::seconds(RESET_TOKEN_TTL_SECS))
+        .format("%Y-%m-%dT%H:%M:%SZ")
+        .to_string();
+    if let Err(err) = state
+        .repos
+        .password_resets
+        .issue(user.id, &sha256_hex(&token), &created, &expires)
+        .await
+    {
+        tracing::error!(error = %err, "password reset: issuing a token failed");
+        return StatusCode::NO_CONTENT.into_response();
+    }
+    let reset_url = format!("{}/reset-password?token={token}", state.config.base_url);
+    let mailer = state.mailer.clone();
+    let recipient = user.email.clone();
+    // lettre blocks; keep the send off the async runtime. A
+    // delivery failure is logged, never answered — see above.
+    tokio::task::spawn_blocking(move || {
+        if let Err(err) = mailer.send_password_reset(&recipient, &reset_url) {
+            tracing::error!(error = %err, "password reset: mail delivery failed");
+        }
+    });
+    StatusCode::NO_CONTENT.into_response()
+}
+
+#[derive(Deserialize)]
+struct ResetConfirmBody {
+    token: String,
+    new_password: String,
+}
+
+async fn password_reset_confirm(
+    State(state): State<AppState>,
+    result: Result<Json<ResetConfirmBody>, JsonRejection>,
+) -> Result<Response, ApiError> {
+    let req = body(result)?;
+    // One generic error for every failure mode — unknown,
+    // used or expired token — so the endpoint is not an
+    // oracle for which links are live.
+    let invalid = || {
+        ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "invalid_token",
+            "This reset link is invalid or has expired. Request a new one.",
+        )
+    };
+    if req.token.is_empty() || req.token.len() > 128 {
+        return Err(invalid());
+    }
+    let row = state
+        .repos
+        .password_resets
+        .by_hash(&sha256_hex(&req.token))
+        .await?
+        .ok_or_else(invalid)?;
+    if row.used_at.is_some() || row.expires_at <= now_iso() {
+        return Err(invalid());
+    }
+    let user = state
+        .repos
+        .users
+        .by_id(row.user_id)
+        .await?
+        .filter(|u| u.deleted_at.is_none() && u.disabled_at.is_none())
+        .ok_or_else(invalid)?;
+    validate_password(&req.new_password, &user.username).map_err(ApiError::validation)?;
+    // Consume first: if anything below fails, the link is
+    // dead and the user requests a fresh one — failing safe.
+    state
+        .repos
+        .password_resets
+        .mark_used(row.id, &now_iso())
+        .await?;
+    let hash = hash_password(req.new_password.clone()).await?;
+    state.repos.users.set_password_hash(user.id, &hash).await?;
+    // A reset can mean the account was compromised: every
+    // session and API token dies with the old password.
+    state.repos.sessions.delete_for_user(user.id).await?;
+    state
+        .repos
+        .tokens
+        .revoke_all_for_user(user.id, &now_iso())
+        .await?;
+    Ok(StatusCode::NO_CONTENT.into_response())
+}
+
 async fn logout(
     State(state): State<AppState>,
     ctx: RequireSession,
@@ -1179,6 +1327,8 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/auth/signup", post(signup))
         .route("/auth/login", post(login))
+        .route("/auth/password-reset/request", post(password_reset_request))
+        .route("/auth/password-reset/confirm", post(password_reset_confirm))
         .route("/auth/logout", post(logout))
         .route("/auth/logout-all", post(logout_all))
         .route("/me", get(get_me).patch(patch_me).delete(delete_me))

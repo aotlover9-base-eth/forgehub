@@ -16,6 +16,8 @@ import LoginPage from './LoginPage';
 import SignupPage from './SignupPage';
 import DashboardPage from './DashboardPage';
 import HomePage from './HomePage';
+import ForgotPasswordPage from './ForgotPasswordPage';
+import ResetPasswordPage from './ResetPasswordPage';
 
 function renderPage(ui: React.ReactNode, route = '/') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -229,5 +231,66 @@ describe('HomePage', () => {
     );
     renderPage(<HomePage />, '/home');
     await waitFor(() => expect(screen.getByText('Save your first snippet')).toBeTruthy());
+  });
+});
+
+describe('Password reset pages', () => {
+  it('forgot: posts the email and lands on the enumeration-safe confirmation', async () => {
+    let posted: unknown = null;
+    server.use(
+      http.post('/api/v1/auth/password-reset/request', async ({ request }) => {
+        posted = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderPage(<ForgotPasswordPage />, '/forgot-password');
+    setField('Email', 'ada@example.com');
+    fireEvent.submit(document.querySelector('form')!);
+    await waitFor(() =>
+      expect(screen.getByText(/If an account exists for/)).toBeTruthy(),
+    );
+    expect(posted).toEqual({ email: 'ada@example.com' });
+  });
+
+  it('reset: matching passwords post token + new password and route to login', async () => {
+    let posted: unknown = null;
+    server.use(
+      http.post('/api/v1/auth/password-reset/confirm', async ({ request }) => {
+        posted = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderPage(<ResetPasswordPage />, '/reset-password?token=tok-123');
+    setField('New password', 'a-brand-new-passphrase-42');
+    setField('Confirm new password', 'a-brand-new-passphrase-42');
+    fireEvent.submit(document.querySelector('form')!);
+    await waitFor(() => expect(posted).not.toBeNull());
+    expect(posted).toEqual({ token: 'tok-123', new_password: 'a-brand-new-passphrase-42' });
+  });
+
+  it('reset: mismatched passwords never reach the API', async () => {
+    let called = false;
+    server.use(
+      http.post('/api/v1/auth/password-reset/confirm', () => {
+        called = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderPage(<ResetPasswordPage />, '/reset-password?token=tok-123');
+    setField('New password', 'a-brand-new-passphrase-42');
+    setField('Confirm new password', 'something-else-entirely-9');
+    fireEvent.submit(document.querySelector('form')!);
+    await waitFor(() =>
+      expect(screen.getByText('The two passwords do not match.')).toBeTruthy(),
+    );
+    expect(called).toBe(false);
+  });
+
+  it('reset: a tokenless link explains itself instead of showing a form', async () => {
+    renderPage(<ResetPasswordPage />, '/reset-password');
+    await waitFor(() =>
+      expect(screen.getByText(/missing its token/)).toBeTruthy(),
+    );
+    expect(document.querySelector('form')).toBeNull();
   });
 });

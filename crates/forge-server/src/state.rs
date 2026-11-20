@@ -28,6 +28,9 @@ pub struct AppState {
     /// Explore feed cache (Step 10): feed name -> (fetched at,
     /// rows). 60-second TTL per the roadmap.
     pub explore_cache: Arc<ExploreCache>,
+    /// Outgoing mail (password resets): SMTP, the dev console
+    /// mailer, or disabled — from the configuration.
+    pub mailer: Arc<dyn crate::mail::Mailer>,
 }
 
 /// Pull dedup map: `(ip hash, snippet id) -> last counted at`.
@@ -43,6 +46,19 @@ impl AppState {
     /// throttles from the config so production and tests agree.
     #[must_use]
     pub fn new(config: Config, repos: Repos, pool: SqlitePool) -> Self {
+        let mailer = crate::mail::mailer_from_config(&config);
+        Self::with_mailer(config, repos, pool, mailer)
+    }
+
+    /// Build state with an explicit mailer (tests capture mail
+    /// instead of sending it).
+    #[must_use]
+    pub fn with_mailer(
+        config: Config,
+        repos: Repos,
+        pool: SqlitePool,
+        mailer: Arc<dyn crate::mail::Mailer>,
+    ) -> Self {
         let login_throttle = Arc::new(LoginThrottle::new(Duration::from_millis(
             config.login_backoff_base_ms,
         )));
@@ -54,6 +70,7 @@ impl AppState {
             device_limiter: Arc::new(DeviceLimiter::new()),
             pull_dedup: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
             explore_cache: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            mailer,
         }
     }
 

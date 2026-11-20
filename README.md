@@ -124,6 +124,8 @@ Detail: [docs/security.md](docs/security.md) ·
 | `FORGEHUB_TOKEN` | CLI: token from the environment, for scripts |
 | `FORGEHUB_SECRET_KEY` | Server: session secret, ≥ 32 random bytes (`.env`) |
 | `FORGEHUB_DOMAIN` | Server (compose/Caddy): domain to serve, default `localhost` |
+| `FORGEHUB_SMTP_URL` | Server: SMTP URL for password-reset mail, e.g. `smtps://user:pass@host:465` |
+| `FORGEHUB_MAIL_FROM` | Server: From address for outgoing mail |
 
 ## Documentation
 

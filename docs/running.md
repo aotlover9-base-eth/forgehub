@@ -10,7 +10,9 @@ the startup log shows the secret key only as set/unset + length.
 |---|---|---|
 | `FORGEHUB_ENV` | `dev` | `dev` (pretty logs) or `prod` (JSON logs; secret required) |
 | `FORGEHUB_BIND` | `127.0.0.1:8080` | Listen address |
-| `FORGEHUB_BASE_URL` | `http://127.0.0.1:8080` | Public base URL (verification links, device flow) |
+| `FORGEHUB_BASE_URL` | `http://127.0.0.1:8080` | Public base URL (password-reset links, device flow) |
+| `FORGEHUB_SMTP_URL` | — | SMTP submission URL for outgoing mail, e.g. `smtps://user:pass@smtp.example.com:465` (carries a password — never logged) |
+| `FORGEHUB_MAIL_FROM` | `ForgeHub <no-reply@localhost>` | From address for outgoing mail |
 | `FORGEHUB_DATABASE_URL` | `sqlite://forgehub.db` | SQLite URL or path; `sqlite::memory:` works |
 | `FORGEHUB_SECRET_KEY` | — | ≥ 32 bytes; **required in prod**, warned-about in dev |
 | `FORGEHUB_ALLOW_SIGNUP` | `true` | Set `false` to close public registration |

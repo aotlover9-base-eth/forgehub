@@ -12,6 +12,7 @@ pub mod device;
 pub mod discovery;
 pub mod error;
 pub mod http;
+pub mod mail;
 pub mod ratelimit;
 pub mod repo;
 pub mod snippets;

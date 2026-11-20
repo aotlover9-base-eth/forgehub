@@ -33,6 +33,19 @@ Two mechanisms, one identity:
 
 When both are present, the `Authorization` header wins.
 
+**Password reset** (2026-11-20): `POST /auth/password-reset/request`
+with `{ "email": "…" }` always answers `204` — registered or
+not — and mails a single-use link (one live link per account,
+one-hour expiry, token stored SHA-256-hashed, throttled per IP
+and per address). `POST /auth/password-reset/confirm` with
+`{ "token": "…", "new_password": "…" }` answers `204` on
+success and one generic `400 invalid_token` for an unknown,
+used or expired token; a successful reset revokes every
+session and API token on the account. Mail delivery needs
+`FORGEHUB_SMTP_URL` (see `docs/running.md`); without it, dev
+servers log the link and production servers log the request
+as undeliverable.
+
 ## Errors
 
 Every error is the same envelope:

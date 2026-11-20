@@ -55,6 +55,22 @@ export const useSignup = authMutation<{ username: string; email: string; passwor
   (v) => v,
 );
 
+/** Ask for a password-reset email. The server answers 204
+ * whether or not the address is registered, so the UI shows
+ * the same "check your inbox" state either way. */
+export function usePasswordResetRequest() {
+  return useMutation<void, ApiError, { email: string }>({
+    mutationFn: (v) => api<void>('/auth/password-reset/request', { method: 'POST', body: JSON.stringify(v) }),
+  });
+}
+
+/** Set a new password from a reset link's token. */
+export function usePasswordResetConfirm() {
+  return useMutation<void, ApiError, { token: string; new_password: string }>({
+    mutationFn: (v) => api<void>('/auth/password-reset/confirm', { method: 'POST', body: JSON.stringify(v) }),
+  });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation<void, ApiError, void>({

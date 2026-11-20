@@ -43,6 +43,9 @@ allow = [
     # webpki-roots ships the Mozilla root certificate list as
     # data; CDLA-Permissive-2.0 is a permissive data licence.
     "CDLA-Permissive-2.0",
+    # quoted_printable (via lettre, for outgoing mail) is
+    # BSD Zero Clause — public-domain-equivalent terms.
+    "0BSD",
 ]
 confidence-threshold = 0.8
 exceptions = []

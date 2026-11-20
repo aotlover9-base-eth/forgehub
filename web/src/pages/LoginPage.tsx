@@ -77,6 +77,9 @@ export default function LoginPage() {
         </form>
       </Card>
       <p>
+        <Link to="/forgot-password">Forgot your password?</Link>
+      </p>
+      <p>
         New to ForgeHub? <Link to="/signup">Create an account</Link>
       </p>
     </div>

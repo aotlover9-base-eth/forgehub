@@ -63,6 +63,37 @@ pub struct Config {
     pub max_snippets_per_user: i64,
     /// Per-snippet version cap (`FORGEHUB_MAX_VERSIONS_PER_SNIPPET`, default 200).
     pub max_versions_per_snippet: i64,
+    /// SMTP submission URL for outgoing mail (`FORGEHUB_SMTP_URL`,
+    /// e.g. `smtps://user:pass@smtp.example.com:465`). Never printed:
+    /// it usually carries a password.
+    pub smtp_url: Option<String>,
+    /// From address for outgoing mail (`FORGEHUB_MAIL_FROM`).
+    pub mail_from: String,
+}
+
+/// How outgoing mail will be handled, for the startup summary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MailMode {
+    /// Real SMTP delivery (`FORGEHUB_SMTP_URL` is set).
+    Smtp,
+    /// Dev only: reset links are written to the server log
+    /// instead of being mailed (the console mailer).
+    Console,
+    /// No way to send mail: reset requests are accepted but
+    /// nothing is delivered (prod without SMTP configured).
+    Disabled,
+}
+
+impl MailMode {
+    /// Lowercase name for the startup summary.
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            MailMode::Smtp => "smtp",
+            MailMode::Console => "console (dev: links go to the server log)",
+            MailMode::Disabled => "disabled (set FORGEHUB_SMTP_URL to send mail)",
+        }
+    }
 }
 
 fn env_var(key: &str) -> Option<String> {
@@ -244,6 +275,17 @@ impl Config {
             session_settings(get)?;
         let device_poll_interval_secs = device_poll_interval(get)?;
         let (max_snippets_per_user, max_versions_per_snippet) = snippet_limits(get)?;
+        let smtp_url = get("FORGEHUB_SMTP_URL");
+        if let Some(url) = &smtp_url {
+            if !url.starts_with("smtp://") && !url.starts_with("smtps://") {
+                bail!("FORGEHUB_SMTP_URL must start with smtp:// or smtps://");
+            }
+        }
+        let mail_from = get("FORGEHUB_MAIL_FROM")
+            .unwrap_or_else(|| "ForgeHub <no-reply@localhost>".to_string());
+        if !mail_from.contains('@') {
+            bail!("FORGEHUB_MAIL_FROM must contain an email address, got `{mail_from}`");
+        }
         Ok(Self {
             env,
             bind,
@@ -261,7 +303,21 @@ impl Config {
             device_poll_interval_secs,
             max_snippets_per_user,
             max_versions_per_snippet,
+            smtp_url,
+            mail_from,
         })
+    }
+
+    /// The mail mode this configuration produces (see [`MailMode`]).
+    #[must_use]
+    pub fn mail_mode(&self) -> MailMode {
+        if self.smtp_url.is_some() {
+            MailMode::Smtp
+        } else if self.env == Env::Dev {
+            MailMode::Console
+        } else {
+            MailMode::Disabled
+        }
     }
 
     /// A secret-free, multi-line summary for the startup log. The
@@ -273,7 +329,7 @@ impl Config {
             None => "not set".to_string(),
         };
         format!(
-            "env={} bind={} base_url={} database={} secret_key={} allow_signup={} web_dir={} body_limit={}KiB rate_limit={}/min timeout={}s session_idle={}s session_absolute={}s",
+            "env={} bind={} base_url={} database={} secret_key={} allow_signup={} web_dir={} body_limit={}KiB rate_limit={}/min timeout={}s session_idle={}s session_absolute={}s mail={}",
             self.env.as_str(),
             self.bind,
             self.base_url,
@@ -286,6 +342,7 @@ impl Config {
             self.request_timeout_secs,
             self.session_idle_secs,
             self.session_absolute_secs,
+            self.mail_mode().as_str(),
         )
     }
 
@@ -341,6 +398,32 @@ mod tests {
             summary.contains(&format!("set ({} bytes", secret.len())),
             "{summary}"
         );
+    }
+
+    #[test]
+    fn mail_modes_and_validation() {
+        let dev = Config::from_vars(&vars(&[])).unwrap();
+        assert_eq!(dev.mail_mode(), MailMode::Console);
+        let smtp = Config::from_vars(&vars(&[(
+            "FORGEHUB_SMTP_URL",
+            "smtps://user:hunter2@smtp.example.com:465",
+        )]))
+        .unwrap();
+        assert_eq!(smtp.mail_mode(), MailMode::Smtp);
+        assert!(
+            !smtp.summary().contains("hunter2"),
+            "the summary must never leak the SMTP password: {}",
+            smtp.summary()
+        );
+        let secret = "x".repeat(32);
+        let prod = Config::from_vars(&vars(&[
+            ("FORGEHUB_ENV", "prod"),
+            ("FORGEHUB_SECRET_KEY", secret.as_str()),
+        ]))
+        .unwrap();
+        assert_eq!(prod.mail_mode(), MailMode::Disabled);
+        assert!(Config::from_vars(&vars(&[("FORGEHUB_SMTP_URL", "http://x")])).is_err());
+        assert!(Config::from_vars(&vars(&[("FORGEHUB_MAIL_FROM", "not-an-address")])).is_err());
     }
 
     #[test]

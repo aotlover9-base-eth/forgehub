@@ -515,6 +515,41 @@ pub trait ReportRepo: Send + Sync {
     async fn exists_open(&self, reporter_id: i64, snippet_id: i64) -> RepoResult<bool>;
 }
 
+/// A password-reset token row (only the hash is ever stored).
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct PasswordResetRow {
+    /// Primary key.
+    pub id: i64,
+    /// Owner.
+    pub user_id: i64,
+    /// SHA-256 hex of the token mailed to the user.
+    pub token_hash: String,
+    /// ISO-8601 creation time.
+    pub created_at: String,
+    /// ISO-8601 expiry; the token is dead at and after this.
+    pub expires_at: String,
+    /// Set when the token has been consumed (single use).
+    pub used_at: Option<String>,
+}
+
+/// Password-reset tokens repository (2026-11-20 increment).
+#[async_trait]
+pub trait PasswordResetRepo: Send + Sync {
+    /// Issue a token for the user, deleting any previous ones:
+    /// at most one live reset link exists per account.
+    async fn issue(
+        &self,
+        user_id: i64,
+        token_hash: &str,
+        now: &str,
+        expires_at: &str,
+    ) -> RepoResult<PasswordResetRow>;
+    /// By token hash.
+    async fn by_hash(&self, token_hash: &str) -> RepoResult<Option<PasswordResetRow>>;
+    /// Consume the token (single use).
+    async fn mark_used(&self, id: i64, now: &str) -> RepoResult<()>;
+}
+
 /// All repositories, backed by one store implementation.
 pub struct Repos {
     /// Users.
@@ -529,6 +564,8 @@ pub struct Repos {
     pub snippets: std::sync::Arc<dyn SnippetRepo>,
     /// Reports.
     pub reports: std::sync::Arc<dyn ReportRepo>,
+    /// Password-reset tokens.
+    pub password_resets: std::sync::Arc<dyn PasswordResetRepo>,
 }
 
 impl Repos {
@@ -542,7 +579,8 @@ impl Repos {
             tokens: store.clone(),
             device_codes: store.clone(),
             snippets: store.clone(),
-            reports: store,
+            reports: store.clone(),
+            password_resets: store,
         }
     }
 }
@@ -1751,6 +1789,56 @@ impl ReportRepo for SqliteStore {
         .fetch_one(&self.pool)
         .await?;
         Ok(count > 0)
+    }
+}
+
+#[async_trait]
+impl PasswordResetRepo for SqliteStore {
+    async fn issue(
+        &self,
+        user_id: i64,
+        token_hash: &str,
+        now: &str,
+        expires_at: &str,
+    ) -> RepoResult<PasswordResetRow> {
+        // One live link per account: a fresh request kills the
+        // previous tokens before the new row lands, in one
+        // transaction so a crash cannot leave two live tokens.
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("DELETE FROM password_reset_tokens WHERE user_id = ?1")
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await?;
+        let row = sqlx::query_as::<_, PasswordResetRow>(
+            "INSERT INTO password_reset_tokens (user_id, token_hash, created_at, expires_at)
+             VALUES (?1, ?2, ?3, ?4) RETURNING *",
+        )
+        .bind(user_id)
+        .bind(token_hash)
+        .bind(now)
+        .bind(expires_at)
+        .fetch_one(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(row)
+    }
+
+    async fn by_hash(&self, token_hash: &str) -> RepoResult<Option<PasswordResetRow>> {
+        Ok(sqlx::query_as::<_, PasswordResetRow>(
+            "SELECT * FROM password_reset_tokens WHERE token_hash = ?1",
+        )
+        .bind(token_hash)
+        .fetch_optional(&self.pool)
+        .await?)
+    }
+
+    async fn mark_used(&self, id: i64, now: &str) -> RepoResult<()> {
+        sqlx::query("UPDATE password_reset_tokens SET used_at = ?2 WHERE id = ?1")
+            .bind(id)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 }
 

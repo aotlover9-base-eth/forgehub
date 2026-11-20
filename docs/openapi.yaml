@@ -108,6 +108,40 @@ paths:
               schema: { $ref: '#/components/schemas/Me' }
         '401': { $ref: '#/components/responses/Error' }
         '429': { $ref: '#/components/responses/Error' }
+  /auth/password-reset/request:
+    post:
+      tags: [auth]
+      summary: Request a password-reset email (always 204; never reveals whether the account exists)
+      operationId: passwordResetRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, maxLength: 254, format: email }
+      responses:
+        '204': { description: Accepted; a single-use link (one hour, one live link per account) is mailed when the address is registered and mail is configured }
+  /auth/password-reset/confirm:
+    post:
+      tags: [auth]
+      summary: Set a new password from a reset token (revokes all sessions and API tokens)
+      operationId: passwordResetConfirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string, maxLength: 128 }
+                new_password: { type: string, maxLength: 256 }
+      responses:
+        '204': { description: Password updated; all sessions and API tokens revoked }
+        '400': { $ref: '#/components/responses/Error' }
   /auth/logout:
     post:
       tags: [auth]

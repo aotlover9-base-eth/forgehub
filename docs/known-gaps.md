@@ -4,26 +4,31 @@ Honest list of things ForgeHub deliberately does not do yet, so
 nobody has to guess. Each gap names the step or condition that
 closes it.
 
-## Account recovery (Step 7)
+## Account recovery: password reset exists (2026-11-20); email is still unverified
 
-**There is no password reset and no email verification.** The
-server sends no email at all in v1 — there is no SMTP or provider
-integration — so:
+**Password reset landed as a post-v0.1.0 increment
+(2026-11-20).** `POST /api/v1/auth/password-reset/request`
+mails a single-use link (token stored only as a SHA-256 hash,
+one live link per account, one-hour expiry, throttled per IP
+and per address, enumeration-safe 204 responses);
+`POST /api/v1/auth/password-reset/confirm` sets the new
+password and revokes every session and API token on the
+account. Delivery is SMTP via `FORGEHUB_SMTP_URL`
+(`FORGEHUB_MAIL_FROM` sets the sender). Two honest caveats:
 
-- If a user forgets their password, they cannot recover the
-  account self-service. The only recovery path is an operator
-  with database access replacing the `password_hash` for the
-  user row (argon2id PHC format) and deleting the user's rows
-  from `sessions`.
-- Email addresses are format-checked at signup but never
-  verified, so an account can be registered with an address the
-  user does not control. Nothing in v1 sends mail to the address,
-  so the impact is limited to the account itself.
-
-Closing this gap needs a mail-sending decision (provider or SMTP)
-and a reset-token flow; it is recorded here rather than silently
-absent, and the threat model's account-takeover row (T-ACCT-1)
-should be re-read when it lands.
+- **Without SMTP configured, no mail leaves the server.** In
+  production the request is accepted and logged as
+  undeliverable; the operator fallback remains replacing the
+  `password_hash` row directly. In dev (`FORGEHUB_ENV=dev`,
+  no SMTP), reset links are written to the server log
+  instead — the console mailer — so local testing needs no
+  mail setup.
+- **Email addresses are still not verified at signup.**
+  They are format-checked only, so an account can be
+  registered with an address the user does not control; a
+  reset link for such an account goes to whoever controls
+  that address, which is the correct behaviour, but signup
+  itself proves nothing about ownership.
 
 ## Rate limiting is per-process (Step 6)
 
