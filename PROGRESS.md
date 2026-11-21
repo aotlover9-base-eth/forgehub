@@ -32,7 +32,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 ### Phase A - UI and UX overhaul
 - [x] A0 - design audit and direction (`docs/design/PEAK-DIRECTION.md`, ADR 0009, audit screenshots in `docs/screenshots/peak-audit/`)
 - [x] A1 - theme system: light, dark, system, with a real switch
-- [ ] A2 - type, shape, elevation and state layers
+- [x] A2 - type, shape, elevation and state layers
 - [ ] A3 - adaptive shell and navigation
 - [ ] A4 - component library refresh
 - [ ] A5 - screen redesign (every route)

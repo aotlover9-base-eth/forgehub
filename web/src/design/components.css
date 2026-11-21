@@ -38,7 +38,8 @@
 .fh-topbar__title {
   font-size: var(--md-sys-typescale-title-large-size);
   line-height: var(--md-sys-typescale-title-large-line-height);
-  font-weight: 500;
+  font-weight: var(--md-sys-typescale-title-large-weight);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
 }
 .fh-topbar__actions {
   display: inline-flex;
@@ -85,6 +86,8 @@
   font: inherit;
   font-size: var(--md-sys-typescale-label-medium-size);
   padding: 0;
+  min-height: 48px;
+  position: relative;
 }
 .fh-nav__item--beside {
   flex-direction: row;
@@ -101,6 +104,29 @@
   display: inline-flex;
   padding: var(--fh-space-1) var(--fh-space-4);
   border-radius: var(--md-sys-shape-corner-full);
+  position: relative;
+  overflow: hidden;
+}
+.fh-nav__pill::after,
+.fh-nav__item--beside::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+.fh-nav__item:hover .fh-nav__pill::after,
+.fh-nav__item--beside:hover::after {
+  opacity: var(--md-sys-state-hover-state-layer-opacity);
+}
+.fh-nav__item:active .fh-nav__pill::after,
+.fh-nav__item--beside:active::after {
+  opacity: var(--md-sys-state-pressed-state-layer-opacity);
+}
+.fh-nav__item--beside {
+  overflow: hidden;
 }
 .fh-nav__item--active .fh-nav__pill {
   background: var(--fh-nav-active);
@@ -122,7 +148,7 @@
 .fh-page-header__title {
   font-size: var(--md-sys-typescale-headline-medium-size);
   line-height: var(--md-sys-typescale-headline-medium-line-height);
-  font-weight: 500;
+  font-weight: var(--md-sys-typescale-headline-medium-weight);
   margin: 0;
 }
 .fh-page-header__subtitle {
@@ -138,7 +164,7 @@
 
 /* ---- Cards */
 .fh-card {
-  border-radius: var(--md-sys-shape-corner-medium);
+  border-radius: var(--md-sys-shape-corner-large);
   padding: var(--fh-space-4);
 }
 .fh-card--filled {
@@ -163,7 +189,8 @@
   border-radius: var(--md-sys-shape-corner-small);
   font-size: var(--md-sys-typescale-label-medium-size);
   line-height: var(--md-sys-typescale-label-medium-line-height);
-  font-weight: 500;
+  font-weight: var(--md-sys-typescale-label-medium-weight);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
 }
 .fh-status-chip__icon {
   font-size: var(--md-sys-typescale-label-large-size);
@@ -201,8 +228,14 @@
   color: var(--md-sys-color-on-surface);
   font: inherit;
   font-size: var(--md-sys-typescale-body-large-size);
-  outline: none;
   min-width: 0;
+}
+.fh-searchbar__input:focus-visible {
+  outline: none;
+}
+.fh-searchbar:focus-within {
+  outline: 2px solid var(--fh-focus-ring);
+  outline-offset: 2px;
 }
 
 /* ---- Code block */
@@ -260,7 +293,7 @@
 }
 .fh-state__title {
   font-size: var(--md-sys-typescale-title-large-size);
-  font-weight: 500;
+  font-weight: var(--md-sys-typescale-title-large-weight);
   margin: 0;
 }
 .fh-state__message {
@@ -307,9 +340,9 @@
   gap: var(--fh-space-3);
   background: var(--md-sys-color-inverse-surface);
   color: var(--md-sys-color-inverse-on-surface);
-  border-radius: var(--md-sys-shape-corner-small);
+  border-radius: var(--md-sys-shape-corner-extra-small);
   padding: var(--fh-space-3) var(--fh-space-4);
-  box-shadow: var(--md-sys-elevation-3);
+  box-shadow: var(--md-sys-elevation-2);
   z-index: 100;
   max-width: min(560px, 92vw);
 }
@@ -318,8 +351,13 @@
   border: none;
   color: var(--md-sys-color-inverse-primary);
   font: inherit;
-  font-weight: 500;
+  font-weight: var(--md-sys-typescale-label-large-weight);
   cursor: pointer;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--fh-space-2);
+  border-radius: var(--md-sys-shape-corner-full);
 }
 .fh-toast__close {
   background: none;
@@ -327,6 +365,20 @@
   color: inherit;
   font: inherit;
   cursor: pointer;
+  min-height: 48px;
+  min-width: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+.fh-toast__action:hover,
+.fh-toast__close:hover {
+  background: color-mix(
+    in srgb,
+    currentColor calc(var(--md-sys-state-hover-state-layer-opacity) * 100%),
+    transparent
+  );
 }
 
 /* ---- Offline banner + footer */
@@ -390,7 +442,7 @@
 .fh-diff__gutter {
   min-width: 1ch;
   user-select: none;
-  font-weight: 700;
+  font-weight: var(--md-sys-typescale-label-large-weight);
 }
 .fh-diff__text {
   flex: 1;

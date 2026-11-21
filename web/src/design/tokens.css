@@ -105,12 +105,67 @@
   --fh-space-7: 48px;
   --fh-space-8: 64px;
 
-  /* Motion. */
-  --md-sys-motion-duration-short: 100ms;
-  --md-sys-motion-duration-medium: 250ms;
-  --md-sys-motion-duration-long: 400ms;
+  /* Typescale weights and tracking (Material 3 baseline,
+     hand-maintained: the colour generator does not emit them). */
+  --md-sys-typescale-display-large-weight: 400;
+  --md-sys-typescale-display-medium-weight: 400;
+  --md-sys-typescale-display-small-weight: 400;
+  --md-sys-typescale-headline-large-weight: 400;
+  --md-sys-typescale-headline-medium-weight: 400;
+  --md-sys-typescale-headline-small-weight: 400;
+  --md-sys-typescale-title-large-weight: 400;
+  --md-sys-typescale-title-medium-weight: 500;
+  --md-sys-typescale-title-small-weight: 500;
+  --md-sys-typescale-body-large-weight: 400;
+  --md-sys-typescale-body-medium-weight: 400;
+  --md-sys-typescale-body-small-weight: 400;
+  --md-sys-typescale-label-large-weight: 500;
+  --md-sys-typescale-label-medium-weight: 500;
+  --md-sys-typescale-label-small-weight: 500;
+  --md-sys-typescale-display-large-tracking: -0.25px;
+  --md-sys-typescale-display-medium-tracking: 0px;
+  --md-sys-typescale-display-small-tracking: 0px;
+  --md-sys-typescale-headline-large-tracking: 0px;
+  --md-sys-typescale-headline-medium-tracking: 0px;
+  --md-sys-typescale-headline-small-tracking: 0px;
+  --md-sys-typescale-title-large-tracking: 0px;
+  --md-sys-typescale-title-medium-tracking: 0.15px;
+  --md-sys-typescale-title-small-tracking: 0.1px;
+  --md-sys-typescale-body-large-tracking: 0.5px;
+  --md-sys-typescale-body-medium-tracking: 0.25px;
+  --md-sys-typescale-body-small-tracking: 0.4px;
+  --md-sys-typescale-label-large-tracking: 0.1px;
+  --md-sys-typescale-label-medium-tracking: 0.5px;
+  --md-sys-typescale-label-small-tracking: 0.5px;
+
+  /* Motion (Material 3 tokens, Peak A2). The three legacy
+     duration aliases below the scale are kept for the landing
+     stylesheet until A5 rebuilds it. */
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium1: 250ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium3: 350ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-duration-long1: 450ms;
+  --md-sys-motion-duration-long2: 500ms;
+  --md-sys-motion-duration-long3: 550ms;
+  --md-sys-motion-duration-long4: 600ms;
+  --md-sys-motion-duration-extra-long1: 700ms;
+  --md-sys-motion-duration-extra-long2: 800ms;
+  --md-sys-motion-duration-extra-long3: 900ms;
+  --md-sys-motion-duration-extra-long4: 1000ms;
   --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
   --md-sys-motion-easing-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-sys-motion-duration-short: var(--md-sys-motion-duration-short2);
+  --md-sys-motion-duration-medium: var(--md-sys-motion-duration-medium1);
+  --md-sys-motion-duration-long: var(--md-sys-motion-duration-medium4);
 
   /* State-layer opacities. */
   --md-sys-state-hover-state-layer-opacity: 0.08;

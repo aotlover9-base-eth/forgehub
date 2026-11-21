@@ -78,6 +78,78 @@ for (const path of walk(srcRoot)) {
   });
 }
 
+// Required-token check (Peak A2): the typescale weight and
+// tracking tokens, the full M3 duration scale, the easing set
+// and the state-layer opacities must exist in tokens.css -
+// components reference them, and a regeneration that dropped
+// them would fail silently in the browser. Values are checked
+// where the M3 spec fixes them.
+const tokensCss = readFileSync(join(srcRoot, 'design', 'tokens.css'), 'utf8');
+const typeStyles = [
+  'display-large',
+  'display-medium',
+  'display-small',
+  'headline-large',
+  'headline-medium',
+  'headline-small',
+  'title-large',
+  'title-medium',
+  'title-small',
+  'body-large',
+  'body-medium',
+  'body-small',
+  'label-large',
+  'label-medium',
+  'label-small',
+];
+const required = [];
+for (const style of typeStyles) {
+  required.push(`--md-sys-typescale-${style}-weight:`);
+  required.push(`--md-sys-typescale-${style}-tracking:`);
+}
+for (const name of [
+  'short1',
+  'short2',
+  'short3',
+  'short4',
+  'medium1',
+  'medium2',
+  'medium3',
+  'medium4',
+  'long1',
+  'long2',
+  'long3',
+  'long4',
+  'extra-long1',
+  'extra-long2',
+  'extra-long3',
+  'extra-long4',
+]) {
+  required.push(`--md-sys-motion-duration-${name}:`);
+}
+for (const name of [
+  'standard',
+  'standard-decelerate',
+  'standard-accelerate',
+  'emphasized',
+  'emphasized-decelerate',
+  'emphasized-accelerate',
+]) {
+  required.push(`--md-sys-motion-easing-${name}:`);
+}
+required.push('--md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1)');
+required.push('--md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15)');
+required.push('--md-sys-state-hover-state-layer-opacity: 0.08');
+required.push('--md-sys-state-focus-state-layer-opacity: 0.1');
+required.push('--md-sys-state-pressed-state-layer-opacity: 0.1');
+required.push('--md-sys-state-dragged-state-layer-opacity: 0.16');
+for (const token of required) {
+  if (!tokensCss.includes(token)) {
+    console.error(`check-tokens: tokens.css is missing required token: ${token}`);
+    failures += 1;
+  }
+}
+
 if (failures > 0) {
   console.error(`check-tokens: ${failures} violation(s). Use tokens.css variables instead.`);
   process.exit(1);
