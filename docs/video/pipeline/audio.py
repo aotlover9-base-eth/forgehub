@@ -51,6 +51,22 @@ Cue map (absolute seconds; scene starts at 0/10/20/30/
   of the bed, and fades out over the last 2 s. Still
   100% synthesized - chords and melody are sine
   partials with envelopes, nothing recorded.
+- Voice-over (added 2026-11-21): the six script lines
+  from docs/video/script.md, synthesized verbatim with
+  the tts CLI (voice: Aria, avocado_v2:MAI_01 - warm,
+  friendly, neutral English) into $WORK/vo/line1..6.mp3
+  at speed 100 - see docs/video/script.md for the exact
+  commands. Every line measured 6.0-8.9 s raw and fits
+  its scene at natural speed; no atempo was needed.
+  build_vo() trims the head/tail silence off each line,
+  level-matches the six to -19 LUFS each, and places
+  them at the caption starts (0.5 / 10.4 / 20.4 / 30.3 /
+  40.4 / 50.5). While any line is speaking, everything
+  else (bed, music, ticks, clicks, blips) ducks by
+  about 9 dB with 0.3 s ramps - speech clarity first.
+  The VO files live in the work directory, not the
+  repo; build_vo() stops with the synthesis commands
+  if one is missing.
 """
 
 import argparse
@@ -196,6 +212,29 @@ BGM_ENV = (
     "if(lt(t,58),1,(60-t)/2)))))))"
 )
 
+# Voice-over placement: (line, offset, latest end) -
+# the offset is the scene's first caption start (0.3-
+# 0.5 s after the cut, so the voice lands with the
+# captions) and the latest end is the scene's last
+# caption end. build_vo() refuses a line whose trimmed
+# speech would cross its latest end.
+VO_LINES = [
+    (1, 0.5, 9.8),
+    (2, 10.4, 19.8),
+    (3, 20.4, 29.8),
+    (4, 30.3, 39.8),
+    (5, 40.4, 49.8),
+    (6, 50.5, 59.5),
+]
+# Each line is gain-matched to this integrated level
+# before the master pass, so the narration sits evenly
+# from scene to scene.
+VO_TARGET_LUFS = -19.0
+# Ducking under speech: everything but the voice drops
+# to this factor (about -9 dB) with smooth ramps.
+DUCK_DEPTH = 0.35
+DUCK_RAMP = 0.3
+
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True)
@@ -230,6 +269,89 @@ def measure(path: Path) -> tuple[float, float]:
         sys.exit(f"loudnorm measurement failed:\n{r.stderr[-800:]}")
     d = json.loads(m.group(0))
     return float(d["input_i"]), float(d["input_tp"])
+
+
+def probe_duration(path: Path) -> float:
+    r = run(["ffprobe", "-v", "error", "-show_entries",
+             "format=duration", "-of", "csv=p=0", str(path)])
+    return float(r.stdout.strip())
+
+
+def build_vo(work: Path, d: Path) -> list[dict]:
+    """Prepare the six voice-over lines for the mix.
+
+    Reads $WORK/vo/line{n}.mp3 (the raw tts renders,
+    kept outside the repo), trims the silence at both
+    ends (internal pauses are the performance and stay),
+    and gain-matches each line to VO_TARGET_LUFS. The
+    speech span is found with silencedetect rather than
+    assumed, and a line that would overrun its scene is
+    a hard stop, not a quiet bleed into the next one.
+    """
+    out: list[dict] = []
+    for n, offset, latest_end in VO_LINES:
+        src = work / "vo" / f"line{n}.mp3"
+        if not src.exists():
+            sys.exit(
+                f"missing voice-over source {src}\n"
+                "synthesize the six lines first (voice Aria, "
+                "avocado_v2:MAI_01, speed 100) - the exact "
+                "commands are in docs/video/script.md")
+        raw = probe_duration(src)
+        r = run(["ffmpeg", "-i", str(src), "-af",
+                 "silencedetect=noise=-40dB:d=0.2", "-f", "null", "-"])
+        starts = [float(x) for x in re.findall(
+            r"silence_start: ([\d.]+)", r.stderr)]
+        ends = [float(x) for x in re.findall(
+            r"silence_end: ([\d.]+)", r.stderr)]
+        silences = list(zip(starts, ends))
+        start, end = 0.0, raw
+        if silences and silences[0][0] < 0.05:
+            start = silences[0][1]
+        if silences and abs(silences[-1][1] - raw) < 0.05:
+            end = silences[-1][0]
+        t0 = max(0.0, start - 0.05)
+        t1 = min(raw, end + 0.05)
+        wav = d / f"vo{n}.wav"
+        r = run(["ffmpeg", "-y", "-loglevel", "error",
+                 "-ss", f"{t0:.3f}", "-to", f"{t1:.3f}",
+                 "-i", str(src), "-ar", str(SR), "-ac", "2",
+                 str(wav)])
+        if r.returncode != 0:
+            sys.exit(f"VO trim failed for line {n}:\n{r.stderr}")
+        dur = probe_duration(wav)
+        if offset + dur > latest_end:
+            sys.exit(
+                f"VO line {n} overruns its scene: offset "
+                f"{offset:.1f} + {dur:.2f} s > {latest_end:.1f} s")
+        i_lufs, _ = measure(wav)
+        gain = VO_TARGET_LUFS - i_lufs
+        print(f"vo{n}: raw {raw:.3f} s -> trimmed {dur:.3f} s, "
+              f"placed at {offset:.1f} s (ends {offset + dur:.2f} s), "
+              f"level {i_lufs:.2f} LUFS -> gain {gain:+.2f} dB")
+        out.append({"path": wav, "offset": offset, "dur": dur,
+                    "gain_db": gain})
+    return out
+
+
+def duck_expr(windows: list[tuple[float, float]]) -> str:
+    """A volume expression dipping to DUCK_DEPTH in VO windows.
+
+    Windows are disjoint and seconds apart, so nesting
+    one if-chain per window (falling through to the
+    next outside its ramps) is exact.
+    """
+    expr = "1"
+    for a, b in reversed(windows):
+        lo, hi = a - DUCK_RAMP, b + DUCK_RAMP
+        expr = (
+            f"if(lt(t,{lo:.3f}),{expr},"
+            f"if(lt(t,{a:.3f}),1-(1-{DUCK_DEPTH})*(t-{lo:.3f})/{DUCK_RAMP},"
+            f"if(lt(t,{b:.3f}),{DUCK_DEPTH},"
+            f"if(lt(t,{hi:.3f}),{DUCK_DEPTH}"
+            f"+(1-{DUCK_DEPTH})*(t-{b:.3f})/{DUCK_RAMP},"
+            f"{expr}))))")
+    return expr
 
 
 def build_prototypes(d: Path) -> None:
@@ -391,7 +513,7 @@ def delay(ms_time: float) -> str:
     return f"adelay={ms}|{ms}"
 
 
-def build_raw_mix(d: Path) -> None:
+def build_raw_mix(d: Path, vo: list[dict]) -> None:
     ticks = tick_times()
     parts: list[str] = []
     labels: list[str] = ["[0:a]", "[4:a]"]
@@ -428,35 +550,53 @@ def build_raw_mix(d: Path) -> None:
     for i, t in enumerate(BLIPS):
         parts.append(f"[b{i}]{delay(t)}[be{i}]")
         labels.append(f"[be{i}]")
+    # Everything but the voice becomes one premix, which
+    # ducks under each VO window; the six lines are then
+    # summed on top at their scene offsets.
+    windows = [(v["offset"] - 0.05, v["offset"] + v["dur"] + 0.05)
+               for v in vo]
     parts.append(
         f"{''.join(labels)}amix=inputs={len(labels)}:normalize=0,"
+        f"volume='{duck_expr(windows)}':eval=frame[ducked]")
+    final: list[str] = ["[ducked]"]
+    for i, v in enumerate(vo):
+        parts.append(
+            f"[{5 + i}:a]volume={v['gain_db']:.2f}dB,"
+            f"{delay(v['offset'])}[vo{i}]")
+        final.append(f"[vo{i}]")
+    parts.append(
+        f"{''.join(final)}amix=inputs={len(final)}:normalize=0,"
         "atrim=0:60,asetpts=N/SR/TB[out]")
     ffmpeg_filter(
         d / "mix_raw.wav",
         [str(d / "bed.wav"), str(d / "tick.wav"),
          str(d / "click.wav"), str(d / "blip.wav"),
-         str(d / "bgm.wav")],
+         str(d / "bgm.wav")]
+        + [str(v["path"]) for v in vo],
         ";".join(parts), ["-map", "[out]", "-ar", str(SR)])
 
 
 def master(d: Path) -> tuple[float, float]:
     """Static gain to about -16 LUFS, verified under -1 dBTP.
 
-    alimiter caps the sample peak at -1 dB, but broadband
-    transients can still overshoot between samples, so the
-    true peak is measured after every pass and the gain is
-    backed off until the measurement complies. The numbers
-    returned are the final measured ones, not targets.
+    alimiter caps the sample peak just under -1 dB
+    (0.87, about -1.2 dB - a ceiling of exactly -1 dB
+    measures back as -0.99 dBTP, which does not comply),
+    but broadband transients can still overshoot between
+    samples, so the true peak is measured after every
+    pass and the gain is backed off until the
+    measurement complies. The numbers returned are the
+    final measured ones, not targets.
     """
     src = d / "mix_raw.wav"
     out = d / "mix.wav"
     i0, _ = measure(src)
     gain = -16.0 - i0
     i1 = tp1 = 0.0
-    for attempt in range(3):
+    for attempt in range(6):
         r = run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src),
                  "-af", f"volume={gain:.2f}dB,"
-                        "alimiter=limit=0.891:attack=5:release=100:level=0,"
+                        "alimiter=limit=0.87:attack=5:release=100:level=0,"
                         "atrim=0:60,asetpts=N/SR/TB",
                  "-ar", str(SR), str(out)])
         if r.returncode != 0:
@@ -465,12 +605,15 @@ def master(d: Path) -> tuple[float, float]:
         print(f"master pass {attempt + 1}: gain {gain:+.2f} dB -> "
               f"integrated {i1:.2f} LUFS, true peak {tp1:.2f} dBTP")
         if tp1 > -1.0:
-            gain -= (tp1 + 1.0) + 0.15
+            gain -= (tp1 + 1.0) + 0.3
             continue
-        if i1 < -16.8 and attempt < 2:
+        if i1 < -16.8 and attempt < 5:
             gain += (-16.0 - i1)
             continue
         break
+    if tp1 > -1.0:
+        sys.exit(f"mastering could not reach a true peak at or "
+                 f"below -1 dBTP (last: {tp1:.2f} dBTP)")
     return i1, tp1
 
 
@@ -485,7 +628,8 @@ def main() -> None:
     build_prototypes(d)
     build_bed(d)
     build_bgm(d)
-    build_raw_mix(d)
+    vo = build_vo(Path(args.work), d)
+    build_raw_mix(d, vo)
     i1, tp1 = master(d)
     print(f"mix: {d / 'mix.wav'}")
     print(f"final: integrated {i1:.2f} LUFS, true peak {tp1:.2f} dBTP, "

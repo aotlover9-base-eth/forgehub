@@ -1,10 +1,33 @@
 # ForgeHub intro video - script
 
-The video has **no voice-over** (none exists; see
-generation-log.md for why). It does carry a fully
-synthesized sound-effects track - see Sound design at
-the end of this file. This is the full voice-over
-script as approved in the brief: it runs as the burned-in
+The video's voice-over was recorded on 2026-11-21
+(the first two audio passes shipped without one - see
+generation-log.md). One voice throughout: **Aria**
+(`avocado_v2:MAI_01` - warm, friendly, neutral
+English), synthesized with the tts CLI at speed 100
+from the six scene lines below, word for word - the
+same text as the captions. Each line was measured,
+trimmed of its head/tail silence, level-matched to
+-19 LUFS, and placed at its scene's first caption
+start; everything else in the mix ducks about 9 dB
+under the speech. Spoken spans (raw render length in
+brackets): scene 1: 0.5-8.8 [8.59 s]; scene 2:
+10.4-18.0 [7.99 s]; scene 3: 20.4-28.6 [8.52 s];
+scene 4: 30.3-38.9 [8.93 s]; scene 5: 40.4-47.9
+[7.87 s]; scene 6: 50.5-56.6 [6.05 s]. No line
+needed speeding up - all six fit their scenes at a
+natural pace. To re-render a line, feed the scene's
+joined VO text on stdin:
+
+    /opt/hatch/bin/tts speak --voice avocado_v2:MAI_01 \
+      --language en --speed 100 \
+      --output ~/workspace/.video-work/vo/line<N>.mp3 \
+      --text-stdin
+
+Under the voice sits a fully synthesized
+sound-effects track - see Sound design at the end of
+this file. The script below is the voice-over script
+as approved in the brief: it runs as the burned-in
 captions on intro-1080p-captioned.mp4 and as the caption
 track (captions.vtt / captions.srt, and the landing
 page's <track>) on the main file. The shorter lines are
@@ -71,15 +94,22 @@ second; every cue sits inside its scene.
 
 ## Sound design (synthesized, added 2026-11-21)
 
-Every sound is synthesized with ffmpeg from sine and
-noise sources by docs/video/pipeline/audio.py - no
-external audio files, no recordings. Still no
-voice-over: the words are carried by the captions and
-this script. Master measurements (loudnorm on the WAV
-master; ebur128 agrees at -15.9 LUFS): integrated
--16.0 LUFS, true peak -2.4 dBTP. The encoded files
-measure -16.0 LUFS / -2.5 dBTP (AAC) and -16.0 LUFS /
--2.3 dBTP (Opus). All times are absolute seconds.
+Every sound under the voice is synthesized with
+ffmpeg from sine and noise sources by
+docs/video/pipeline/audio.py - no external audio
+files, no recordings. (The voice-over itself is the
+one recorded element; see the top of this file.)
+Master measurements at the rebalance (loudnorm on
+the WAV master; ebur128 agrees at -15.9 LUFS):
+integrated -16.0 LUFS, true peak -2.4 dBTP. The
+encoded files measure -16.0 LUFS / -2.5 dBTP (AAC)
+and -16.0 LUFS / -2.3 dBTP (Opus). Voice-over pass
+(later the same day): master -16.02 LUFS / -1.14
+dBTP (ebur128: -15.9 LUFS, -1.1 dBFS peak); encoded
+AAC -16.05 LUFS / -1.20 dBTP; Opus -16.72 LUFS /
+-1.64 dBTP (the Opus encode takes a -0.7 dB trim -
+it overshoots true peak further than AAC from the
+same master). All times are absolute seconds.
 
 Rebalanced later the same day at the owner's ear: the
 key ticks were halved (they read as too loud) and a

@@ -22,19 +22,27 @@ captures and all app views are real screenshots - see
   screenshots every frame, encodes one MP4 segment per
   scene into $VIDEO_WORK/segments, plus the poster source
   frame. Playwright is resolved from web/node_modules.
-- `audio.py` - the sound design. Every sound is
-  synthesized with ffmpeg from sine and noise sources
-  (no external audio files): key-tick patter over the
-  typing (halved in the rebalance pass), soft clicks
-  on Save and Approve, two-tone confirm blips, a
-  six-partial sine pad under brown room tone, and a
-  synthesized music bed (a chord-pad progression with
-  a sparse plucked-sine melody), all timed from the
-  scene timings in build_scenes.py. It writes $VIDEO_WORK/audio/mix.wav,
-  loudness-adjusted to about -16 LUFS with true peak at
-  or below -1 dBTP (measured with loudnorm; the script
-  prints the real numbers). The cue list lives in
-  ../script.md.
+- `audio.py` - the sound design and the voice-over.
+  Every sound under the voice is synthesized with
+  ffmpeg from sine and noise sources (no external
+  audio files): key-tick patter over the typing
+  (halved in the rebalance pass), soft clicks on Save
+  and Approve, two-tone confirm blips, a six-partial
+  sine pad under brown room tone, and a synthesized
+  music bed (a chord-pad progression with a sparse
+  plucked-sine melody), all timed from the scene
+  timings in build_scenes.py. The voice-over is the
+  one recorded element: the six script lines,
+  synthesized with the tts CLI (voice Aria) into
+  $VIDEO_WORK/vo/line1..6.mp3 - audio.py stops with
+  the exact commands if they are missing (they are
+  also in ../script.md). It trims and level-matches
+  the lines, ducks everything else about 9 dB under
+  the speech, and writes $VIDEO_WORK/audio/mix.wav,
+  loudness-adjusted to about -16 LUFS with true peak
+  at or below -1 dBTP (measured with loudnorm; the
+  script prints the real numbers). The cue list
+  lives in ../script.md.
 - `build.sh` - builds the audio mix via audio.py,
   concatenates the segments (hard cuts), lays the mix
   under them, and writes every final deliverable into

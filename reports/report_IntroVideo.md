@@ -203,8 +203,10 @@ so the one-command rebuild reproduces the track).
   60.000 s (the WebM container reports 60.008 s, it
   was 60.018 s before). Hero loops untouched and
   still silent. No application code changed.
-- **Still no voice-over** - captions, script.md and
-  the landing transcript carry the words, as before.
+- **No voice-over in this pass** - captions,
+  script.md and the landing transcript carried the
+  words. (Superseded later the same day - see the
+  voice-over entry at the end of this addendum.)
 - **Rebalance (same day, owner feedback):** the
   typing clicks were halved (a `TICK_GAIN` of 0.5 on
   the patter only - clicks, blips and scene 4's panel
@@ -222,3 +224,33 @@ so the one-command rebuild reproduces the track).
   unchanged), durations still 60.000 s; new sizes
   9,736,063 B / 8,486,083 B / 4,733,710 B. Hero loops
   untouched.
+- **Voice-over (same day, later; owner request):**
+  the six script lines are now actually spoken.
+  Voice: **Aria** (`avocado_v2:MAI_01` - warm,
+  friendly, neutral English), one voice throughout,
+  synthesized verbatim from script.md at natural
+  speed (tts speed 100; no atempo - every line fit
+  its scene as rendered). Raw -> trimmed durations:
+  8.59 -> 8.31 s, 7.99 -> 7.63 s, 8.52 -> 8.17 s,
+  8.93 -> 8.56 s, 7.87 -> 7.52 s, 6.05 -> 6.05 s;
+  placed at the caption starts 0.5 / 10.4 / 20.4 /
+  30.3 / 40.4 / 50.5, ending at 8.81 / 18.03 /
+  28.57 / 38.86 / 47.92 / 56.55 - inside every
+  scene, in sync with the captions. audio.py's new
+  build_vo step trims, level-matches the lines to
+  -19 LUFS each, and refuses an overrunning line;
+  the rest of the mix (bed, music, ticks, clicks,
+  blips) ducks about 9 dB under each spoken window
+  with 0.3 s ramps. Mastering: the limiter ceiling
+  moved from exactly -1 dB to 0.87 (about -1.2 dB)
+  after the -1 dB ceiling measured back as
+  -0.99 dBTP, and the pass now hard-fails if the
+  true peak exceeds -1 dBTP. Measured: master
+  -16.02 LUFS / -1.14 dBTP (ebur128 -15.9 LUFS);
+  AAC -16.05 / -1.20 dBTP; Opus -16.72 / -1.64 dBTP
+  (Opus took a -0.7 dB encode trim for true peak).
+  Video streams copied bit-for-bit (streamhash MD5s
+  unchanged), durations 60.000 s; new sizes
+  9,736,711 B / 8,486,731 B / 4,729,733 B. The
+  intro-video release assets were updated and
+  size-verified. Hero loops untouched, still silent.

@@ -185,7 +185,8 @@ day after the render, by docs/video/pipeline/audio.py
   untouched and remain silent by design.
 - build.sh now runs audio.py and lays mix.wav under
   the concat, so the one-command rebuild reproduces
-  this track. Still no voice-over.
+  this track. No voice-over yet (it arrives in the
+  voice-over pass at the end of this section).
 - Rebalance pass (2026-11-21, later; owner feedback
   after listening): two changes, both in audio.py.
   (1) The key-tick patter was halved - a TICK_GAIN of
@@ -222,3 +223,62 @@ day after the render, by docs/video/pipeline/audio.py
   intro-1080p-captioned.mp4 8,486,083 B,
   intro-1080p.webm 4,733,710 B. Hero loops untouched
   and still silent.
+
+### Voice-over pass (2026-11-21, later still)
+
+- The owner asked for the voice-over, so the six
+  script lines were recorded for real. Voice: **Aria**
+  (`avocado_v2:MAI_01` - warm, friendly, neutral
+  English), one voice for all six lines, synthesized
+  with the tts CLI at speed 100, each line's text fed
+  verbatim from script.md (the caption text, joined at
+  the sentence boundaries). The raw renders live
+  outside the repo in ~/workspace/.video-work/vo/
+  (line1..6.mp3); the exact commands are in
+  script.md.
+- Timing, measured with ffprobe + silencedetect
+  (raw length -> trimmed speech span, placed at the
+  scene's first caption start): line 1: 8.59 -> 8.31 s
+  at 0.5 (ends 8.81); line 2: 7.99 -> 7.63 s at 10.4
+  (ends 18.03); line 3: 8.52 -> 8.17 s at 20.4 (ends
+  28.57); line 4: 8.93 -> 8.56 s at 30.3 (ends 38.86);
+  line 5: 7.87 -> 7.52 s at 40.4 (ends 47.92);
+  line 6: 6.05 -> 6.05 s at 50.5 (ends 56.55). Every
+  line fits inside its scene at natural speed - no
+  tts speed-up and no atempo anywhere. The silence
+  maps show the expected sentence pauses (three to
+  four per line), which is the duration/structure
+  check that each file holds its intended words.
+- Mix: audio.py gained a build_vo step - it trims
+  each line's head/tail silence (silencedetect, not
+  assumption), gain-matches the six to -19 LUFS each,
+  and hard-stops if a line would cross its scene's
+  last caption end. In the mix, everything but the
+  voice (bed, music, ticks, clicks, blips) ducks to
+  0.35 (about -9 dB) under each spoken window with
+  0.3 s ramps. Per-scene loudness of the new master
+  is uniform (-15.5 to -16.9 LUFS per 10 s scene) -
+  the narration carries every scene, scene 4
+  included.
+- Mastering note: with speech transients in the mix,
+  a limiter ceiling of exactly -1 dB measured back
+  as -0.99 dBTP and would not comply, so the ceiling
+  moved to 0.87 (about -1.2 dB) and the pass now
+  fails loudly if the true peak still exceeds
+  -1 dBTP. Final master: -16.02 LUFS integrated,
+  -1.14 dBTP (loudnorm; ebur128: -15.9 LUFS,
+  -1.1 dBFS peak).
+- Delivery: audio replaced in the three intro
+  files, video copied bit-for-bit (streamhash MD5s
+  unchanged: a9ad7ad1... main, c41d8eb0... captioned,
+  9445b87a... webm). Encoded tracks: AAC -16.05 LUFS
+  / -1.20 dBTP; Opus -16.72 LUFS / -1.64 dBTP (the
+  Opus encode needed a -0.7 dB trim - from the same
+  master it overshot to -0.85 dBTP). Durations
+  60.000 s (MP4s), WebM container 60.008 s as
+  before. New sizes: intro-1080p.mp4 9,736,711 B,
+  intro-1080p-captioned.mp4 8,486,731 B,
+  intro-1080p.webm 4,729,733 B. The intro-video
+  GitHub release assets were re-uploaded (--clobber)
+  and the new sizes verified there. Hero loops
+  untouched and still silent.
