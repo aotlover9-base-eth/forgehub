@@ -1,0 +1,49 @@
+name: Visual goldens (manual, Peak A8)
+
+# Manually dispatched helper: generates the A8 visual
+# goldens on a healthy runner and uploads them as an
+# artifact, because the dev sandbox's write fault blocks
+# the local server/sqlite the suite needs. Temporary:
+# removed by the A8 commit that lands the goldens.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  goldens:
+    name: Generate visual goldens
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build server
+        run: cargo build -p forge-server
+      - name: Install web deps and build the SPA
+        working-directory: web
+        run: |
+          npm ci --legacy-peer-deps
+          npm run build
+      - name: Install the headless browser
+        working-directory: web
+        run: npx playwright install --with-deps chromium-headless-shell
+      - name: Generate goldens
+        run: bash scripts/visual-web.sh --update --skip-build
+      - name: Check run against the fresh goldens
+        run: bash scripts/visual-web.sh --skip-build
+      - name: Upload goldens
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: visual-goldens
+          path: web/e2e/visual/__screenshots__/
+          if-no-files-found: error

@@ -7,6 +7,9 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  // Visual goldens live where the Peak plan puts them
+  // (A8): web/e2e/visual/__screenshots__/<name>.png
+  snapshotPathTemplate: '{testDir}/visual/__screenshots__/{arg}{ext}',
   timeout: 60_000,
   retries: 0,
   reporter: [['list']],
