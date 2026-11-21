@@ -45,7 +45,8 @@ test('web story: signup, create, edit, diff, token, device', async ({ page, cont
   await expect(page).toHaveURL(/\/new$/);
   await page.getByRole('textbox', { name: 'Name' }).fill('ubuntu-setup');
   await page.getByRole('textbox', { name: 'Description' }).fill('Browser E2E demo');
-  await page.locator('label', { hasText: 'Public' }).first().click();
+  // Peak A5: visibility is a segmented control now, not radios.
+  await page.getByRole('button', { name: 'Public', exact: true }).click();
   await page.locator('textarea[aria-label="Script body"]').fill('echo browser-v1');
   await button('Save snippet').click();
   await expect(page).toHaveURL(/\/webuser\/ubuntu-setup$/);

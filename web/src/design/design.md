@@ -47,6 +47,21 @@ md-icon-button with a mandatory text `label` (aria-label + title).
 ### Icon
 Material Symbols (self-hosted variable font), sizes from the icon tokens.
 Decorative by default (`aria-hidden`); meaning is carried by labels.
+**The font is a subset**: only these names render - access_time,
+account_circle, add, app_registration, arrow_back, bookmark, call_split,
+check, chevron_right, clear, close, code, content_copy, contrast, create,
+dark_mode, delete, devices, download, edit, error, expand_more, explore,
+file_download, file_upload, filter_list, grade, help, history, home,
+https, info, key, library_books, light_mode, link, local_offer, lock,
+login, logout, menu, more_vert, person, phonelink, play_arrow, public,
+refresh, report, restore, save_alt, schedule, search, sell, send,
+settings, share, shield, sort, star, tag, terminal, update, upload,
+verified, visibility, visibility_off, warning, watch_later (plus the
+`*_outline` / `*_filled` variants of several). A name outside the subset
+renders as raw text - Peak A5 shipped that bug once (cloud_upload,
+density_medium, checklist, open_in_new) and caught it in screenshots.
+Check this list before using a new icon; extending the subset means
+regenerating the font, not just typing the name.
 
 ### Fab
 md-fab; with `text` it renders the extended FAB (expanded layouts).

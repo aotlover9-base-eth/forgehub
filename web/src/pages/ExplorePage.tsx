@@ -7,9 +7,9 @@ import {
   EmptyState,
   ErrorState,
   Icon,
-  Menu,
   PageHeader,
   SearchBar,
+  SegmentedControl,
   Skeleton,
 } from '../design';
 import { ApiError } from '../api/client';
@@ -84,9 +84,9 @@ function SnippetCard({ snippet, nameNode, descNode }: { snippet: Snippet; nameNo
 }
 
 const SORTS: { id: SearchSort; label: string }[] = [
-  { id: 'relevance', label: 'Most relevant' },
+  { id: 'relevance', label: 'Relevance' },
   { id: 'stars', label: 'Most stars' },
-  { id: 'updated', label: 'Recently updated' },
+  { id: 'updated', label: 'Recent' },
 ];
 
 export default function ExplorePage() {
@@ -146,7 +146,7 @@ export default function ExplorePage() {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--fh-space-2)' }}>
             <span style={{ flex: 1 }} />
-            <Menu buttonLabel="Sort results" buttonIcon="sort" items={SORTS.map((s) => ({ id: s.id, label: s.label }))} onSelect={(id) => setSort(id as SearchSort)} />
+            <SegmentedControl ariaLabel="Sort results" options={SORTS} value={sort} onChange={setSort} />
           </div>
           {search.isPending ? (
             <Skeleton lines={4} />

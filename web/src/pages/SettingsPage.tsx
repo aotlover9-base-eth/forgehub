@@ -13,11 +13,14 @@ import {
   Radio,
   SelectField,
   Skeleton,
+  Switch,
   Tabs,
   TextField,
   resolveTheme,
+  useDensity,
   useThemePreference,
   useToast,
+  useWidthClass,
   type ThemePreference,
 } from '../design';
 import { ApiError } from '../api/client';
@@ -38,33 +41,81 @@ import { passwordIssue, relativeTime } from '../validation';
 
 const TAB_IDS = ['appearance', 'profile', 'security', 'tokens', 'cli', 'danger'] as const;
 
+const SECTION_LABELS: Record<string, string> = {
+  appearance: 'Appearance',
+  profile: 'Profile',
+  security: 'Security',
+  tokens: 'Tokens',
+  cli: 'CLI',
+  danger: 'Danger zone',
+};
+
+function sectionElement(id: string) {
+  switch (id) {
+    case 'appearance':
+      return <AppearanceTab />;
+    case 'profile':
+      return <ProfileTab />;
+    case 'security':
+      return <SecurityTab />;
+    case 'tokens':
+      return <TokensTab />;
+    case 'cli':
+      return <CliTab />;
+    default:
+      return <DangerTab />;
+  }
+}
+
 export default function SettingsPage() {
   const me = useMe();
   const [tab, setTab] = useState(0);
+  const widthClass = useWidthClass();
   if (!me.data) return null;
   const user = me.data;
+  const activeId = TAB_IDS[tab];
   return (
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
       <PageHeader title="Settings" subtitle={`Signed in as ${user.username}`} />
-      <Tabs
-        ariaLabel="Settings sections"
-        tabs={[
-          { id: 'appearance', label: 'Appearance' },
-          { id: 'profile', label: 'Profile' },
-          { id: 'security', label: 'Security' },
-          { id: 'tokens', label: 'Tokens' },
-          { id: 'cli', label: 'CLI' },
-          { id: 'danger', label: 'Danger zone' },
-        ]}
-        activeIndex={tab}
-        onChange={setTab}
-      />
-      {TAB_IDS[tab] === 'appearance' ? <AppearanceTab /> : null}
-      {TAB_IDS[tab] === 'profile' ? <ProfileTab /> : null}
-      {TAB_IDS[tab] === 'security' ? <SecurityTab /> : null}
-      {TAB_IDS[tab] === 'tokens' ? <TokensTab /> : null}
-      {TAB_IDS[tab] === 'cli' ? <CliTab /> : null}
-      {TAB_IDS[tab] === 'danger' ? <DangerTab /> : null}
+      {widthClass === 'compact' ? (
+        // Compact: every section stacked with its own head.
+        <div style={{ display: 'grid', gap: 'var(--fh-space-5)' }}>
+          {TAB_IDS.map((id) => (
+            <section key={id} aria-label={SECTION_LABELS[id]}>
+              <h2 className="fh-settings-section-title">{SECTION_LABELS[id]}</h2>
+              {sectionElement(id)}
+            </section>
+          ))}
+        </div>
+      ) : widthClass === 'expanded' ? (
+        // Expanded: vertical tab rail on the left.
+        <div style={{ display: 'flex', gap: 'var(--fh-space-5)', alignItems: 'flex-start' }}>
+          <nav className="fh-settings-nav" aria-label="Settings sections">
+            {TAB_IDS.map((id, index) => (
+              <button
+                key={id}
+                type="button"
+                aria-current={index === tab ? 'page' : undefined}
+                className={`fh-settings-nav__item${index === tab ? ' fh-settings-nav__item--active' : ''}`}
+                onClick={() => setTab(index)}
+              >
+                {SECTION_LABELS[id]}
+              </button>
+            ))}
+          </nav>
+          <div style={{ flex: 1, minWidth: 0 }}>{sectionElement(activeId)}</div>
+        </div>
+      ) : (
+        <>
+          <Tabs
+            ariaLabel="Settings sections"
+            tabs={TAB_IDS.map((id) => ({ id, label: SECTION_LABELS[id] }))}
+            activeIndex={tab}
+            onChange={setTab}
+          />
+          {sectionElement(activeId)}
+        </>
+      )}
     </div>
   );
 }
@@ -77,6 +128,7 @@ const THEME_OPTIONS: { id: ThemePreference; label: string; help: string }[] = [
 
 function AppearanceTab() {
   const [pref, setPref] = useThemePreference();
+  const [density, setDensity] = useDensity();
   return (
     <Card>
       <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
@@ -98,7 +150,19 @@ function AppearanceTab() {
           ))}
         </div>
       </fieldset>
-      <p>Currently showing the {resolveTheme(pref)} scheme. The same choice lives in the app bar, under Theme.</p>
+      <p>Currently showing the {resolveTheme(pref)} scheme. The same choice lives in the app bar account menu.</p>
+      <div>
+        <p style={{ fontWeight: 500, margin: '0 0 var(--fh-space-2)' }}>Density</p>
+        <Switch
+          checked={density === 'compact'}
+          onChange={(compact) => setDensity(compact ? 'compact' : 'comfortable')}
+          label="Compact list density"
+        />
+        <p style={{ color: 'var(--md-sys-color-on-surface-variant)', margin: 'var(--fh-space-1) 0 0' }}>
+          Compact tightens the rows in Library and other snippet lists. The Library toolbar has the
+          same switch.
+        </p>
+      </div>
     </Card>
   );
 }

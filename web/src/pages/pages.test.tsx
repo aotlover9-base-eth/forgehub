@@ -230,7 +230,10 @@ describe('HomePage', () => {
       http.get('/api/v1/explore', () => HttpResponse.json({ snippets: [], next_cursor: null })),
     );
     renderPage(<HomePage />, '/home');
-    await waitFor(() => expect(screen.getByText('Save your first snippet')).toBeTruthy());
+    // Peak A5: the empty library shows the two-step start
+    // (CLI first) with the web create action.
+    await waitFor(() => expect(screen.getByText('Two steps to your first saved command')).toBeTruthy());
+    expect(screen.getByText('Or create a snippet on the web')).toBeTruthy();
   });
 });
 

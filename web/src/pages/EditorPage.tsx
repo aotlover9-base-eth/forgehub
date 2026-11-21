@@ -9,7 +9,7 @@ import {
   Icon,
   IconButton,
   PageHeader,
-  Radio,
+  SegmentedControl,
   Skeleton,
   Switch,
   Tabs,
@@ -120,15 +120,16 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
   const escArmed = useRef(false);
   const gutterRef = useRef<HTMLDivElement>(null);
 
+  const [base, setBase] = useState(initial);
   const dirty = useMemo(() => {
     if (!editing) return name !== '' || body !== '' || description !== '' || tags.length > 0;
     return (
-      description !== initial.description ||
-      visibility !== initial.visibility ||
-      body !== initial.body ||
-      JSON.stringify(tags) !== JSON.stringify(initial.tags)
+      description !== base.description ||
+      visibility !== base.visibility ||
+      body !== base.body ||
+      JSON.stringify(tags) !== JSON.stringify(base.tags)
     );
-  }, [editing, name, body, description, tags, visibility, initial]);
+  }, [editing, name, body, description, tags, visibility, base]);
 
   // After a successful save we navigate away ourselves; the
   // guard must stand down for that one navigation or it would
@@ -283,6 +284,49 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
     });
   };
 
+  /** Conflict resolution: take the server's latest version
+   * into the form (fields and dirty-base both reset). */
+  const reloadTheirs = () => {
+    if (!existing) return;
+    void fetchLatest(existing).then((fresh) => {
+      if (!fresh) {
+        toast({ message: 'Could not load the latest version - check your connection' });
+        return;
+      }
+      const freshInitial = {
+        name: fresh.name,
+        description: fresh.description,
+        visibility: fresh.visibility,
+        tags: fresh.tags,
+        body: fresh.body,
+        mode: fresh.summary?.mode ?? ('script' as Mode),
+      };
+      setBase(freshInitial);
+      setDescription(fresh.description);
+      setVisibility(fresh.visibility);
+      setTags(fresh.tags);
+      setBody(fresh.body);
+      setMode(freshInitial.mode);
+      setMessage('');
+      setConflict(false);
+      toast({ message: `Loaded version ${fresh.version}` });
+    });
+  };
+
+  // Ctrl+S / Cmd+S saves from anywhere in the form.
+  const saveRef = useRef<() => void>(() => {});
+  saveRef.current = save;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const addTag = () => {
     const t = tagDraft.trim().toLowerCase();
     if (!t) return;
@@ -416,25 +460,18 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         }
       />
       <TextField label="Description" value={description} onChange={setDescription} maxLength={280} supportingText="At most 280 characters." />
-      <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
-        <legend style={{ fontWeight: 500, marginBottom: 'var(--fh-space-2)' }}>Visibility</legend>
-        <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
-          {VISIBILITY_HELP.map((v) => (
-            <Radio
-              key={v.id}
-              name="visibility"
-              value={v.id}
-              checked={visibility === v.id}
-              onChange={(value) => setVisibility(value as Visibility)}
-              label={
-                <>
-                  <strong>{v.label}</strong> - {v.help}
-                </>
-              }
-            />
-          ))}
-        </div>
-      </fieldset>
+      <div>
+        <p style={{ fontWeight: 500, margin: '0 0 var(--fh-space-2)' }}>Visibility</p>
+        <SegmentedControl
+          ariaLabel="Visibility"
+          options={VISIBILITY_HELP.map((v) => ({ id: v.id, label: v.label }))}
+          value={visibility}
+          onChange={setVisibility}
+        />
+        <p style={{ color: 'var(--md-sys-color-on-surface-variant)', margin: 'var(--fh-space-2) 0 0' }}>
+          {VISIBILITY_HELP.find((v) => v.id === visibility)?.help}
+        </p>
+      </div>
       <div>
         <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
@@ -556,32 +593,25 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         onConfirm={() => blocker.proceed?.()}
         onCancel={() => blocker.reset?.()}
       />
-      <ConfirmDialog
-        open={conflict}
-        headline="Someone saved a newer version"
-        content="This snippet changed since you opened it - probably from the CLI. You can view their version, overwrite it with yours, or copy your text and decide later."
-        confirmLabel="Overwrite with mine"
-        cancelLabel="Copy my text"
-        onConfirm={overwriteConflict}
-        onCancel={() => {
-          void navigator.clipboard.writeText(body).catch(() => {});
-          setConflict(false);
-          toast({ message: 'Your text is on the clipboard' });
-        }}
-      />
-      {conflict && existing ? (
-        <p>
-          <Button
-            variant="text"
-            onClick={() => {
-              setConflict(false);
-              navigate(`/${existing.owner}/${existing.name}`);
-            }}
-          >
-            View their version instead
+      <md-dialog open={conflict || undefined} onClose={() => setConflict(false)}>
+        <div slot="headline">Someone saved a newer version</div>
+        <div slot="content">
+          This snippet changed since you opened it - probably from the CLI. Reload their version
+          into this form, keep editing yours, or save yours as the next version on top of theirs.
+          Nothing is overwritten silently.
+        </div>
+        <div slot="actions" style={{ display: 'flex', gap: 'var(--fh-space-2)', flexWrap: 'wrap' }}>
+          <Button variant="text" onClick={reloadTheirs}>
+            Reload theirs
           </Button>
-        </p>
-      ) : null}
+          <Button variant="text" onClick={() => setConflict(false)}>
+            Keep editing
+          </Button>
+          <Button variant="filled" onClick={overwriteConflict}>
+            Save mine as new version
+          </Button>
+        </div>
+      </md-dialog>
     </div>
   );
 }

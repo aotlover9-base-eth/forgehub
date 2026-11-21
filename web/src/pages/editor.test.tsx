@@ -141,7 +141,7 @@ describe('EditorPage (new)', () => {
 });
 
 describe('EditorPage (edit, optimistic concurrency)', () => {
-  it('offers the conflict dialog on 412 and overwrites with the fresh version', async () => {
+  it('offers the conflict dialog on 412 and saves as a new version on top of the fresh one', async () => {
     const v3 = snippetFixture({ version: 3, body: 'echo v3' });
     const v4 = snippetFixture({ version: 4, body: 'echo v4-someone-else' });
     let getCount = 0;
@@ -170,7 +170,7 @@ describe('EditorPage (edit, optimistic concurrency)', () => {
     await waitFor(() => expect(screen.getByText(/Valid - ready to save/)).toBeTruthy());
     fireEvent.click(screen.getByText('Save new version'));
     await waitFor(() => expect(screen.getByText('Someone saved a newer version')).toBeTruthy());
-    fireEvent.click(screen.getByText('Overwrite with mine'));
+    fireEvent.click(screen.getByText('Save mine as new version'));
     await waitFor(() => expect(screen.getByText('DETAIL PAGE')).toBeTruthy());
     expect(lastIfMatch).toBe('4');
   });

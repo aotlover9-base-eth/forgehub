@@ -490,3 +490,248 @@
 .fh-select-row--start {
   align-items: flex-start;
 }
+
+/* Landing page (Peak A5): the public page on the same
+   tokens as the app - a simple top bar, a display headline,
+   the demo exchange in a CodeBlock, feature cards and the
+   intro video. No separate theme. */
+.fh-landing {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+.fh-landing__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--fh-space-4);
+  padding: var(--fh-space-3) var(--fh-space-4);
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+}
+.fh-landing__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fh-space-2);
+  color: inherit;
+  text-decoration: none;
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: var(--md-sys-typescale-title-large-weight);
+}
+.fh-landing__links {
+  display: inline-flex;
+  gap: var(--fh-space-4);
+  margin-inline-start: var(--fh-space-2);
+}
+.fh-landing__links a {
+  color: var(--md-sys-color-on-surface-variant);
+  text-decoration: none;
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+}
+.fh-landing__links a:hover {
+  color: var(--md-sys-color-primary);
+}
+.fh-landing__actions {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fh-space-2);
+}
+.fh-landing__user {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
+}
+.fh-landing__cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--fh-space-5);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  text-decoration: none;
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+}
+.fh-landing__cta--text {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+}
+.fh-landing__cta--outlined {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  border: 1px solid var(--md-sys-color-outline);
+}
+.fh-landing__main {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: var(--fh-space-5) var(--fh-space-4) var(--fh-space-7);
+  display: grid;
+  gap: var(--fh-space-7);
+  align-content: start;
+}
+.fh-landing__hero {
+  display: grid;
+  gap: var(--fh-space-4);
+  justify-items: start;
+  max-width: 760px;
+}
+.fh-landing__display {
+  margin: 0;
+  font-size: var(--md-sys-typescale-display-large-size);
+  line-height: var(--md-sys-typescale-display-large-line-height);
+  font-weight: var(--md-sys-typescale-display-large-weight);
+  letter-spacing: var(--md-sys-typescale-display-large-tracking);
+}
+.fh-landing__sub {
+  margin: 0;
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+  color: var(--md-sys-color-on-surface-variant);
+  max-width: 640px;
+}
+.fh-landing__demo {
+  width: 100%;
+}
+.fh-landing__hero-actions {
+  display: flex;
+  gap: var(--fh-space-2);
+  flex-wrap: wrap;
+}
+.fh-landing__features {
+  display: grid;
+  gap: var(--fh-space-3);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 840px) {
+  .fh-landing__features {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .fh-landing__bar,
+  .fh-landing__main {
+    padding-inline: var(--fh-space-5);
+  }
+}
+.fh-landing__feature-icon {
+  margin: 0 0 var(--fh-space-2);
+  color: var(--md-sys-color-primary);
+}
+.fh-landing__feature-title {
+  margin: 0 0 var(--fh-space-1);
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: var(--md-sys-typescale-title-large-weight);
+}
+.fh-landing__feature-body {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+.fh-landing__intro {
+  display: grid;
+  gap: var(--fh-space-3);
+  justify-items: start;
+  max-width: 760px;
+}
+.fh-landing__section-title {
+  margin: 0;
+  font-size: var(--md-sys-typescale-headline-large-size);
+  line-height: var(--md-sys-typescale-headline-large-line-height);
+  font-weight: var(--md-sys-typescale-headline-large-weight);
+}
+.fh-landing__skip {
+  color: var(--md-sys-color-primary);
+  font-size: var(--md-sys-typescale-label-large-size);
+}
+.fh-landing__video {
+  width: 100%;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-highest);
+}
+.fh-landing__transcript {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+.fh-landing__footer {
+  display: flex;
+  gap: var(--fh-space-4);
+  flex-wrap: wrap;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: var(--fh-space-4);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+}
+.fh-landing__footer a {
+  color: var(--md-sys-color-primary);
+}
+
+/* Density (Peak A5): list rows breathe at the comfortable
+   default; compact tightens the row padding. The attribute
+   is set pre-paint by theme-init.js and owned by
+   design/density.ts. */
+:root {
+  --fh-row-pad-block: var(--fh-space-2);
+}
+:root[data-density='compact'] {
+  --fh-row-pad-block: var(--fh-space-1);
+}
+.fh-list-row {
+  padding-block: var(--fh-row-pad-block);
+}
+/* The j/k cursor row in Library. */
+.fh-list-row--cursor {
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+/* Settings (Peak A5): vertical tab rail on expanded,
+   stacked section heads on compact. */
+.fh-settings-nav {
+  display: grid;
+  gap: var(--fh-space-1);
+  width: 208px;
+  flex-shrink: 0;
+}
+.fh-settings-nav__item {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--fh-space-4);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font: inherit;
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  cursor: pointer;
+  text-align: start;
+}
+.fh-settings-nav__item:hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+.fh-settings-nav__item--active {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+.fh-settings-section-title {
+  margin: 0 0 var(--fh-space-3);
+  font-size: var(--md-sys-typescale-headline-small-size);
+  line-height: var(--md-sys-typescale-headline-small-line-height);
+  font-weight: var(--md-sys-typescale-headline-small-weight);
+}

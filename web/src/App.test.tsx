@@ -5,13 +5,16 @@ import App from './App';
 describe('App', () => {
   it('renders the standalone landing, signed out', async () => {
     render(<App />);
-    // The landing is its own full-viewport scene (Observe
-    // theme) with a glass nav - the app shell is NOT rendered
-    // on it, so Home can never be mistaken for another page.
+    // The landing is a standalone page (Peak A5) with its
+    // own top bar - the app shell is NOT rendered on it, so
+    // Home can never be mistaken for another page.
     expect(screen.getByRole('navigation', { name: 'Landing' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
     // /me resolves 401 (MSW default) -> landing with sign-up CTA.
-    expect(await screen.findByText('Create account', undefined, { timeout: 4000 })).toBeInTheDocument();
+    // The sign-up CTA appears in the top bar and the hero.
+    expect(
+      (await screen.findAllByText('Create account', undefined, { timeout: 4000 })).length,
+    ).toBeGreaterThan(0);
     // Scoped to the heading: the intro transcript below
     // the fold quotes the same tagline.
     expect(
@@ -23,7 +26,7 @@ describe('App', () => {
 describe('App keyboard shortcuts', () => {
   it('ignores shortcuts while typing in a Material field, fires them outside', async () => {
     render(<App />);
-    const cta = await screen.findByText('Create account', undefined, { timeout: 4000 });
+    const cta = (await screen.findAllByText('Create account', undefined, { timeout: 4000 }))[0];
     fireEvent.click(cta);
     expect(
       await screen.findByRole('heading', { name: 'Create account' }, { timeout: 4000 }),

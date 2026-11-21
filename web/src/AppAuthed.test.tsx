@@ -33,17 +33,17 @@ describe('App navigation (signed in)', () => {
     render(<App />);
     // Home is the home page even when signed in (it used to
     // redirect to the dashboard, i.e. "Home goes to Library").
-    // Since the Observe theme it is a standalone scene with no
-    // shell nav at all - the CTA is the way into the app.
+    // The landing is a standalone page (Peak A5) with no
+    // shell nav - the CTA is the way into the app.
     expect(
       await screen.findByRole('heading', { level: 1, name: /Save a command once/ }, { timeout: 4000 }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText('Open your library', undefined, { timeout: 4000 }),
-    ).toBeInTheDocument();
+      (await screen.findAllByText('Open your library', undefined, { timeout: 4000 })).length,
+    ).toBeGreaterThan(0);
 
     // Into the shell via the library CTA, then to the profile.
-    fireEvent.click(screen.getByText('Open your library'));
+    fireEvent.click(screen.getAllByText('Open your library')[0]);
     expect(
       await screen.findByRole('button', { name: 'Profile' }, { timeout: 4000 }),
     ).toBeInTheDocument();

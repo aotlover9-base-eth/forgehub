@@ -124,9 +124,10 @@ export function useSetVisibility() {
 const snippetPath = (owner: string, name: string) =>
   `/snippets/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
 
-export function useSnippet(owner: string, name: string) {
+export function useSnippet(owner: string, name: string, enabled = true) {
   return useQuery<Snippet>({
     queryKey: ['snippet', owner, name],
+    enabled,
     retry: false,
     queryFn: () => api<Snippet>(snippetPath(owner, name)),
   });
@@ -147,6 +148,16 @@ export function useVersions(owner: string, name: string, enabled: boolean) {
     enabled,
     retry: false,
     queryFn: () => api<{ versions: VersionSummary[] }>(`${snippetPath(owner, name)}/versions`),
+  });
+}
+
+/** Forks of a snippet that the viewer may see (Peak A5). */
+export function useForks(owner: string, name: string, enabled: boolean) {
+  return useQuery<{ forks: Snippet[] }>({
+    queryKey: ['forks', owner, name],
+    enabled,
+    retry: false,
+    queryFn: () => api<{ forks: Snippet[] }>(`${snippetPath(owner, name)}/forks`),
   });
 }
 

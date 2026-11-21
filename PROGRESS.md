@@ -35,7 +35,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [x] A2 - type, shape, elevation and state layers
 - [x] A3 - adaptive shell and navigation
 - [x] A4 - component library refresh
-- [ ] A5 - screen redesign (every route)
+- [x] A5 - screen redesign (every route)
 - [ ] A6 - motion and micro-interactions
 - [ ] A7 - accessibility and quality pass
 - [ ] A8 - visual regression suite

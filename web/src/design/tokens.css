@@ -138,9 +138,9 @@
   --md-sys-typescale-label-medium-tracking: 0.5px;
   --md-sys-typescale-label-small-tracking: 0.5px;
 
-  /* Motion (Material 3 tokens, Peak A2). The three legacy
-     duration aliases below the scale are kept for the landing
-     stylesheet until A5 rebuilds it. */
+  /* Motion (Material 3 tokens, Peak A2): the full duration
+     and easing scale. Components pick a step from the scale;
+     there are no per-component durations. */
   --md-sys-motion-duration-short1: 50ms;
   --md-sys-motion-duration-short2: 100ms;
   --md-sys-motion-duration-short3: 150ms;
@@ -163,9 +163,6 @@
   --md-sys-motion-easing-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
   --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
   --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
-  --md-sys-motion-duration-short: var(--md-sys-motion-duration-short2);
-  --md-sys-motion-duration-medium: var(--md-sys-motion-duration-medium1);
-  --md-sys-motion-duration-long: var(--md-sys-motion-duration-medium4);
 
   /* State-layer opacities. */
   --md-sys-state-hover-state-layer-opacity: 0.08;
@@ -184,47 +181,6 @@
   --fh-topbar-bg: var(--md-sys-color-surface);
   --fh-nav-active: var(--md-sys-color-secondary-container);
   --fh-nav-active-text: var(--md-sys-color-on-secondary-container);
-
-  /* Observe landing theme (user-directed, 2026-11-20): a dark
-     glass scene used ONLY by the public landing page - it is a
-     deliberate exception to the Material scheme above, scoped
-     to one route. Monochrome values live here so observe.css
-     stays literal-free like every other stylesheet. */
-  --fh-observe-bg: #000000;
-  --fh-observe-fg: #ffffff;
-  --fh-observe-fg-90: rgb(255 255 255 / 0.9);
-  --fh-observe-fg-80: rgb(255 255 255 / 0.8);
-  --fh-observe-fg-70: rgb(255 255 255 / 0.7);
-  --fh-observe-glass-bg: rgb(0 0 0 / 0.1);
-  --fh-observe-glass-shadow: inset 0 1px 1px rgb(255 255 255 / 0.1);
-  --fh-observe-rim: linear-gradient(
-    180deg,
-    rgb(255 255 255 / 0.45) 0%,
-    rgb(255 255 255 / 0.15) 20%,
-    rgb(255 255 255 / 0) 40%,
-    rgb(255 255 255 / 0) 60%,
-    rgb(255 255 255 / 0.15) 80%,
-    rgb(255 255 255 / 0.45) 100%
-  );
-  --fh-observe-rim-circle: linear-gradient(
-    180deg,
-    rgb(255 255 255 / 0.45) 0%,
-    rgb(255 255 255 / 0.22) 30%,
-    rgb(255 255 255 / 0.16) 50%,
-    rgb(255 255 255 / 0.22) 70%,
-    rgb(255 255 255 / 0.45) 100%
-  );
-  --fh-observe-aura-display: 0 0 72px rgb(0 0 0 / 0.42), 0 4px 28px rgb(0 0 0 / 0.28);
-  --fh-observe-aura-sub: 0 0 30px rgb(0 0 0 / 0.32), 0 1px 10px rgb(0 0 0 / 0.2);
-  --fh-observe-display-size: clamp(2.9rem, 7.4vw, 6.9rem);
-  --fh-observe-section-size: clamp(2rem, 4.5vw, 3.4rem);
-  --fh-observe-hover-bg: rgb(255 255 255 / 0.05);
-  --fh-observe-scrim: rgb(0 0 0 / 0.32);
-  /* The pinned mobile bottom bar sits over scrolling content,
-     so it gets a denser glass than the floating panels. */
-  --fh-observe-bar-bg: rgb(8 8 10 / 0.78);
-  --fh-observe-line-strong: rgb(255 255 255 / 0.28);
-  --fh-observe-line: rgb(255 255 255 / 0.12);
 
   /* Map the scheme onto @material/web component tokens. */
   --md-primary-color: var(--md-sys-color-primary);

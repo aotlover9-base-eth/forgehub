@@ -936,6 +936,35 @@ async fn list_versions(
     .into_response())
 }
 
+/// The forks tab (Peak A5): forks of this snippet that the
+/// viewer may see, newest first, each serialized like a
+/// normal snippet read. The parent must be readable first -
+/// a private parent's fork list never leaks.
+async fn list_forks(
+    State(state): State<AppState>,
+    CurrentUser(viewer): CurrentUser,
+    Path((owner, name)): Path<(String, String)>,
+) -> Result<Response, ApiError> {
+    let viewer_user = viewer.as_ref().map(|c| c.user.clone());
+    let resolved = resolve_readable(&state, &owner, &name, viewer_user.as_ref()).await?;
+    let forks = state
+        .repos
+        .snippets
+        .forks_of(resolved.snippet.id, viewer_user.as_ref().map(|u| u.id), 100)
+        .await?;
+    let mut out = Vec::with_capacity(forks.len());
+    for fork in &forks {
+        let version = state
+            .repos
+            .snippets
+            .version(fork.id, fork.latest_version)
+            .await?
+            .ok_or_else(not_found)?;
+        out.push(snippet_json(&state, fork, &version, viewer_user.as_ref()).await?);
+    }
+    Ok(Json(serde_json::json!({ "forks": out })).into_response())
+}
+
 async fn get_version(
     State(state): State<AppState>,
     CurrentUser(viewer): CurrentUser,
@@ -1157,6 +1186,7 @@ pub fn routes() -> Router<AppState> {
             get(get_version),
         )
         .route("/snippets/{owner}/{name}/diff", get(diff_versions))
+        .route("/snippets/{owner}/{name}/forks", get(list_forks))
         .route("/snippets/{owner}/{name}/raw", get(get_raw))
         .route("/me/snippets", get(my_snippets))
 }

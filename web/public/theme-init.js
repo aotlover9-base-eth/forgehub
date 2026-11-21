@@ -25,3 +25,17 @@
   document.documentElement.setAttribute('data-theme', resolved);
   document.documentElement.style.colorScheme = resolved;
 })();
+
+// Density bootstrap (Peak A5): same idea - the stored list
+// density is on <html data-density> before first paint.
+(function () {
+  var density = 'comfortable';
+  try {
+    if (window.localStorage.getItem('forgehub-density') === 'compact') {
+      density = 'compact';
+    }
+  } catch (err) {
+    // Storage unavailable: comfortable default.
+  }
+  document.documentElement.setAttribute('data-density', density);
+})();

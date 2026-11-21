@@ -446,6 +446,16 @@ pub trait SnippetRepo: Send + Sync {
         limit: i64,
         offset: i64,
     ) -> RepoResult<Vec<SnippetRow>>;
+    /// Forks of a snippet that the viewer may see (Peak A5):
+    /// public forks, plus the viewer's own forks at any
+    /// visibility. Unlisted forks are not listed - an unlisted
+    /// fork's existence stays with link-knowers. Newest first.
+    async fn forks_of(
+        &self,
+        snippet_id: i64,
+        viewer_id: Option<i64>,
+        limit: i64,
+    ) -> RepoResult<Vec<SnippetRow>>;
     /// Snippets a user starred, most recent star first. Includes
     /// unlisted; excludes deleted/hidden and others' private.
     async fn list_starred(
@@ -1540,6 +1550,25 @@ impl SnippetRepo for SqliteStore {
         .bind(since)
         .bind(limit)
         .bind(offset)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn forks_of(
+        &self,
+        snippet_id: i64,
+        viewer_id: Option<i64>,
+        limit: i64,
+    ) -> RepoResult<Vec<SnippetRow>> {
+        Ok(sqlx::query_as::<_, SnippetRow>(
+            "SELECT * FROM snippets WHERE forked_from_snippet_id = ?1 \
+             AND hidden_at IS NULL AND deleted_at IS NULL \
+             AND (visibility = 'public' OR owner_id = ?2) \
+             ORDER BY created_at DESC, id DESC LIMIT ?3",
+        )
+        .bind(snippet_id)
+        .bind(viewer_id.unwrap_or(-1))
+        .bind(limit)
         .fetch_all(&self.pool)
         .await?)
     }

@@ -698,6 +698,28 @@ paths:
                     items: { $ref: '#/components/schemas/VersionSummary' }
                   next_cursor: { type: [string, 'null'] }
         '404': { $ref: '#/components/responses/Error' }
+  /snippets/{owner}/{name}/forks:
+    parameters:
+      - { $ref: '#/components/parameters/Owner' }
+      - { $ref: '#/components/parameters/Name' }
+    get:
+      tags: [snippets]
+      summary: List forks of a snippet that the viewer may see (public forks, plus the viewer's own). Private snippets return 404 to non-owners.
+      operationId: listForks
+      security: [{ cookieSession: [] }, { bearerToken: [] }, {}]
+      responses:
+        '200':
+          description: Forks, newest first (at most 100)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [forks]
+                properties:
+                  forks:
+                    type: array
+                    items: { $ref: '#/components/schemas/Snippet' }
+        '404': { $ref: '#/components/responses/Error' }
   /snippets/{owner}/{name}/versions/{version}:
     parameters:
       - { $ref: '#/components/parameters/Owner' }

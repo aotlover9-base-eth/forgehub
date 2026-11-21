@@ -302,6 +302,63 @@ async fn stars_flow() {
 }
 
 #[tokio::test]
+async fn forks_list_visibility() {
+    let s = start().await;
+    let (_anna, _ac, ben, bc) = seed(&s).await;
+    // Ben forks anna's public snippet; forks start private.
+    let resp = s
+        .client
+        .post(format!(
+            "{}/api/v1/snippets/anna/docker-cleanup/fork",
+            s.base
+        ))
+        .header("cookie", &ben)
+        .header("x-csrf-token", &bc)
+        .json(&serde_json::json!({}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+
+    // Anonymous viewers see no forks while the only fork is private.
+    let (status, v) = get(&s, "/api/v1/snippets/anna/docker-cleanup/forks", None).await;
+    assert_eq!(status, 200);
+    assert_eq!(
+        v["forks"].as_array().unwrap().len(),
+        0,
+        "private fork must not be listed"
+    );
+
+    // The fork's owner sees his own fork.
+    let (status, v) = get(&s, "/api/v1/snippets/anna/docker-cleanup/forks", Some(&ben)).await;
+    assert_eq!(status, 200);
+    let forks = v["forks"].as_array().unwrap();
+    assert_eq!(forks.len(), 1);
+    assert_eq!(forks[0]["owner"], "ben");
+    assert_eq!(forks[0]["forked_from"]["owner"], "anna");
+
+    // Once the fork is public, everyone sees it.
+    let resp = s
+        .client
+        .patch(format!("{}/api/v1/snippets/ben/docker-cleanup", s.base))
+        .header("cookie", &ben)
+        .header("x-csrf-token", &bc)
+        .json(&serde_json::json!({ "visibility": "public" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let (status, v) = get(&s, "/api/v1/snippets/anna/docker-cleanup/forks", None).await;
+    assert_eq!(status, 200);
+    assert_eq!(v["forks"].as_array().unwrap().len(), 1);
+
+    // A private parent's fork list does not leak: ben cannot
+    // even read the parent, so the list is a 404 for him.
+    let (status, _) = get(&s, "/api/v1/snippets/anna/docker-diary/forks", Some(&ben)).await;
+    assert_eq!(status, 404);
+}
+
+#[tokio::test]
 async fn fork_flow() {
     let s = start().await;
     let (_anna, _ac, ben, bc) = seed(&s).await;

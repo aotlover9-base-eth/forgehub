@@ -11,6 +11,7 @@ import {
   ErrorState,
   Icon,
   IconButton,
+  ListItem,
   Menu,
   Skeleton,
   StatusChip,
@@ -30,6 +31,7 @@ import {
   useSnippet,
   useSnippetVersion,
   useStar,
+  useForks,
   useVersions,
 } from '../api/hooks';
 import type { Visibility } from '../api/types';
@@ -56,6 +58,7 @@ export default function SnippetPage() {
   const own = me.data?.username === owner;
   const versionView = useSnippetVersion(owner, name, viewVersion);
   const versions = useVersions(owner, name, tab === 1);
+  const forks = useForks(owner, name, tab === 2);
   const [diffPair, setDiffPair] = useState<{ from: number; to: number } | null>(null);
   const diff = useDiff(owner, name, diffPair?.from ?? null, diffPair?.to ?? null);
 
@@ -260,6 +263,7 @@ export default function SnippetPage() {
         tabs={[
           { id: 'code', label: 'Code' },
           { id: 'versions', label: 'Versions' },
+          { id: 'forks', label: 'Forks' },
         ]}
         activeIndex={tab}
         onChange={setTab}
@@ -294,7 +298,7 @@ export default function SnippetPage() {
           ) : null}
           <CodeBlock code={shown?.body ?? ''} lineNumbers label={`${name} · v${shown?.version ?? s.version}`} />
         </div>
-      ) : (
+      ) : tab === 1 ? (
         <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
           {versions.isPending ? (
             <Skeleton lines={3} />
@@ -357,6 +361,38 @@ export default function SnippetPage() {
               <DiffView diff={diff.data.diff} />
             ) : null
           ) : null}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
+          {forks.isPending ? (
+            <Skeleton lines={3} />
+          ) : forks.isError ? (
+            <ErrorState title="Could not load forks" message="Try again." retryLabel="Retry" onRetry={() => void forks.refetch()} />
+          ) : (forks.data?.forks ?? []).length === 0 ? (
+            <EmptyState
+              icon="call_split"
+              title="No forks yet"
+              message={
+                s.fork_count > 0
+                  ? 'This snippet has forks, but none of them are visible to you (forks start private).'
+                  : 'Nobody has forked this snippet yet. Forks are copies other people keep in their own libraries.'
+              }
+            />
+          ) : (
+            <Card variant="outlined">
+              <md-list>
+                {(forks.data?.forks ?? []).map((f) => (
+                  <ListItem
+                    key={`${f.owner}/${f.name}`}
+                    headline={`${f.owner}/${f.name}`}
+                    supportingText={`v${f.version} - ${relativeTime(f.updated_at)}`}
+                    trailing={<StatusChip visibility={f.visibility} />}
+                    onClick={() => navigate(`/${f.owner}/${f.name}`)}
+                  />
+                ))}
+              </md-list>
+            </Card>
+          )}
         </div>
       )}
 

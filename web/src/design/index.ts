@@ -7,3 +7,4 @@ export * from './components/AppShell';
 export * from './components/DiffView';
 export * from './hooks';
 export * from './theme';
+export * from './density';

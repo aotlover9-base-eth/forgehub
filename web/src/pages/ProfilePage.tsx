@@ -1,5 +1,5 @@
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Card, EmptyState, Icon, Skeleton, StatusChip } from '../design';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Card, EmptyState, Icon, ListItem, Skeleton, StatusChip } from '../design';
 import { useProfile, useProfileSnippets } from '../api/hooks';
 import { relativeTime } from '../validation';
 
@@ -42,7 +42,8 @@ export default function ProfilePage() {
             width: 56,
             height: 56,
             borderRadius: 'var(--md-sys-shape-corner-full)',
-            background: 'var(--md-sys-color-surface-container-highest)',
+            background: 'var(--md-sys-color-primary-container)',
+            color: 'var(--md-sys-color-on-primary-container)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -72,22 +73,14 @@ export default function ProfilePage() {
         <Card variant="outlined">
           <md-list>
             {snippets.data.snippets.map((s) => (
-              <md-list-item key={s.name} type="button" onClick={() => navigate(`/${p.username}/${s.name}`)}>
-                <span slot="headline">
-                  <Link to={`/${p.username}/${s.name}`} style={{ color: 'inherit' }}>
-                    {s.name}
-                  </Link>
-                </span>
-                <span slot="supporting-text">
-                  {s.description || 'No description.'} · v{s.version} · {relativeTime(s.updated_at)}
-                </span>
-                <span slot="start">
-                  <Icon name="terminal" />
-                </span>
-                <span slot="end">
-                  <StatusChip visibility={s.visibility} />
-                </span>
-              </md-list-item>
+              <ListItem
+                key={s.name}
+                headline={s.name}
+                supportingText={`${s.description || 'No description.'} - v${s.version} - ${relativeTime(s.updated_at)}`}
+                leading={<Icon name="terminal" />}
+                trailing={<StatusChip visibility={s.visibility} />}
+                onClick={() => navigate(`/${p.username}/${s.name}`)}
+              />
             ))}
           </md-list>
         </Card>

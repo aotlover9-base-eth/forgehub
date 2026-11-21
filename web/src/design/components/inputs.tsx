@@ -302,3 +302,36 @@ export function SelectField({
     </md-outlined-select>
   );
 }
+
+/**
+ * Segmented control (M3 segmented buttons, single select):
+ * a short closed choice - visibility in the editor, sort on
+ * Explore. Selection is controlled; each button reports its
+ * own id.
+ */
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  options: { id: T; label: string; icon?: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <md-outlined-segmented-button-set aria-label={ariaLabel}>
+      {options.map((option) => (
+        <md-outlined-segmented-button
+          key={option.id}
+          label={option.label}
+          selected={value === option.id || undefined}
+          onClick={() => onChange(option.id)}
+        >
+          {option.icon ? <Icon name={option.icon} slot="icon" /> : null}
+        </md-outlined-segmented-button>
+      ))}
+    </md-outlined-segmented-button-set>
+  );
+}
