@@ -37,7 +37,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [x] A4 - component library refresh
 - [x] A5 - screen redesign (every route)
 - [x] A6 - motion and micro-interactions
-- [ ] A7 - accessibility and quality pass
+- [x] A7 - accessibility and quality pass
 - [ ] A8 - visual regression suite
 
 ### Phase B - CLI improvements

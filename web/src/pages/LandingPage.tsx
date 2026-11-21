@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useMe } from '../api/hooks';
 import { Card, CodeBlock, Icon } from '../design';
@@ -46,6 +47,9 @@ const FEATURES: { icon: string; title: string; body: string }[] = [
 
 export default function LandingPage() {
   const me = useMe();
+  useEffect(() => {
+    document.title = 'ForgeHub - save a command once, run it anywhere';
+  }, []);
   const signedIn = Boolean(me.data);
   return (
     <div className="fh-landing">

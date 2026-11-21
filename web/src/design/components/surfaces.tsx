@@ -110,17 +110,22 @@ export function EmptyState({
   message,
   actionLabel,
   onAction,
+  titleLevel = 2,
 }: {
   icon: string;
   title: string;
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** Standalone pages (404, missing profile) pass 1 so the
+   * page keeps a proper heading outline. */
+  titleLevel?: 1 | 2;
 }) {
+  const Title = titleLevel === 1 ? 'h1' : 'h2';
   return (
     <div className="fh-state">
       <Icon name={icon} className="fh-state__icon" />
-      <h2 className="fh-state__title">{title}</h2>
+      <Title className="fh-state__title">{title}</Title>
       <p className="fh-state__message">{message}</p>
       {actionLabel && onAction ? (
         <Button variant="tonal" onClick={onAction}>

@@ -118,6 +118,39 @@ function ThemeButton() {
   );
 }
 
+const STATIC_TITLES: Record<string, string> = {
+  '/login': 'Log in - ForgeHub',
+  '/signup': 'Create account - ForgeHub',
+  '/forgot-password': 'Reset your password - ForgeHub',
+  '/reset-password': 'Set a new password - ForgeHub',
+  '/home': 'Home - ForgeHub',
+  '/dashboard': 'Library - ForgeHub',
+  '/explore': 'Explore - ForgeHub',
+  '/new': 'New snippet - ForgeHub',
+  '/settings': 'Settings - ForgeHub',
+  '/device': 'Approve a device - ForgeHub',
+  '/profile': 'Your profile - ForgeHub',
+};
+
+function titleForPath(pathname: string): string {
+  if (STATIC_TITLES[pathname]) return STATIC_TITLES[pathname];
+  const edit = /^\/([^/]+)\/([^/]+)\/edit$/.exec(pathname);
+  if (edit) return `Edit ${edit[2]} - ForgeHub`;
+  const snippet = /^\/([^/]+)\/([^/]+)$/.exec(pathname);
+  if (snippet) return `${snippet[2]} by ${snippet[1]} - ForgeHub`;
+  const profile = /^\/([^/]+)$/.exec(pathname);
+  if (profile) return `${profile[1]} - ForgeHub`;
+  return 'Not found - ForgeHub';
+}
+
+/** Per-route document titles (Peak A7). */
+function usePageTitle() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    document.title = titleForPath(pathname);
+  }, [pathname]);
+}
+
 function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -126,6 +159,7 @@ function Shell() {
   const [themePref, setThemePref] = useThemePreference();
   const widthClass = useWidthClass();
   const [helpOpen, setHelpOpen] = useState(false);
+  usePageTitle();
   // The FAB lives on the two screens where creating is the
   // primary action: your Library and your own profile.
   const showFab =
@@ -282,9 +316,8 @@ function Shell() {
 }
 
 const router = createBrowserRouter([
-  // The landing page is a standalone full-viewport scene with
-  // its own glass nav (the Observe theme) - it does not render
-  // inside the app shell.
+  // The landing page is a standalone page (Peak A5) with its
+  // own top bar - it does not render inside the app shell.
   { path: '/', element: <LandingPage /> },
   {
     element: <Shell />,

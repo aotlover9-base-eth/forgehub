@@ -224,7 +224,7 @@ export default function SnippetPage() {
               <IconButton icon="report" label="Report this snippet" onClick={() => setReportOpen(true)} />
             </>
           ) : null}
-          <a href={apiUrl(`/snippets/${owner}/${name}/raw`)} target="_blank" rel="noreferrer">
+          <a href={apiUrl(`/snippets/${owner}/${name}/raw`)} target="_blank" rel="noreferrer" aria-label="Open the raw snippet in a new tab">
             <Button variant="text">Raw</Button>
           </a>
         </div>

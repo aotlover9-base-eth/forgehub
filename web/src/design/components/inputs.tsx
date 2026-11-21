@@ -14,6 +14,7 @@ export function TextField({
   type = 'text',
   required,
   disabled,
+  readOnly,
   autoComplete,
   multiline,
   rows,
@@ -28,6 +29,7 @@ export function TextField({
   type?: string;
   required?: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   autoComplete?: string;
   multiline?: boolean;
   rows?: number;
@@ -41,6 +43,7 @@ export function TextField({
       type={multiline ? 'textarea' : type}
       required={required}
       disabled={disabled}
+      readonly={readOnly}
       autoComplete={autoComplete}
       error={errorText ? true : undefined}
       error-text={errorText}

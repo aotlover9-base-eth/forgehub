@@ -453,7 +453,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         label="Name"
         value={name}
         onChange={setName}
-        disabled={editing}
+        readOnly={editing}
         errorText={
           nameIssue ??
           (!editing && availability.data === 'taken' ? 'You already have a snippet with this name.' : undefined)

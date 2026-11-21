@@ -79,8 +79,8 @@ export function AppShell({
       ) : null}
       <main className="fh-shell__main" ref={mainRef}>
         {children}
+        {fab}
       </main>
-      {fab}
       {widthClass === 'compact' ? (
         <nav className="fh-nav fh-nav--bar" aria-label="Main">
           {navItems.map((item) => navButton(item))}

@@ -11,6 +11,7 @@ export default function NotFoundPage() {
       icon="search"
       title="Not found"
       message="This page does not exist, or it is private."
+      titleLevel={1}
       actionLabel="Go home"
       onAction={() => navigate('/')}
     />

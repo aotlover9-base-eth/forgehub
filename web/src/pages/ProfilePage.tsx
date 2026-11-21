@@ -25,6 +25,7 @@ export default function ProfilePage() {
     return (
       <EmptyState
         icon="person"
+        titleLevel={1}
         title="No such user"
         message="That profile does not exist."
         actionLabel="Go to Explore"
