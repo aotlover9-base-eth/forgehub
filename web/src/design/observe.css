@@ -374,105 +374,6 @@
   background: var(--fh-observe-hover-bg);
 }
 
-/* ---- The app scene: the same Observe world inside the
-   shell (user-directed, 2026-11-20 - "after creating account
-   all sections must be of same theme"). The drifting smoke
-   backdrop sits fixed behind everything, dimmed by a scrim
-   so dense pages stay readable; the top bar and bottom nav
-   become glass; cards pick up a blur over the scene. Colour
-   itself comes from the .observe-app token scope in
-   tokens.css - this section only does glass and layout. */
-
-body:has(.observe-app) {
-  background: var(--fh-observe-bg);
-}
-
-.observe-app {
-  position: relative;
-  background: var(--fh-observe-bg);
-}
-
-.observe-app-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background-image: url('/media/observe-bg.jpg');
-  background-size: cover;
-  background-position: center bottom;
-  transform: scale(1.08);
-  animation: observe-drift 70s ease-in-out infinite alternate;
-}
-
-.observe-app-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--fh-observe-scrim);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .observe-app-bg {
-    animation: none;
-  }
-}
-
-.observe-app.fh-shell {
-  background: transparent;
-}
-
-.observe-app .fh-topbar,
-.observe-app .fh-nav,
-.observe-app .fh-shell__main,
-.observe-app .fh-footer {
-  position: relative;
-  z-index: 1;
-}
-
-.observe-app .fh-topbar {
-  background: var(--fh-observe-glass-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--fh-observe-line);
-}
-
-.observe-app .fh-nav--bar {
-  background: var(--fh-observe-bar-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--fh-observe-line);
-  /* Mobile fix (2026-11-20): the bar was an in-flow grid
-     row, so on any page taller than the viewport it sank
-     below the fold - navigation unreachable while scrolling.
-     Pin it to the viewport bottom; the main column gets
-     matching bottom padding so nothing hides behind it. */
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 30;
-}
-
-.observe-app.fh-shell--compact .fh-shell__main {
-  padding-bottom: 96px;
-}
-
-.observe-app .fh-card {
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--fh-observe-line);
-}
-
-.observe-app .fh-footer {
-  background: transparent;
-}
-
-/* Headings inside the app use the default UI typeface, NOT
-   the landing's Instrument Serif - the serif is a
-   landing-only treatment (user clarification, 2026-11-20;
-   an earlier change that put serif headings in the app was
-   reverted on the same day). */
-
-/* ------------------------------------------------------------------ */
 /* Motion (user-directed, 2026-11-20): the UI felt too static.        */
 /* Entrance choreography on the landing, a page transition            */
 /* inside the app, and small physical responses on cards,             */
@@ -494,17 +395,6 @@ body:has(.observe-app) {
   from {
     opacity: 0;
     transform: translateY(-14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fh-page-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -565,61 +455,23 @@ body:has(.observe-app) {
   transform: scale(0.97);
 }
 
-/* The route wrapper is keyed by pathname in App.tsx, so this
-   replays on every navigation inside the app. */
-.observe-app .fh-route {
-  animation: fh-page-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.observe-app .fh-card {
-  transition:
-    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.3s ease;
-}
-
-.observe-app .fh-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--fh-observe-line-strong);
-}
-
-.observe-app
-  :is(md-filled-button, md-filled-tonal-button, md-outlined-button, md-text-button, md-icon-button) {
-  transition: transform 0.15s ease;
-}
-
-.observe-app
-  :is(
-    md-filled-button,
-    md-filled-tonal-button,
-    md-outlined-button,
-    md-text-button,
-    md-icon-button
-  ):active {
-  transform: scale(0.96);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .observe-nav-wrap,
   .observe-display,
   .observe-sub,
   .observe-pill-wrap,
-  .observe-social,
-  .observe-app .fh-route {
+  .observe-social {
     animation: none;
   }
 
   .observe-circle,
   .observe-cta-solid,
-  .observe-join,
-  .observe-app .fh-card,
-  .observe-app
-    :is(md-filled-button, md-filled-tonal-button, md-outlined-button, md-text-button, md-icon-button) {
+  .observe-join {
     transition: none;
   }
 
   .observe-circle:hover,
-  .observe-cta-solid:hover,
-  .observe-app .fh-card:hover {
+  .observe-cta-solid:hover {
     transform: none;
   }
 }

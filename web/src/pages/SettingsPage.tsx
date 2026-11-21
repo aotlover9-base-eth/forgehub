@@ -12,7 +12,10 @@ import {
   Skeleton,
   Tabs,
   TextField,
+  resolveTheme,
+  useThemePreference,
   useToast,
+  type ThemePreference,
 } from '../design';
 import { ApiError } from '../api/client';
 import {
@@ -30,7 +33,7 @@ import {
 import type { CreatedToken } from '../api/types';
 import { passwordIssue, relativeTime } from '../validation';
 
-const TAB_IDS = ['profile', 'security', 'tokens', 'cli', 'danger'] as const;
+const TAB_IDS = ['appearance', 'profile', 'security', 'tokens', 'cli', 'danger'] as const;
 
 export default function SettingsPage() {
   const me = useMe();
@@ -43,6 +46,7 @@ export default function SettingsPage() {
       <Tabs
         ariaLabel="Settings sections"
         tabs={[
+          { id: 'appearance', label: 'Appearance' },
           { id: 'profile', label: 'Profile' },
           { id: 'security', label: 'Security' },
           { id: 'tokens', label: 'Tokens' },
@@ -52,12 +56,49 @@ export default function SettingsPage() {
         activeIndex={tab}
         onChange={setTab}
       />
+      {TAB_IDS[tab] === 'appearance' ? <AppearanceTab /> : null}
       {TAB_IDS[tab] === 'profile' ? <ProfileTab /> : null}
       {TAB_IDS[tab] === 'security' ? <SecurityTab /> : null}
       {TAB_IDS[tab] === 'tokens' ? <TokensTab /> : null}
       {TAB_IDS[tab] === 'cli' ? <CliTab /> : null}
       {TAB_IDS[tab] === 'danger' ? <DangerTab /> : null}
     </div>
+  );
+}
+
+const THEME_OPTIONS: { id: ThemePreference; label: string; help: string }[] = [
+  { id: 'system', label: 'System', help: 'Follow your device setting.' },
+  { id: 'light', label: 'Light', help: 'Always use the light scheme.' },
+  { id: 'dark', label: 'Dark', help: 'Always use the dark scheme.' },
+];
+
+function AppearanceTab() {
+  const [pref, setPref] = useThemePreference();
+  return (
+    <Card>
+      <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
+        <legend style={{ fontWeight: 500, marginBottom: 'var(--fh-space-2)' }}>Theme</legend>
+        <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
+          {THEME_OPTIONS.map((option) => (
+            <label
+              key={option.id}
+              style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start', cursor: 'pointer' }}
+            >
+              <md-radio
+                name="theme"
+                value={option.id}
+                checked={pref === option.id || undefined}
+                onChange={() => setPref(option.id)}
+              />
+              <span>
+                <strong>{option.label}</strong> - {option.help}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <p>Currently showing the {resolveTheme(pref)} scheme. The same choice lives in the app bar, under Theme.</p>
+    </Card>
   );
 }
 

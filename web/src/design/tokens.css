@@ -180,8 +180,7 @@
 /* Dark scheme: explicit choice wins; otherwise follow the OS
    unless the user picked light. The theme module sets
    data-theme on <html> before first paint. */
-:root[data-theme='dark'],
-.observe-app {
+:root[data-theme='dark'] {
   color-scheme: dark;
   --md-sys-color-primary: #a0cafd;
   --md-sys-color-on-primary: #003258;
@@ -281,63 +280,4 @@
     --md-sys-color-scrim: #000000;
     --md-sys-color-shadow: #000000;
   }
-}
-
-/* Observe app scope (user-directed, 2026-11-20): inside the
-   app shell, the dark scheme above is re-pointed to the
-   Observe monochrome palette - white is the only accent,
-   surfaces become translucent glass tones over the scene
-   backdrop, and the active nav state is the white pill.
-   Declared last so it wins on the shell element. Error is
-   deliberately NOT remapped: red means error in every theme. */
-.observe-app {
-  --md-sys-color-primary: #ffffff;
-  --md-sys-color-on-primary: #000000;
-  --md-sys-color-primary-container: rgb(255 255 255 / 0.14);
-  --md-sys-color-on-primary-container: #ffffff;
-  --md-sys-color-primary-fixed: #ffffff;
-  --md-sys-color-primary-fixed-dim: rgb(255 255 255 / 0.8);
-  --md-sys-color-on-primary-fixed: #000000;
-  --md-sys-color-on-primary-fixed-variant: rgb(0 0 0 / 0.7);
-  --md-sys-color-secondary: rgb(255 255 255 / 0.85);
-  --md-sys-color-on-secondary: #000000;
-  --md-sys-color-secondary-container: rgb(255 255 255 / 0.12);
-  --md-sys-color-on-secondary-container: #ffffff;
-  --md-sys-color-secondary-fixed: rgb(255 255 255 / 0.9);
-  --md-sys-color-secondary-fixed-dim: rgb(255 255 255 / 0.7);
-  --md-sys-color-on-secondary-fixed: #000000;
-  --md-sys-color-on-secondary-fixed-variant: rgb(0 0 0 / 0.7);
-  --md-sys-color-tertiary: #ffffff;
-  --md-sys-color-on-tertiary: #000000;
-  --md-sys-color-tertiary-container: rgb(255 255 255 / 0.16);
-  --md-sys-color-on-tertiary-container: #ffffff;
-  --md-sys-color-tertiary-fixed: #ffffff;
-  --md-sys-color-tertiary-fixed-dim: rgb(255 255 255 / 0.8);
-  --md-sys-color-on-tertiary-fixed: #000000;
-  --md-sys-color-on-tertiary-fixed-variant: rgb(0 0 0 / 0.7);
-  --md-sys-color-surface: rgb(0 0 0 / 0.35);
-  --md-sys-color-on-surface: #ffffff;
-  --md-sys-color-surface-variant: rgb(255 255 255 / 0.08);
-  --md-sys-color-on-surface-variant: rgb(255 255 255 / 0.7);
-  --md-sys-color-surface-dim: rgb(0 0 0 / 0.45);
-  --md-sys-color-surface-bright: rgb(255 255 255 / 0.14);
-  --md-sys-color-surface-container-lowest: rgb(0 0 0 / 0.3);
-  --md-sys-color-surface-container-low: rgb(255 255 255 / 0.07);
-  --md-sys-color-surface-container: rgb(255 255 255 / 0.1);
-  --md-sys-color-surface-container-high: rgb(255 255 255 / 0.14);
-  --md-sys-color-surface-container-highest: rgb(255 255 255 / 0.18);
-  --md-sys-color-inverse-surface: #ffffff;
-  --md-sys-color-inverse-on-surface: #000000;
-  --md-sys-color-inverse-primary: #000000;
-  --md-sys-color-outline: rgb(255 255 255 / 0.4);
-  --md-sys-color-outline-variant: rgb(255 255 255 / 0.16);
-  --fh-topbar-bg: transparent;
-  --fh-nav-active: #ffffff;
-  --fh-nav-active-text: #000000;
-  --fh-code-bg: rgb(0 0 0 / 0.45);
-  --fh-focus-ring: #ffffff;
-  /* The brand typeface is deliberately NOT overridden here:
-     the Instrument Serif belongs to the landing page only.
-     Inside the app, headings use the default UI typeface
-     (user clarification, 2026-11-20). */
 }

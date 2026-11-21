@@ -4,11 +4,10 @@ import './design/md';
 import './index.css';
 import App from './App.tsx';
 
-// ForgeHub ships exactly one theme - the dark Observe theme -
-// pinned as data-theme="dark" on <html> in index.html. There
-// is no runtime theme switching (removed 2026-11-20: inside
-// the Observe app the old light/dark toggle changed nothing,
-// and a control that lies is worse than no control).
+// The theme preference (system / light / dark) is resolved
+// before first paint by public/theme-init.js and owned at
+// runtime by src/design/theme.ts (Peak A1, 2026-11-22). The
+// single-theme Observe pin that used to live here is gone.
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

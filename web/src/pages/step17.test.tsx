@@ -168,7 +168,7 @@ describe('SettingsPage tokens', () => {
     await waitFor(() => expect(screen.getByText('Profile', { selector: 'md-primary-tab' })).toBeTruthy());
     // Switch to the Tokens tab.
     const tabs = document.querySelector('md-tabs') as unknown as { activeTabIndex: number };
-    tabs.activeTabIndex = 2;
+    tabs.activeTabIndex = 3;
     fireEvent.change(document.querySelector('md-tabs')!);
     await waitFor(() => expect(screen.getByText(/abcd1234/)).toBeTruthy());
     fireEvent.click(screen.getByText('New token', { selector: 'md-filled-button' }));
@@ -206,7 +206,7 @@ describe('SettingsPage danger zone', () => {
     );
     await waitFor(() => expect(document.querySelector('md-tabs')).toBeTruthy());
     const tabs = document.querySelector('md-tabs') as unknown as { activeTabIndex: number };
-    tabs.activeTabIndex = 4;
+    tabs.activeTabIndex = 5;
     fireEvent.change(document.querySelector('md-tabs')!);
     await waitFor(() => expect(screen.getByText('Delete my account')).toBeTruthy());
     fireEvent.click(screen.getByText('Delete my account'));
@@ -224,6 +224,12 @@ describe('SettingsPage danger zone', () => {
   it('has no axe violations on the profile tab', async () => {
     server.use(...authedHandlers());
     const { container } = renderWithRouter([{ path: '/settings', element: <SettingsPage /> }], '/settings');
+    // Peak A1 added the Appearance tab first; switch to Profile
+    // (index 1) the same way the token and danger tests switch.
+    await waitFor(() => expect(document.querySelector('md-tabs')).toBeTruthy());
+    const tabs = document.querySelector('md-tabs') as unknown as { activeTabIndex: number };
+    tabs.activeTabIndex = 1;
+    fireEvent.change(document.querySelector('md-tabs')!);
     await waitFor(() => expect(document.querySelector('md-outlined-text-field[label="Display name"]')).toBeTruthy());
     const results = await axe.run(container);
     expect(results.violations).toEqual([]);

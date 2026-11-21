@@ -20,17 +20,32 @@ describe('generated tokens', () => {
     expect(lightColors['primary']).toBe('#36618e');
   });
 
-  it('meet WCAG AA (4.5:1) for the key text pairs in both schemes', () => {
+  it('meet WCAG AA (4.5:1) for every text pair the UI uses, in both schemes', () => {
+    // Peak A1: extended from the original nine pairs to every
+    // foreground/background combination components actually
+    // render text with (measured against the generated tokens).
     const pairs: [string, string][] = [
       ['on-surface', 'surface'],
+      ['on-surface', 'surface-dim'],
+      ['on-surface', 'surface-container-low'],
+      ['on-surface', 'surface-container'],
+      ['on-surface', 'surface-container-high'],
+      ['on-surface', 'surface-container-highest'],
       ['on-surface-variant', 'surface'],
+      ['on-surface-variant', 'surface-container-low'],
+      ['on-surface-variant', 'surface-container-highest'],
       ['on-primary', 'primary'],
+      ['on-secondary', 'secondary'],
+      ['on-tertiary', 'tertiary'],
       ['on-primary-container', 'primary-container'],
       ['on-secondary-container', 'secondary-container'],
       ['on-tertiary-container', 'tertiary-container'],
       ['on-error', 'error'],
       ['on-error-container', 'error-container'],
+      ['primary', 'surface'],
+      ['primary', 'surface-container-low'],
       ['inverse-on-surface', 'inverse-surface'],
+      ['inverse-primary', 'inverse-surface'],
     ];
     for (const [name, colors] of [
       ['light', lightColors],
@@ -40,6 +55,16 @@ describe('generated tokens', () => {
         const ratio = contrast(colors[fg], colors[bg]);
         expect(ratio, `${name} ${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
       }
+    }
+  });
+
+  it('meet WCAG AA non-text contrast (3:1) for the outline role', () => {
+    for (const [name, colors] of [
+      ['light', lightColors],
+      ['dark', darkColors],
+    ] as const) {
+      const ratio = contrast(colors['outline'], colors['surface']);
+      expect(ratio, `${name} outline on surface`).toBeGreaterThanOrEqual(3);
     }
   });
 });

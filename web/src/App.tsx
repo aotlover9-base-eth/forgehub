@@ -15,7 +15,9 @@ import {
   Icon,
   Skeleton,
   ToastProvider,
+  useThemePreference,
   type NavItem,
+  type ThemePreference,
 } from './design';
 import { useLogout, useMe } from './api/hooks';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -86,6 +88,32 @@ function OfflineBanner() {
   );
 }
 
+const THEME_LABEL: Record<ThemePreference, string> = {
+  system: 'System',
+  light: 'Light',
+  dark: 'Dark',
+};
+const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
+  system: 'light',
+  light: 'dark',
+  dark: 'system',
+};
+
+/** App bar theme control: cycles System -> Light -> Dark.
+ * The full radio group lives in Settings -> Appearance. */
+function ThemeButton() {
+  const [pref, setPref] = useThemePreference();
+  return (
+    <Button
+      variant="text"
+      aria-label={`Theme: ${THEME_LABEL[pref]}. Activate to switch to ${THEME_LABEL[NEXT_THEME[pref]]}.`}
+      onClick={() => setPref(NEXT_THEME[pref])}
+    >
+      Theme: {THEME_LABEL[pref]}
+    </Button>
+  );
+}
+
 function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -151,9 +179,11 @@ function Shell() {
       activeId={active}
       onNavigate={(item) => navigate(item.href)}
       actions={
-        me.data ? (
-          <>
-            <span aria-label={`Signed in as ${me.data.username}`}>{me.data.username}</span>
+        <>
+          <ThemeButton />
+          {me.data ? (
+            <>
+              <span aria-label={`Signed in as ${me.data.username}`}>{me.data.username}</span>
             <Button variant="text" onClick={() => navigate('/settings')}>
               Settings
             </Button>
@@ -168,7 +198,8 @@ function Shell() {
           <Button variant="text" onClick={() => navigate('/login')}>
             Log in
           </Button>
-        )
+          )}
+        </>
       }
     >
       <OfflineBanner />
