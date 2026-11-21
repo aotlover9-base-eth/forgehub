@@ -26,7 +26,7 @@ use tower_http::services::{ServeDir, ServeFile};
 /// §2), so `'self'` suffices; `'unsafe-inline'` for styles is needed
 /// by Material Web's injected styles.
 pub const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
-img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; \
+img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; \
 base-uri 'self'; form-action 'self'";
 
 async fn health(State(state): State<AppState>) -> Response {

@@ -162,6 +162,7 @@
   --fh-observe-aura-display: 0 0 72px rgb(0 0 0 / 0.42), 0 4px 28px rgb(0 0 0 / 0.28);
   --fh-observe-aura-sub: 0 0 30px rgb(0 0 0 / 0.32), 0 1px 10px rgb(0 0 0 / 0.2);
   --fh-observe-display-size: clamp(2.9rem, 7.4vw, 6.9rem);
+  --fh-observe-section-size: clamp(2rem, 4.5vw, 3.4rem);
   --fh-observe-hover-bg: rgb(255 255 255 / 0.05);
   --fh-observe-scrim: rgb(0 0 0 / 0.32);
   /* The pinned mobile bottom bar sits over scrolling content,

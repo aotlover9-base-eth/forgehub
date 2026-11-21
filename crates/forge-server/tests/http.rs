@@ -116,6 +116,12 @@ async fn security_headers_and_request_id_are_present() {
         .unwrap();
     let headers = resp.headers().clone();
     assert_eq!(headers["content-security-policy"], CSP);
+    // The landing page's intro <video> loads media from the
+    // app itself; the policy names that explicitly.
+    assert!(
+        CSP.contains("media-src 'self'"),
+        "CSP must carry an explicit media-src 'self': {CSP}"
+    );
     assert_eq!(headers["x-content-type-options"], "nosniff");
     assert_eq!(headers["x-frame-options"], "DENY");
     assert_eq!(

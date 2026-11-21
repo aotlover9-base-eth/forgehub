@@ -1,5 +1,28 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMe } from '../api/hooks';
+
+/**
+ * True when the visitor prefers reduced motion. The hero
+ * loop below autoplays only when this is false; with
+ * reduced motion it is replaced by the poster still.
+ */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState<boolean>(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches);
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
+  return reduced;
+}
 
 const REPO = 'https://github.com/aotlover9-base-eth/forgehub';
 const GUIDE = `${REPO}/blob/main/docs/user-guide.md`;
@@ -111,6 +134,7 @@ function BookIcon() {
 export default function LandingPage() {
   const me = useMe();
   const signedIn = Boolean(me.data);
+  const reducedMotion = usePrefersReducedMotion();
   return (
     <div className="observe-root">
       <div className="observe-bg" aria-hidden="true" />
@@ -202,6 +226,85 @@ export default function LandingPage() {
           <BookIcon />
         </a>
       </div>
+      <section className="observe-intro" aria-labelledby="intro-title">
+        <h2 className="observe-intro-title" id="intro-title">
+          See it run before it runs
+        </h2>
+        <p className="observe-intro-sub">
+          Sixty seconds, silent and captioned: a command is saved once, then run anywhere - and
+          ForgeHub shows you exactly what will run before anything executes.
+        </p>
+        <a className="observe-skip" href="#after-intro">
+          Skip video
+        </a>
+        <div className="liquid-glass observe-video-card">
+          <video
+            className="observe-video"
+            controls
+            preload="metadata"
+            playsInline
+            poster="/video/poster.png"
+            aria-label="ForgeHub introduction video, 60 seconds, silent with captions"
+          >
+            <source src="/video/intro-1080p.mp4" type="video/mp4" />
+            <source src="/video/intro-1080p.webm" type="video/webm" />
+            <track kind="captions" src="/video/captions.vtt" srcLang="en" label="English" default />
+          </video>
+        </div>
+        <figure className="observe-loop-card">
+          {reducedMotion ? (
+            <img
+              className="observe-loop-media"
+              src="/video/poster.png"
+              alt="The ForgeHub confirmation card for fg ubuntu-setup: the exact command, version 1, its sha256 hash and the uses-sudo warning, waiting for approval"
+            />
+          ) : (
+            <video
+              className="observe-loop-media"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster="/video/poster.png"
+              aria-label="Eight-second loop: the ForgeHub confirmation card for fg ubuntu-setup"
+            >
+              <source src="/video/hero-loop.mp4" type="video/mp4" />
+              <source src="/video/hero-loop.webm" type="video/webm" />
+            </video>
+          )}
+          <figcaption className="observe-loop-caption">
+            The confirmation card, in an eight-second loop.
+          </figcaption>
+        </figure>
+        <details className="observe-transcript">
+          <summary>Transcript</summary>
+          <div className="observe-transcript-body">
+            <p>
+              Every new machine starts the same way. You type the same long command, again. It
+              lives in a note, a chat, a gist, or your shell history.
+            </p>
+            <p>
+              ForgeHub is a home for your shell commands. Paste yours on the web, name it, save
+              it. Text only, versioned, and private by default.
+            </p>
+            <p>
+              Log in once from the terminal. Then just type fg and the name. ForgeHub shows
+              exactly what it will run, and asks you first.
+            </p>
+            <p>
+              Safety is the product. Other people's snippets need a typed yes. If a snippet
+              changed, you see the diff first. With no terminal, it refuses to run.
+            </p>
+            <p>
+              Keep snippets private, share a link, or publish them. Search, star and fork.
+              Record in your terminal and push like git.
+            </p>
+            <p>ForgeHub. Save a command once. Run it anywhere with fg.</p>
+          </div>
+        </details>
+      </section>
+      <div id="after-intro" tabIndex={-1} />
     </div>
   );
 }

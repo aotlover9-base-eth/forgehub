@@ -1,0 +1,40 @@
+WEBVTT
+
+00:00.500 --> 00:05.000
+Every new machine starts the same way. You type the same long command, again.
+
+00:05.000 --> 00:09.800
+It lives in a note, a chat, a gist, or your shell history.
+
+00:10.400 --> 00:15.000
+ForgeHub is a home for your shell commands. Paste yours on the web, name it, save it.
+
+00:15.000 --> 00:19.800
+Text only, versioned, and private by default.
+
+00:20.400 --> 00:25.000
+Log in once from the terminal. Then just type fg and the name.
+
+00:25.000 --> 00:29.800
+ForgeHub shows exactly what it will run, and asks you first.
+
+00:30.300 --> 00:33.300
+Safety is the product. Other people's snippets need a typed yes.
+
+00:33.600 --> 00:36.600
+If a snippet changed, you see the diff first.
+
+00:36.900 --> 00:39.800
+With no terminal, it refuses to run.
+
+00:40.400 --> 00:45.000
+Keep snippets private, share a link, or publish them.
+
+00:45.000 --> 00:49.800
+Search, star and fork. Record in your terminal and push like git.
+
+00:50.500 --> 00:56.000
+ForgeHub. Save a command once. Run it anywhere.
+
+00:56.000 --> 00:59.500
+Save a command once. Run it anywhere with fg.

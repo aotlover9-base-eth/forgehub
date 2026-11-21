@@ -24,7 +24,8 @@
 }
 
 .observe-root a:focus-visible,
-.observe-root button:focus-visible {
+.observe-root button:focus-visible,
+.observe-root summary:focus-visible {
   outline: 2px solid var(--fh-observe-fg);
   outline-offset: 2px;
 }
@@ -252,6 +253,10 @@
   position: relative;
   z-index: 10;
   flex: 1;
+  /* The intro section flows below the first screen; keep
+     the hero itself a full screen tall (nav + social take
+     roughly the subtracted amount). */
+  min-height: calc(100dvh - 13rem);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -617,4 +622,102 @@ body:has(.observe-app) {
   .observe-app .fh-card:hover {
     transform: none;
   }
+}
+
+/* Intro video section (2026-11-21): flows below the first
+   screen inside the same Observe scene. The 16:9 boxes are
+   reserved with aspect-ratio so nothing shifts layout when
+   the media loads. */
+.observe-intro {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fh-space-5);
+  padding: var(--fh-space-8) var(--fh-space-5);
+  text-align: center;
+}
+
+.observe-intro-title {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-weight: 400;
+  font-size: var(--fh-observe-section-size);
+  line-height: 1.1;
+  margin: 0;
+  text-shadow: var(--fh-observe-aura-display);
+}
+
+.observe-intro-sub {
+  color: var(--fh-observe-fg-70);
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+  max-width: 52rem;
+  margin: 0;
+  text-shadow: var(--fh-observe-aura-sub);
+}
+
+.observe-skip {
+  color: var(--fh-observe-fg-80);
+  font-size: var(--md-sys-typescale-body-medium-size);
+}
+
+.observe-video-card {
+  width: 100%;
+  max-width: 64rem;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  padding: var(--fh-space-3);
+}
+
+.observe-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--fh-observe-bg);
+}
+
+.observe-loop-card {
+  width: 100%;
+  max-width: 36rem;
+  margin: 0;
+}
+
+.observe-loop-media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--fh-observe-line);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--fh-observe-bg);
+}
+
+.observe-loop-caption {
+  color: var(--fh-observe-fg-70);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  margin-top: var(--fh-space-3);
+}
+
+.observe-transcript {
+  width: 100%;
+  max-width: 64rem;
+  text-align: left;
+}
+
+.observe-transcript summary {
+  cursor: pointer;
+  color: var(--fh-observe-fg);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+}
+
+.observe-transcript-body {
+  color: var(--fh-observe-fg-80);
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+
+.observe-transcript-body p {
+  margin: var(--fh-space-3) 0;
 }

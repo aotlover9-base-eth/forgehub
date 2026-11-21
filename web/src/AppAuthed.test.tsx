@@ -36,7 +36,7 @@ describe('App navigation (signed in)', () => {
     // Since the Observe theme it is a standalone scene with no
     // shell nav at all - the CTA is the way into the app.
     expect(
-      await screen.findByText(/Save a command once/, undefined, { timeout: 4000 }),
+      await screen.findByRole('heading', { level: 1, name: /Save a command once/ }, { timeout: 4000 }),
     ).toBeInTheDocument();
     expect(
       await screen.findByText('Open your library', undefined, { timeout: 4000 }),

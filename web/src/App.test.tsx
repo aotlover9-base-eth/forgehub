@@ -12,7 +12,11 @@ describe('App', () => {
     expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
     // /me resolves 401 (MSW default) -> landing with sign-up CTA.
     expect(await screen.findByText('Create account', undefined, { timeout: 4000 })).toBeInTheDocument();
-    expect(screen.getByText(/Save a command once/)).toBeInTheDocument();
+    // Scoped to the heading: the intro transcript below
+    // the fold quotes the same tagline.
+    expect(
+      screen.getByRole('heading', { level: 1, name: /Save a command once/ }),
+    ).toBeInTheDocument();
   });
 });
 
