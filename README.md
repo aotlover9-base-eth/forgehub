@@ -67,7 +67,7 @@ create an account. Details: [docs/deploy.md](docs/deploy.md).
 cargo install --path crates/forge-cli   # from the clone; Rust 1.x
 forgehub alias install                  # adds the `fg` alias
 fg init
-fg record hello             # capture shell: run `echo hello`, then `exit`
+fg record hello             # capture shell: run `echo hello`, then `end`
 fg hello                    # shows the commands, asks [y/N], runs
 ```
 

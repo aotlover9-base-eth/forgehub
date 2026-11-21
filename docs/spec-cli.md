@@ -43,7 +43,7 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 | Command | Behaviour (summary; Steps 4–5 are normative for detail) |
 |---------|----------------------------------------------------------|
 | `init` | Create home, `config.yaml` (`default_shell`, `editor`, `confirm_before_run`, `ignore_commands`, `history_file`, `human_overhead_seconds`, analyze thresholds), `snippets/`, `backups/`. Idempotent |
-| `record <name> [--simple] [--force] [-d desc] [--push]` | Bash/zsh live capture with a `● rec` prompt marker; `--simple` reads stdin. Drops noise (`ls`, `cd`, `clear`, config `ignore_commands`) and consecutive duplicates; a leading `cd` becomes `cwd`; secret scanner **refuses** to save secrets and offers a variable instead. Saves steps-mode YAML |
+| `record <name> [--simple] [--force] [-d desc] [--push]` | Bash/zsh/fish live capture with a `● rec` prompt marker; `--simple` reads stdin. Drops noise (`ls`, `cd`, `clear`, config `ignore_commands`) and consecutive duplicates; a leading `cd` becomes `cwd`; secret scanner **refuses** to save secrets and offers a variable instead. Saves steps-mode YAML |
 | `run <target> [KEY=value…] [--dry] [--step] [-k/--keep-going] [-q] [-y] [--version N] [--no-cache] [--offline]` | §6–§8. `forgehub <name>` is shorthand for `run <name>` when `<name>` is not a subcommand |
 | `list [--tag t] [--long]` | Local workflows; `--json` per §3 |
 | `show <name>` | Surface card + numbered commands |
