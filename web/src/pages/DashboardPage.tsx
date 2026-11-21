@@ -105,9 +105,15 @@ export default function DashboardPage() {
   }, [snippets.data, query]);
 
   // Keep the keyboard cursor inside the visible list.
-  useEffect(() => {
+  // Adjusting state during render (guarded by the
+  // previous length) is the React-endorsed replacement
+  // for a clamp effect; the cursor ends up exactly
+  // where the effect put it, without the extra render.
+  const [clampedLength, setClampedLength] = useState(visible.length);
+  if (clampedLength !== visible.length) {
+    setClampedLength(visible.length);
     setCursor((c) => Math.min(c, Math.max(0, visible.length - 1)));
-  }, [visible.length]);
+  }
 
   const sheetSnippet = visible.find((s) => s.name === sheetName) ?? null;
   const sheetDetail = useSnippet(sheetSnippet?.owner ?? '', sheetName ?? '', sheetName !== null);

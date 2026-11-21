@@ -94,10 +94,18 @@ export default function ExplorePage() {
   // as the initial (and updated) query.
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
-  useEffect(() => {
+  // Adopt a new ?q= when the URL changes while this page
+  // stays mounted. Adjusting state during render (guarded
+  // by the previous params) is the React-endorsed
+  // replacement for a sync-from-props effect; it fires
+  // under exactly the condition the old effect did - the
+  // searchParams object changing - and before paint.
+  const [seenParams, setSeenParams] = useState(searchParams);
+  if (searchParams !== seenParams) {
+    setSeenParams(searchParams);
     const q = searchParams.get('q');
     if (q !== null) setQuery(q);
-  }, [searchParams]);
+  }
   const [debounced, setDebounced] = useState('');
   const [tag, setTag] = useState<string | null>(null);
   const [sort, setSort] = useState<SearchSort>('relevance');

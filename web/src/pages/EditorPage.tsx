@@ -322,7 +322,13 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
 
   // Ctrl+S / Cmd+S saves from anywhere in the form.
   const saveRef = useRef<() => void>(() => {});
-  saveRef.current = save;
+  // Latest-ref pattern: the ref is refreshed in an
+  // effect (refs are never written during render), so
+  // the stable key handler below always calls the
+  // current save closure.
+  useEffect(() => {
+    saveRef.current = save;
+  });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
