@@ -1,7 +1,9 @@
 # ForgeHub intro video - script
 
-The video is **silent** (no voice-over track exists; see
-generation-log.md for why). This is the full voice-over
+The video has **no voice-over** (none exists; see
+generation-log.md for why). It does carry a fully
+synthesized sound-effects track - see Sound design at
+the end of this file. This is the full voice-over
 script as approved in the brief: it runs as the burned-in
 captions on intro-1080p-captioned.mp4 and as the caption
 track (captions.vtt / captions.srt, and the landing
@@ -66,3 +68,41 @@ second; every cue sits inside its scene.
 - On screen: wordmark, tagline, "Create your account" /
   "Install the CLI", and the install card:
   `gh release download v0.1.6`, `sha256sum -c SHA256SUMS`.
+
+## Sound design (synthesized, added 2026-11-21)
+
+Every sound is synthesized with ffmpeg from sine and
+noise sources by docs/video/pipeline/audio.py - no
+external audio files, no recordings. Still no
+voice-over: the words are carried by the captions and
+this script. Master measurements (loudnorm on the WAV
+master; ebur128 agrees at -15.9 LUFS): integrated
+-16.0 LUFS, true peak -1.7 dBTP. The encoded files
+measure -16.0 LUFS / -1.6 dBTP (AAC) and -16.0 LUFS /
+-1.8 dBTP (Opus). All times are absolute seconds.
+
+- **Room tone** (0-60): brown noise through a 320 Hz
+  lowpass, very quiet, everywhere - the only sound
+  under scene 1 besides the typing.
+- **Ambient pad** (10-60): six sine partials (A minor:
+  A1, A2, E3, A3, C4, E4), each with a slow amplitude
+  drift, lowpassed at 1400 Hz. Fades in 10.0-13.0,
+  dips to 45% across scene 4 (30.0-40.5), the two
+  highest partials resolve away 52-58, and the whole
+  bed fades out 58-60 with the closing fade.
+- **Key ticks**: short sine-ping + noise-snap
+  transients, sparse and jittered (never one per
+  character), over the typing only - scene 1:
+  0.75-4.25 (the apt command); scene 3: 20.35-21.05
+  (`forgehub login`), 24.40-24.95 (`fg ubuntu-setup`);
+  scene 5: 46.35-48.87 (the record/push commands).
+- **Soft UI clicks**: 11.05 wordmark lock (quieter),
+  16.50 Save, 23.25 device Approve.
+- **Confirm blips** (two sines, E5 then B5): 28.30
+  the typed `y` in scene 3; 49.18 the push result
+  line in scene 5.
+- **Scene 4** is deliberately near-empty: no clicks,
+  no blips - only very soft lowpassed ticks on the
+  panel changes (33.35, 36.65) over the dipped bed.
+- **Scene 5**: one soft tick at 43.40 for the Explore
+  to Versions crossfade.

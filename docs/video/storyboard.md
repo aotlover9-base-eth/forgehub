@@ -1,9 +1,10 @@
 # ForgeHub intro video - storyboard
 
-60 seconds, 6 scenes x 10 s, 1920x1080, 30 fps, silent
-(the voice-over script lives in script.md; the same text
-runs as captions). One line: **Save a command once. Run it
-anywhere with fg.**
+60 seconds, 6 scenes x 10 s, 1920x1080, 30 fps, no
+voice-over - a synthesized sound-effects track instead
+(cues in script.md; the voice-over script lives there
+too, and the same text runs as captions). One line:
+**Save a command once. Run it anywhere with fg.**
 
 Visual language: the product's current Observe theme -
 dark monochrome glass over the smoke backdrop, Instrument

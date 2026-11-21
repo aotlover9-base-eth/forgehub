@@ -131,3 +131,58 @@ Verified with ffprobe after assembly: 1920x1080,
 Rec.709 tags, faststart on the MP4s, main duration
 60.000 s, hero loop 8.000 s. File sizes are listed in
 reports/report_IntroVideo.md.
+
+## Audio pass (2026-11-21)
+
+A fully synthesized sound-effects track was added the
+day after the render, by docs/video/pipeline/audio.py
+(user request). Method, honestly stated:
+
+- Nothing was recorded, downloaded or AI-generated.
+  Every sound is an ffmpeg lavfi source - `sine` and
+  `anoisesrc` - shaped by volume envelopes, bandpass /
+  lowpass filters and delays, mixed with amix. This
+  script only computes cue times (taken from the scene
+  timings in build_scenes.py); all DSP is ffmpeg's.
+- Sounds: key-tick patter (sine ping + noise snap under
+  exponential decays) over the typing windows; soft UI
+  clicks (low sine thock + band noise) on the wordmark
+  lock, Save and device Approve; two-tone confirm blips
+  (E5, B5) on the typed `y` and the push result; an
+  ambient pad of six drifting sine partials (A minor)
+  over brown-noise room tone, dipping for scene 4 and
+  resolving/fading out across the close. Scene 4 gets
+  no clicks or blips, only two very soft lowpassed
+  ticks on its panel changes. The full cue list with
+  timestamps is in script.md.
+- One measurement worth logging: this ffmpeg's `sine`
+  source peaks at -18.1 dBFS, not full scale (verified
+  with volumedetect on a raw source). audio.py carries
+  a documented SINE_GAIN compensation so the design
+  levels are the heard levels.
+- Mastering: static gain plus a sample-peak limiter
+  safety, with the true peak *measured* after the pass
+  (broadband ticks overshoot between samples, so the
+  limiter alone was not trusted). WAV master, measured
+  with loudnorm: integrated -16.00 LUFS, true peak
+  -1.71 dBTP; ebur128 independently reads -15.9 LUFS /
+  -1.7 dBFS peak. Window checks confirm the design:
+  scene 4's window (34-38 s) reads -23.1 LUFS against
+  scene 2's -15.0.
+- Delivery: the audio was replaced in the three intro
+  files with the video stream copied bit-for-bit
+  (streamhash MD5s identical before and after:
+  a9ad7ad1... main, c41d8eb0... captioned,
+  9445b87a... webm). AAC at 128k for the MP4s, Opus at
+  96k for the WebM; the encoded tracks measure
+  -16.04 LUFS / -1.63 dBTP and -16.02 LUFS /
+  -1.75 dBTP. Durations: 60.000 s (MP4s); the WebM
+  container reports 60.008 s (was 60.018 s before this
+  pass - Opus timestamp rounding; its video is exactly
+  1800 frames). New sizes: intro-1080p.mp4 9,734,723 B,
+  intro-1080p-captioned.mp4 8,484,743 B,
+  intro-1080p.webm 4,657,233 B. The hero loops are
+  untouched and remain silent by design.
+- build.sh now runs audio.py and lays mix.wav under
+  the concat, so the one-command rebuild reproduces
+  this track. Still no voice-over.

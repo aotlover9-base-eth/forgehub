@@ -26,24 +26,31 @@ for n in 1 2 3 4 5 6; do
 done
 test -f "$SEG/hero.mp4" || { echo "missing hero.mp4 - run render.mjs first" >&2; exit 1; }
 
-# Concat the six scenes with hard cuts, add the silent
-# stereo track the brief asks for, faststart for the web.
+# The synthesized sound-design track (audio.py - every
+# sound is synthesized with ffmpeg from sines and noise;
+# see docs/video/script.md for the cue list). Builds
+# $WORK/audio/mix.wav, loudness-adjusted to about
+# -16 LUFS with true peak at or below -1 dBTP.
+python3 "$SCRIPT_DIR/audio.py" --work "$WORK"
+
+# Concat the six scenes with hard cuts, lay the sound
+# design under them, faststart for the web.
 LIST="$WORK/concat.txt"
 : > "$LIST"
 for n in 1 2 3 4 5 6; do echo "file '$SEG/scene$n.mp4'" >> "$LIST"; done
 ffmpeg -y -loglevel error -f concat -safe 0 -i "$LIST" \
-  -f lavfi -t 60 -i anullsrc=cl=stereo:r=48000 \
+  -i "$WORK/audio/mix.wav" \
   -map 0:v:0 -map 1:a:0 \
   -vf format=yuv420p \
   -c:v libx264 -pix_fmt yuv420p -crf 18 -preset slow -r 30 \
   -colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv \
-  -c:a aac -b:a 64k -movflags +faststart \
+  -c:a aac -b:a 128k -movflags +faststart \
   "$OUT/intro-1080p.mp4"
 
 # WebM (VP9) variant.
 ffmpeg -y -loglevel error -i "$OUT/intro-1080p.mp4" \
   -c:v libvpx-vp9 -b:v 0 -crf 32 -pix_fmt yuv420p \
-  -c:a libopus -b:a 64k "$OUT/intro-1080p.webm"
+  -c:a libopus -b:a 96k "$OUT/intro-1080p.webm"
 
 # Captioned variant: the VO captions burned in with libass,
 # so they are visible in any player.

@@ -158,3 +158,50 @@ update from the Ubuntu archive; simulations for upgrade/install).
 
 None. The pipeline uses the repo's existing Playwright install,
 Python 3, and the system ffmpeg 8.1.2.
+
+## Addendum - Audio pass (2026-11-21)
+
+Added at the user's request, the same day: a fully
+synthesized sound-effects track for the intro video.
+No external audio files, no downloads, no recordings,
+no AI generation - every sound is synthesized with
+ffmpeg from sine and noise sources by the new pipeline
+step `docs/video/pipeline/audio.py` (build.sh runs it,
+so the one-command rebuild reproduces the track).
+
+- **Method:** audio.py computes cue times from the
+  scene timings in build_scenes.py and drives ffmpeg;
+  all DSP (envelopes, filters, delays, mixing) is
+  ffmpeg's. Mastering is a static gain plus a
+  sample-peak limiter safety, with the true peak
+  measured after the pass and the gain backed off if
+  the measurement exceeds -1 dBTP.
+- **Cues (absolute seconds):** brown-noise room tone
+  throughout; a six-partial sine pad (A minor) fading
+  in 10-13 s, dipping to 45% across scene 4, its top
+  partials resolving 52-58 s, bed out 58-60 s; sparse
+  jittered key-tick patter over the typing (scene 1:
+  0.75-4.25; scene 3: 20.35-21.05 and 24.40-24.95;
+  scene 5: 46.35-48.87); soft UI clicks at 11.05
+  (wordmark lock), 16.50 (Save), 23.25 (Approve);
+  two-tone confirm blips (E5-B5) at 28.30 (typed `y`)
+  and 49.18 (push result); scene 4 kept serious - no
+  clicks or blips, only soft lowpassed ticks on the
+  panel changes (33.35, 36.65) over the dipped bed;
+  one soft tick at 43.40 for scene 5's crossfade.
+  Full cue list in docs/video/script.md.
+- **Measured loudness / peak:** WAV master -16.00 LUFS
+  integrated, -1.71 dBTP true peak (loudnorm; ebur128
+  agrees: -15.9 LUFS, -1.7 dBFS peak). Encoded tracks:
+  AAC -16.04 LUFS / -1.63 dBTP; Opus -16.02 LUFS /
+  -1.75 dBTP.
+- **Files changed:** web/public/video/intro-1080p.mp4
+  (9,734,723 B), intro-1080p-captioned.mp4
+  (8,484,743 B), intro-1080p.webm (4,657,233 B) - in
+  each, the video stream was copied, not re-encoded
+  (streamhash MD5 verified identical), durations stay
+  60.000 s (the WebM container reports 60.008 s, it
+  was 60.018 s before). Hero loops untouched and
+  still silent. No application code changed.
+- **Still no voice-over** - captions, script.md and
+  the landing transcript carry the words, as before.
