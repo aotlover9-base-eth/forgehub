@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 /** A Material Symbols icon (self-hosted subset font). */
 export function Icon({
@@ -90,6 +90,35 @@ export function IconButton({
       <Icon name={icon} filled={filled} />
     </md-icon-button>
   );
+}
+
+/**
+ * Copy button with the A6 feedback contract: the icon
+ * morphs to a check for a moment on success (the caller
+ * usually pairs it with a toast). Clipboard failure leaves
+ * the icon unchanged - the text stays selectable.
+ */
+export function CopyIconButton({
+  text,
+  label,
+  onCopied,
+}: {
+  text: string;
+  label: string;
+  onCopied?: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      onCopied?.();
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // No clipboard permission: nothing to morph.
+    }
+  };
+  return <IconButton icon={copied ? 'check' : 'content_copy'} label={label} onClick={copy} />;
 }
 
 /**

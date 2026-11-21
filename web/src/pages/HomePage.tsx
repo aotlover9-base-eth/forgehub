@@ -3,8 +3,8 @@ import {
   Button,
   Card,
   CodeBlock,
+  CopyIconButton,
   Icon,
-  IconButton,
   ListItem,
   PageHeader,
   Skeleton,
@@ -37,14 +37,6 @@ export default function HomePage() {
   const trending = (popular.data?.pages[0]?.snippets ?? []).slice(0, 5);
   const isNewUser = !mine.isPending && recent.length === 0;
 
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({ message: `Copied: ${text}` });
-    } catch {
-      toast({ message: 'Copy failed - your browser blocked clipboard access' });
-    }
-  };
 
   return (
     <div>
@@ -99,7 +91,7 @@ export default function HomePage() {
                 <Skeleton lines={3} />
               ) : (
                 <>
-                  <md-list>
+                  <md-list class="fh-list-enter">
                     {recent.map((s) => (
                       <ListItem
                         key={s.name}
@@ -126,7 +118,7 @@ export default function HomePage() {
                 <p>No public snippets yet - yours could be the first everyone reaches for.</p>
               ) : (
                 <>
-                  <md-list>
+                  <md-list class="fh-list-enter">
                     {trending.map((s) => (
                       <ListItem
                         key={`${s.owner}/${s.name}`}
@@ -164,7 +156,7 @@ export default function HomePage() {
           >
             <Card variant="outlined">
               <h2 style={{ marginTop: 0 }}>Recent activity</h2>
-              <md-list>
+              <md-list class="fh-list-enter">
                 {recent.map((s) => (
                   <ListItem
                     key={s.name}
@@ -185,7 +177,7 @@ export default function HomePage() {
               </p>
               <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
                 <code style={{ flex: 1, fontSize: 'var(--md-sys-typescale-body-large-size)' }}>fg ubuntu-setup</code>
-                <IconButton icon="content_copy" label="Copy run command" onClick={() => void copy('fg ubuntu-setup')} />
+                <CopyIconButton text="fg ubuntu-setup" label="Copy run command" onCopied={() => toast({ message: 'Copied: fg ubuntu-setup' })} />
               </div>
             </Card>
           </div>

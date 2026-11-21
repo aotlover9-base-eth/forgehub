@@ -5,6 +5,7 @@ import {
   Card,
   Checkbox,
   CodeBlock,
+  CopyIconButton,
   ConfirmDialog,
   DialogActions,
   EmptyState,
@@ -356,7 +357,7 @@ export default function DashboardPage() {
           <EmptyState icon="search" title="Nothing matches" message="No snippets match this filter and search. Try clearing one of them." />
         ) : (
           <Card variant="outlined">
-            <div ref={listRef}>
+            <div ref={listRef} className="fh-list-enter">
               <md-list>
                 {visible.map((snippet, index) => (
                   <div
@@ -418,6 +419,7 @@ export default function DashboardPage() {
 
       {sheetSnippet ? (
         <aside
+          className="fh-sheet-enter"
           aria-label={`Preview of ${sheetSnippet.name}`}
           style={{ width: 360, flexShrink: 0, position: 'sticky', top: 0 }}
         >
@@ -436,10 +438,10 @@ export default function DashboardPage() {
                 <CodeBlock code={sheetDetail.data.body} label={`${sheetSnippet.name} - v${sheetDetail.data.version}`} />
                 <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
                   <code style={{ flex: 1 }}>fg {sheetSnippet.name}</code>
-                  <IconButton
-                    icon="content_copy"
+                  <CopyIconButton
+                    text={`fg ${sheetSnippet.name}`}
                     label="Copy run command"
-                    onClick={() => void copy(`fg ${sheetSnippet.name}`, `Copied: fg ${sheetSnippet.name}`)}
+                    onCopied={() => toast({ message: `Copied: fg ${sheetSnippet.name}` })}
                   />
                 </div>
                 <Button

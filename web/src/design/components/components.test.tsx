@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import axe from 'axe-core';
-import { Chip, StatusChip } from './core';
+import { Chip, CopyIconButton, StatusChip } from './core';
 import { Checkbox, Radio, SelectField, Switch } from './inputs';
 import { CodeBlock, EmptyState, ErrorState } from './surfaces';
 
@@ -119,5 +119,18 @@ describe('selection wrappers', () => {
     el.value = '30';
     fireEvent.change(el);
     expect(onChange).toHaveBeenCalledWith('30');
+  });
+});
+
+describe('CopyIconButton', () => {
+  it('morphs to a check after a successful copy', async () => {
+    Object.assign(navigator, { clipboard: { writeText: async () => {} } });
+    const { container } = render(<CopyIconButton text="fg demo" label="Copy run command" />);
+    const button = container.querySelector('md-icon-button') as HTMLElement;
+    fireEvent.click(button);
+    await waitFor(() => {
+      const icon = container.querySelector('.material-symbols-outlined');
+      expect(icon?.textContent).toBe('check');
+    });
   });
 });

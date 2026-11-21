@@ -26,6 +26,18 @@ dragged 16%); the full M3 duration and easing scale.
   `prefers-reduced-motion`.
 - Text is never truncated in lists or code; long lines wrap.
 
+## Motion (Peak A6)
+
+Shared-axis entrances only, on the token scale: route changes fade and
+rise 8 px over medium2 (300 ms, emphasized-decelerate); list rows
+stagger in 25 ms apart over medium1; the Library side sheet slides
+16 px; toasts rise over medium1. Under `prefers-reduced-motion` all of
+it collapses to a short2 fade with no travel and no stagger. Copy
+feedback is an icon morph to a check plus a toast; saving flashes an
+inline check on the save button for 500 ms before navigating. There
+are no looping decorative animations (the skeleton pulse is a loading
+indicator, and it stops under reduced motion).
+
 ## Components
 
 ### AppShell (`components/AppShell.tsx`)

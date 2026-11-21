@@ -117,6 +117,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [validating, setValidating] = useState(false);
   const [conflict, setConflict] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const escArmed = useRef(false);
   const gutterRef = useRef<HTMLDivElement>(null);
 
@@ -140,6 +141,12 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
   const navigateAfterSave = (path: string) => {
     allowLeave.current = true;
     navigate(path, { replace: true });
+  };
+  /** Save success: flash the inline check on the save
+   * button for a beat, then leave (A6). */
+  const succeedSave = (path: string) => {
+    setJustSaved(true);
+    window.setTimeout(() => navigateAfterSave(path), 500);
   };
 
   // Unsaved-changes guard: router navigation + tab close.
@@ -222,7 +229,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
       create.mutate(input, {
         onSuccess: (snippet) => {
           toast({ message: `${snippet.name} saved` });
-          navigateAfterSave(`/${snippet.owner}/${snippet.name}`);
+          succeedSave(`/${snippet.owner}/${snippet.name}`);
         },
         onError: onSaveError,
       });
@@ -235,7 +242,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
     const afterMeta = () => {
       if (!bodyChanged) {
         toast({ message: 'Saved' });
-        navigateAfterSave(`/${s.owner}/${s.name}`);
+        succeedSave(`/${s.owner}/${s.name}`);
         return;
       }
       update.mutate(
@@ -243,7 +250,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         {
           onSuccess: (saved) => {
             toast({ message: `Saved as version ${saved.version}` });
-            navigateAfterSave(`/${saved.owner}/${saved.name}`);
+            succeedSave(`/${saved.owner}/${saved.name}`);
           },
           onError: onSaveError,
         },
@@ -276,7 +283,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         {
           onSuccess: (saved) => {
             toast({ message: `Saved as version ${saved.version}` });
-            navigateAfterSave(`/${saved.owner}/${saved.name}`);
+            succeedSave(`/${saved.owner}/${saved.name}`);
           },
           onError: onSaveError,
         },
@@ -555,8 +562,13 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         <TextField label="Version message (optional)" value={message} onChange={setMessage} maxLength={200} />
       ) : null}
       <p style={{ display: 'flex', gap: 'var(--fh-space-2)', margin: 0 }}>
-        <Button variant="filled" onClick={save} disabled={saveBlocked || create.isPending || update.isPending || patch.isPending}>
-          {editing ? 'Save new version' : 'Save snippet'}
+        <Button
+          variant="filled"
+          icon={justSaved ? 'check' : undefined}
+          onClick={save}
+          disabled={justSaved || saveBlocked || create.isPending || update.isPending || patch.isPending}
+        >
+          {justSaved ? 'Saved' : editing ? 'Save new version' : 'Save snippet'}
         </Button>
         <Button variant="text" onClick={() => navigate(-1)}>
           Cancel

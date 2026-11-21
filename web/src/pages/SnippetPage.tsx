@@ -6,6 +6,7 @@ import {
   Checkbox,
   Chip,
   CodeBlock,
+  CopyIconButton,
   DialogActions,
   EmptyState,
   ErrorState,
@@ -95,14 +96,6 @@ export default function SnippetPage() {
   }
   const s = snippet.data;
 
-  const copy = async (text: string, message: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({ message });
-    } catch {
-      toast({ message: 'Copy failed - your browser blocked clipboard access' });
-    }
-  };
 
   const toggleVersion = (version: number) => {
     setSelected((prev) => {
@@ -251,7 +244,7 @@ export default function SnippetPage() {
         <h2 style={{ marginTop: 0 }}>Run it</h2>
         <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
           <code style={{ flex: 1, fontSize: 'var(--md-sys-typescale-body-large-size)' }}>{runCommand}</code>
-          <IconButton icon="content_copy" label="Copy run command" onClick={() => void copy(runCommand, `Copied: ${runCommand}`)} />
+          <CopyIconButton text={runCommand} label="Copy run command" onCopied={() => toast({ message: `Copied: ${runCommand}` })} />
         </div>
         <p style={{ color: 'var(--md-sys-color-on-surface-variant)', marginBottom: 0 }}>
           New to <code>fg</code>? Install instructions are in the ForgeHub README.
