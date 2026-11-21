@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -90,7 +90,14 @@ const SORTS: { id: SearchSort; label: string }[] = [
 ];
 
 export default function ExplorePage() {
-  const [query, setQuery] = useState('');
+  // The app bar search entry lands here with ?q=; adopt it
+  // as the initial (and updated) query.
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q !== null) setQuery(q);
+  }, [searchParams]);
   const [debounced, setDebounced] = useState('');
   const [tag, setTag] = useState<string | null>(null);
   const [sort, setSort] = useState<SearchSort>('relevance');

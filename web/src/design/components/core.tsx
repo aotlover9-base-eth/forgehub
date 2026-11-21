@@ -92,18 +92,24 @@ export function IconButton({
   );
 }
 
-/** Floating action button wrapper. */
+/**
+ * Floating action button wrapper. With `text`, renders the
+ * extended FAB (icon + label) used on expanded layouts; the
+ * label doubles as the accessible name.
+ */
 export function Fab({
   icon,
   label,
+  text,
   onClick,
 }: {
   icon: string;
   label: string;
+  text?: string;
   onClick?: () => void;
 }) {
   return (
-    <md-fab aria-label={label} onClick={onClick}>
+    <md-fab aria-label={label} label={text} onClick={onClick}>
       <Icon name={icon} slot="icon" />
     </md-fab>
   );

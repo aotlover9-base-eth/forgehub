@@ -11,7 +11,7 @@
 /* ---- App shell */
 .fh-shell {
   display: grid;
-  min-height: 100dvh;
+  height: 100dvh;
   background: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
 }
@@ -52,6 +52,34 @@
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
+  overflow-y: auto;
+  min-height: 0;
+  min-width: 0;
+}
+.fh-shell--medium .fh-shell__main,
+.fh-shell--expanded .fh-shell__main {
+  padding: var(--fh-space-5);
+}
+/* Medium top app bar (expanded width class): taller, with a
+   headline-small title, per the M3 top app bar variants. */
+.fh-topbar--medium {
+  padding: var(--fh-space-4) var(--fh-space-5);
+}
+.fh-topbar--medium .fh-topbar__title {
+  font-size: var(--md-sys-typescale-headline-small-size);
+  line-height: var(--md-sys-typescale-headline-small-line-height);
+  font-weight: var(--md-sys-typescale-headline-small-weight);
+}
+/* The FAB floats above the content; on compact it also
+   clears the navigation bar. */
+.fh-fab {
+  position: fixed;
+  right: var(--fh-space-4);
+  bottom: var(--fh-space-4);
+  z-index: 40;
+}
+.fh-shell--compact .fh-fab {
+  bottom: calc(var(--fh-space-7) + var(--fh-space-6));
 }
 .fh-nav {
   display: flex;

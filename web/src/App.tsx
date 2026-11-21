@@ -12,10 +12,14 @@ import {
   AppShell,
   Button,
   ConfirmDialog,
+  Fab,
   Icon,
+  IconButton,
+  Menu,
   Skeleton,
   ToastProvider,
   useThemePreference,
+  useWidthClass,
   type NavItem,
   type ThemePreference,
 } from './design';
@@ -119,7 +123,14 @@ function Shell() {
   const location = useLocation();
   const me = useMe();
   const logout = useLogout();
+  const [themePref, setThemePref] = useThemePreference();
+  const widthClass = useWidthClass();
   const [helpOpen, setHelpOpen] = useState(false);
+  // The FAB lives on the two screens where creating is the
+  // primary action: your Library and your own profile.
+  const showFab =
+    Boolean(me.data) &&
+    (location.pathname === '/dashboard' || location.pathname === `/${me.data?.username}`);
   // Which nav item is "here": Profile on your own profile
   // page, otherwise the matching section - and nothing on
   // pages that belong to no section (another user's profile,
@@ -180,27 +191,53 @@ function Shell() {
       onNavigate={(item) => navigate(item.href)}
       actions={
         <>
-          <ThemeButton />
+          <IconButton
+            icon="search"
+            label="Search public snippets"
+            onClick={() => navigate('/explore')}
+          />
           {me.data ? (
+            <Menu
+              buttonLabel={`Account menu for ${me.data.username}`}
+              buttonIcon="account_circle"
+              items={[
+                { id: 'profile', label: `Profile (${me.data.username})`, icon: 'person' },
+                { id: 'settings', label: 'Settings', icon: 'settings' },
+                { id: 'theme', label: `Theme: ${THEME_LABEL[themePref]}`, icon: 'contrast' },
+                { id: 'logout', label: 'Log out', icon: 'logout' },
+              ]}
+              onSelect={(id) => {
+                if (!me.data) return;
+                if (id === 'profile') navigate(`/${me.data.username}`);
+                else if (id === 'settings') navigate('/settings');
+                else if (id === 'theme') setThemePref(NEXT_THEME[themePref]);
+                else if (id === 'logout')
+                  logout.mutate(undefined, { onSuccess: () => navigate('/') });
+              }}
+            />
+          ) : (
             <>
-              <span aria-label={`Signed in as ${me.data.username}`}>{me.data.username}</span>
-            <Button variant="text" onClick={() => navigate('/settings')}>
-              Settings
-            </Button>
-            <Button
-              variant="text"
-              onClick={() => logout.mutate(undefined, { onSuccess: () => navigate('/') })}
-            >
-              Log out
-            </Button>
-          </>
-        ) : (
-          <Button variant="text" onClick={() => navigate('/login')}>
-            Log in
-          </Button>
+              <ThemeButton />
+              <Button variant="text" onClick={() => navigate('/login')}>
+                Log in
+              </Button>
+            </>
           )}
         </>
       }
+      fab={
+        showFab ? (
+          <span className="fh-fab">
+            <Fab
+              icon="add"
+              label="New snippet"
+              text={widthClass === 'expanded' ? 'New snippet' : undefined}
+              onClick={() => navigate('/new')}
+            />
+          </span>
+        ) : undefined
+      }
+      scrollKey={location.pathname}
     >
       <OfflineBanner />
       <ErrorBoundary>

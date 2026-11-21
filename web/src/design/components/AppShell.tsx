@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useWidthClass } from '../hooks';
 import { Icon } from './core';
 
@@ -21,6 +21,8 @@ export function AppShell({
   activeId,
   onNavigate,
   actions,
+  fab,
+  scrollKey,
   children,
 }: {
   title: string;
@@ -28,9 +30,22 @@ export function AppShell({
   activeId: string | null;
   onNavigate: (item: NavItem) => void;
   actions?: ReactNode;
+  /** Floating action button, rendered above the content at
+   * the trailing-bottom corner (clears the navigation bar on
+   * compact). */
+  fab?: ReactNode;
+  /** When this changes, the content column scrolls back to
+   * the top (route changes pass the pathname). */
+  scrollKey?: string;
   children: ReactNode;
 }) {
   const widthClass = useWidthClass();
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // Optional call: some DOM implementations (jsdom in
+    // tests) have no Element.scrollTo.
+    mainRef.current?.scrollTo?.({ top: 0 });
+  }, [scrollKey]);
   const navButton = (item: NavItem, showLabelBeside = false) => {
     const active = item.id === activeId;
     return (
@@ -49,7 +64,7 @@ export function AppShell({
   };
   return (
     <div className={`fh-shell fh-shell--${widthClass}`}>
-      <header className="fh-topbar">
+      <header className={`fh-topbar${widthClass === 'expanded' ? ' fh-topbar--medium' : ''}`}>
         <span className="fh-topbar__title">{title}</span>
         <span className="fh-topbar__actions">{actions}</span>
       </header>
@@ -62,7 +77,10 @@ export function AppShell({
           {navItems.map((item) => navButton(item))}
         </nav>
       ) : null}
-      <main className="fh-shell__main">{children}</main>
+      <main className="fh-shell__main" ref={mainRef}>
+        {children}
+      </main>
+      {fab}
       {widthClass === 'compact' ? (
         <nav className="fh-nav fh-nav--bar" aria-label="Main">
           {navItems.map((item) => navButton(item))}
