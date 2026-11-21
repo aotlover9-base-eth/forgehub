@@ -205,3 +205,20 @@ so the one-command rebuild reproduces the track).
   still silent. No application code changed.
 - **Still no voice-over** - captions, script.md and
   the landing transcript carry the words, as before.
+- **Rebalance (same day, owner feedback):** the
+  typing clicks were halved (a `TICK_GAIN` of 0.5 on
+  the patter only - clicks, blips and scene 4's panel
+  ticks unchanged) and a subtle background-music bed
+  was added: a warm sine pad playing Am(add9) -
+  Fmaj7 - Cmaj7 - G6 - Am(add9) - Fmaj7 - Cmaj7 -
+  Am(add9) at 7.5 s per chord with 1.5 s crossfades,
+  plus a sparse plucked-sine pentatonic melody that
+  rests across scene 4; the music fades in
+  8.5-11.5 s, dips to 50% across scene 4 and resolves
+  out 58-60 s. New measurements: master -15.99 LUFS /
+  -2.36 dBTP (ebur128 -15.9 LUFS); AAC -16.01 /
+  -2.51 dBTP; Opus -16.00 / -2.33 dBTP. Video streams
+  again copied bit-for-bit (streamhash MD5s
+  unchanged), durations still 60.000 s; new sizes
+  9,736,063 B / 8,486,083 B / 4,733,710 B. Hero loops
+  untouched.

@@ -21,6 +21,9 @@ Cue map (absolute seconds; scene starts at 0/10/20/30/
   apt command), scene 3 (20.3-21.1 login, 24.35-25.0
   fg ubuntu-setup), scene 5 (46.35-48.87 record/push
   commands). Sparse and jittered, never one per character.
+  Halved in gain (TICK_GAIN) in the 2026-11-21 rebalance
+  pass - the owner found the clicks too loud. The soft
+  UI clicks and confirm blips were left as they were.
 - Soft UI clicks: 11.05 wordmark lock (scene 2, quieter),
   16.50 Save crossfade (scene 2), 23.25 device Approve
   ring (scene 3).
@@ -36,6 +39,18 @@ Cue map (absolute seconds; scene starts at 0/10/20/30/
   (30-40.5 s), its two highest partials resolving away
   over 52-58 s, and the whole bed fading out over the
   last 2 s while scene 6 fades to black.
+- Background music (added in the rebalance pass, at the
+  owner's request for an actual music bed under the
+  atmosphere): a warm sine pad playing Am(add9) -
+  Fmaj7 - Cmaj7 - G6 - Am(add9) - Fmaj7 - Cmaj7 -
+  Am(add9), one chord every 7.5 s with 1.5 s crossfades
+  between chords, plus a sparse plucked-sine melody
+  (A-minor pentatonic, long decays, no notes at all
+  across scene 4). The music fades in over 8.5-11.5 s,
+  dips to 50% across scene 4 (30-40.5 s) with the rest
+  of the bed, and fades out over the last 2 s. Still
+  100% synthesized - chords and melody are sine
+  partials with envelopes, nothing recorded.
 """
 
 import argparse
@@ -113,6 +128,73 @@ ENV_MAIN = (
 )
 # The high partials resolve away over 52-58 s.
 ENV_RESOLVE = "if(lt(t,52),1,if(lt(t,58),(58-t)/6,0))"
+
+# Owner feedback (rebalance pass): the typing clicks
+# were too loud. The key-tick patter - and only the
+# patter; the panel ticks, the crossfade tick, the UI
+# clicks and the blips keep their levels - is scaled
+# by this factor relative to the first mix.
+TICK_GAIN = 0.5
+
+# Background music: one chord every 7.5 s, two
+# statements of Am(add9) - Fmaj7 - Cmaj7 - G6, the
+# second ending back on Am(add9) so the piece resolves
+# at home under the closing fade. Partials are
+# (frequency, gain) sine pairs, voiced low and warm;
+# adjacent chords crossfade over 1.5 s.
+CHORD_DUR = 7.5
+CHORD_XFADE = 1.5
+CHORDS = [
+    ("Am(add9)", [(55.00, 0.050), (110.00, 0.085), (164.81, 0.055),
+                  (246.94, 0.036), (261.63, 0.033)]),
+    ("Fmaj7", [(87.31, 0.078), (174.61, 0.046), (220.00, 0.050),
+               (261.63, 0.037), (329.63, 0.029)]),
+    ("Cmaj7", [(65.41, 0.068), (130.81, 0.058), (164.81, 0.050),
+               (196.00, 0.044), (246.94, 0.033)]),
+    ("G6", [(98.00, 0.076), (146.83, 0.048), (196.00, 0.047),
+            (246.94, 0.038), (329.63, 0.030)]),
+    ("Am(add9)", [(55.00, 0.050), (110.00, 0.085), (164.81, 0.055),
+                  (246.94, 0.036), (261.63, 0.033)]),
+    ("Fmaj7", [(87.31, 0.078), (174.61, 0.046), (220.00, 0.050),
+               (261.63, 0.037), (329.63, 0.029)]),
+    ("Cmaj7", [(65.41, 0.068), (130.81, 0.058), (164.81, 0.050),
+               (196.00, 0.044), (246.94, 0.033)]),
+    ("Am(add9)", [(55.00, 0.050), (110.00, 0.085), (164.81, 0.055),
+                  (246.94, 0.036), (261.63, 0.033)]),
+]
+
+# Sparse plucked-sine melody (time, frequency, gain).
+# A-minor pentatonic, each note a chord tone or a
+# gentle extension of the chord under it. Nothing
+# between 30 and 40.5 s: the melody rests across
+# scene 4 with the dipped bed.
+MELODY = [
+    (12.00, 659.25, 0.050),  # E5 - the maj7 of Fmaj7
+    (14.20, 523.25, 0.044),  # C5
+    (18.50, 659.25, 0.050),  # E5 over Cmaj7
+    (20.80, 783.99, 0.040),  # G5
+    (24.00, 587.33, 0.046),  # D5 over G6
+    (27.50, 659.25, 0.048),  # E5 - the 6 of G6
+    (42.00, 523.25, 0.044),  # C5 over Fmaj7
+    (47.00, 659.25, 0.048),  # E5 over Cmaj7
+    (49.50, 587.33, 0.042),  # D5
+    (53.50, 659.25, 0.048),  # E5 over Am(add9)
+    (55.50, 523.25, 0.044),  # C5
+    (57.20, 440.00, 0.040),  # A4 - home, under the fade
+]
+
+# Global envelope for the music: silent until 8.5 s,
+# in by 11.5 s, dipped to 50% across scene 4
+# (30-40.5 s), out over the last 2 s.
+BGM_ENV = (
+    "if(lt(t,8.5),0,"
+    "if(lt(t,11.5),(t-8.5)/3,"
+    "if(lt(t,30),1,"
+    "if(lt(t,31.5),1-0.3333*(t-30),"
+    "if(lt(t,39),0.5,"
+    "if(lt(t,40.5),0.5+0.3333*(t-39),"
+    "if(lt(t,58),1,(60-t)/2)))))))"
+)
 
 
 def run(cmd: list[str]) -> subprocess.CompletedProcess:
@@ -213,6 +295,84 @@ def build_bed(d: Path) -> None:
                   ["-map", "[out]", "-ar", str(SR)])
 
 
+def build_bgm(d: Path) -> None:
+    """The music bed: chord pad segments + pluck melody.
+
+    Each chord is rendered as its own short file whose
+    envelope ramps over the crossfade at both ends, so
+    simply delaying the segments onto the timeline and
+    summing them crossfades the progression. The first
+    segment starts at 0 (its window opens the piece,
+    silent under the global envelope until 8.5 s) and
+    the last ends exactly at 60 s.
+    """
+    half = CHORD_XFADE / 2
+    n = len(CHORDS)
+    segment_files: list[Path] = []
+    for k, (_name, partials) in enumerate(CHORDS):
+        start = k * CHORD_DUR
+        if k == 0:
+            seg_dur, env = CHORD_DUR + half, (
+                f"if(lt(t,{CHORD_DUR - half}),1,"
+                f"({CHORD_DUR + half}-t)/{CHORD_XFADE})")
+        elif k == n - 1:
+            seg_dur, env = CHORD_DUR + half, (
+                f"if(lt(t,{CHORD_XFADE}),t/{CHORD_XFADE},1)")
+        else:
+            seg_dur, env = CHORD_DUR + CHORD_XFADE, (
+                f"if(lt(t,{CHORD_XFADE}),t/{CHORD_XFADE},"
+                f"if(lt(t,{CHORD_DUR}),1,"
+                f"({CHORD_DUR + CHORD_XFADE}-t)/{CHORD_XFADE}))")
+        inputs, chains, labels = [], [], []
+        for i, (f, g) in enumerate(partials):
+            inputs.append(
+                f"sine=frequency={f}:sample_rate=48000:duration={seg_dur}")
+            drift = 0.05 + 0.013 * i
+            phase = 0.7 * i + 1.1 * k
+            chains.append(
+                f"[{i}:a]volume='{g * SINE_GAIN}"
+                f"*(0.85+0.15*sin(2*PI*{drift}*t+{phase}))'"
+                f":eval=frame,volume='{env}':eval=frame[p{i}]")
+            labels.append(f"[p{i}]")
+        chains.append(
+            f"{''.join(labels)}amix=inputs={len(labels)}:normalize=0,"
+            f"lowpass=f=1200,pan=stereo|c0=c0|c1=c0,"
+            f"atrim=0:{seg_dur}[out]")
+        seg = d / f"bgm_chord{k}.wav"
+        ffmpeg_filter(seg, inputs, ";".join(chains),
+                      ["-map", "[out]", "-ar", str(SR)])
+        segment_files.append(seg)
+    # Assembly: delayed chord segments plus the melody.
+    # Each melody note is a sine fundamental with a
+    # quiet octave above it, both under exponential
+    # decays (the octave decays faster, like a pluck).
+    inputs = [str(p) for p in segment_files]
+    chains, labels = [], []
+    for k in range(n):
+        ms = int(round((k * CHORD_DUR - (half if k else 0.0)) * 1000))
+        chains.append(f"[{k}:a]adelay={ms}|{ms}[ch{k}]")
+        labels.append(f"[ch{k}]")
+    for j, (t, f, g) in enumerate(MELODY):
+        base = n + 2 * j
+        inputs.append(f"sine=frequency={f}:sample_rate=48000:duration=2.4")
+        inputs.append(
+            f"sine=frequency={2 * f}:sample_rate=48000:duration=2.4")
+        ms = int(round(t * 1000))
+        chains.append(
+            f"[{base}:a]volume='{g * SINE_GAIN}*exp(-1.7*t)':eval=frame,"
+            f"adelay={ms}|{ms}[mf{j}]")
+        chains.append(
+            f"[{base + 1}:a]volume='{g * 0.32 * SINE_GAIN}*exp(-3.0*t)'"
+            f":eval=frame,adelay={ms}|{ms}[mh{j}]")
+        labels += [f"[mf{j}]", f"[mh{j}]"]
+    chains.append(
+        f"{''.join(labels)}amix=inputs={len(labels)}:normalize=0,"
+        f"volume='{BGM_ENV}':eval=frame,"
+        "pan=stereo|c0=c0|c1=c0,atrim=0:60[out]")
+    ffmpeg_filter(d / "bgm.wav", inputs, ";".join(chains),
+                  ["-map", "[out]", "-ar", str(SR)])
+
+
 def tick_times() -> list[tuple[float, float]]:
     """Deterministic sparse patter over the typing windows."""
     rng = random.Random(20261121)
@@ -234,7 +394,7 @@ def delay(ms_time: float) -> str:
 def build_raw_mix(d: Path) -> None:
     ticks = tick_times()
     parts: list[str] = []
-    labels: list[str] = ["[0:a]"]
+    labels: list[str] = ["[0:a]", "[4:a]"]
     # All tick uses share one asplit of the tick prototype:
     # the typing patter, scene 4's lowpassed panel ticks,
     # and scene 5's soft crossfade tick.
@@ -243,7 +403,8 @@ def build_raw_mix(d: Path) -> None:
                  + "".join(f"[s{i}]" for i in range(n_tick_uses)))
     branch = 0
     for t, g in ticks:
-        parts.append(f"[s{branch}]{delay(t)},volume={g:.2f}[e{branch}]")
+        parts.append(
+            f"[s{branch}]{delay(t)},volume={g * TICK_GAIN:.3f}[e{branch}]")
         labels.append(f"[e{branch}]")
         branch += 1
     for t, g in PANEL_TICKS:
@@ -273,7 +434,8 @@ def build_raw_mix(d: Path) -> None:
     ffmpeg_filter(
         d / "mix_raw.wav",
         [str(d / "bed.wav"), str(d / "tick.wav"),
-         str(d / "click.wav"), str(d / "blip.wav")],
+         str(d / "click.wav"), str(d / "blip.wav"),
+         str(d / "bgm.wav")],
         ";".join(parts), ["-map", "[out]", "-ar", str(SR)])
 
 
@@ -322,6 +484,7 @@ def main() -> None:
     d.mkdir(parents=True, exist_ok=True)
     build_prototypes(d)
     build_bed(d)
+    build_bgm(d)
     build_raw_mix(d)
     i1, tp1 = master(d)
     print(f"mix: {d / 'mix.wav'}")

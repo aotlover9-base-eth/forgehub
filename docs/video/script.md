@@ -77,9 +77,15 @@ external audio files, no recordings. Still no
 voice-over: the words are carried by the captions and
 this script. Master measurements (loudnorm on the WAV
 master; ebur128 agrees at -15.9 LUFS): integrated
--16.0 LUFS, true peak -1.7 dBTP. The encoded files
-measure -16.0 LUFS / -1.6 dBTP (AAC) and -16.0 LUFS /
--1.8 dBTP (Opus). All times are absolute seconds.
+-16.0 LUFS, true peak -2.4 dBTP. The encoded files
+measure -16.0 LUFS / -2.5 dBTP (AAC) and -16.0 LUFS /
+-2.3 dBTP (Opus). All times are absolute seconds.
+
+Rebalanced later the same day at the owner's ear: the
+key ticks were halved (they read as too loud) and a
+real background-music bed was added under the
+atmosphere - see the Background music bullet below.
+The UI clicks and confirm blips were not changed.
 
 - **Room tone** (0-60): brown noise through a 320 Hz
   lowpass, very quiet, everywhere - the only sound
@@ -96,6 +102,20 @@ measure -16.0 LUFS / -1.6 dBTP (AAC) and -16.0 LUFS /
   0.75-4.25 (the apt command); scene 3: 20.35-21.05
   (`forgehub login`), 24.40-24.95 (`fg ubuntu-setup`);
   scene 5: 46.35-48.87 (the record/push commands).
+  Gain halved in the rebalance pass (x0.5) - the
+  owner found the first mix's clicks too loud.
+- **Background music** (added in the rebalance): a
+  warm sine pad playing Am(add9) - Fmaj7 - Cmaj7 -
+  G6 - Am(add9) - Fmaj7 - Cmaj7 - Am(add9), one
+  chord every 7.5 s with 1.5 s crossfades, lowpassed
+  at 1200 Hz, plus a sparse plucked-sine melody
+  (A-minor pentatonic: E5, C5, G5, D5, A4 - twelve
+  notes in the whole minute, each placed on a chord
+  tone). Fades in 8.5-11.5, dips to 50% across
+  scene 4 where the melody rests entirely, and
+  fades out 58-60 resolving on Am(add9). Present
+  when you listen for it; it never competes with
+  the effects.
 - **Soft UI clicks**: 11.05 wordmark lock (quieter),
   16.50 Save, 23.25 device Approve.
 - **Confirm blips** (two sines, E5 then B5): 28.30

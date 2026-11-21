@@ -25,10 +25,12 @@ captures and all app views are real screenshots - see
 - `audio.py` - the sound design. Every sound is
   synthesized with ffmpeg from sine and noise sources
   (no external audio files): key-tick patter over the
-  typing, soft clicks on Save and Approve, two-tone
-  confirm blips, and a six-partial sine pad under brown
-  room tone, all timed from the scene timings in
-  build_scenes.py. It writes $VIDEO_WORK/audio/mix.wav,
+  typing (halved in the rebalance pass), soft clicks
+  on Save and Approve, two-tone confirm blips, a
+  six-partial sine pad under brown room tone, and a
+  synthesized music bed (a chord-pad progression with
+  a sparse plucked-sine melody), all timed from the
+  scene timings in build_scenes.py. It writes $VIDEO_WORK/audio/mix.wav,
   loudness-adjusted to about -16 LUFS with true peak at
   or below -1 dBTP (measured with loudnorm; the script
   prints the real numbers). The cue list lives in

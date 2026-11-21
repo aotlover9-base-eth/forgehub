@@ -186,3 +186,39 @@ day after the render, by docs/video/pipeline/audio.py
 - build.sh now runs audio.py and lays mix.wav under
   the concat, so the one-command rebuild reproduces
   this track. Still no voice-over.
+- Rebalance pass (2026-11-21, later; owner feedback
+  after listening): two changes, both in audio.py.
+  (1) The key-tick patter was halved - a TICK_GAIN of
+  0.5 applied to the typing branches only; the UI
+  clicks, confirm blips, scene 4 panel ticks and the
+  43.40 crossfade tick keep their first-mix levels.
+  (2) A background-music bed was added (new build_bgm
+  step): a warm sine pad playing Am(add9) - Fmaj7 -
+  Cmaj7 - G6 - Am(add9) - Fmaj7 - Cmaj7 - Am(add9),
+  one chord per 7.5 s, chords rendered as overlapping
+  segments so neighbours crossfade over 1.5 s,
+  lowpassed at 1200 Hz; plus a sparse plucked-sine
+  melody (A-minor pentatonic, fundamental + faster-
+  decaying octave, twelve notes, none across scene
+  4). The music fades in 8.5-11.5 s, dips to 50%
+  across scene 4 (30-40.5 s), and fades out 58-60 s.
+  Still 100% synthesized - no audio files were added.
+- Rebalance measurements: WAV master -15.99 LUFS
+  integrated, -2.36 dBTP true peak (loudnorm; ebur128
+  agrees: -15.9 LUFS, -2.4 dBFS peak) - one mastering
+  pass, more peak headroom than the first mix because
+  the loudest transients (the ticks) were halved.
+  Window checks: 0-8 s -25.2 LUFS (room tone + halved
+  ticks), 12-20 s -15.0 and 24-30 s -14.6 (music
+  present), 34-38 s -23.9 (scene 4 still the
+  calmest), 53-58 s -16.8. Delivery as before: audio
+  replaced in the three intro files, video copied
+  bit-for-bit (streamhash MD5s unchanged: a9ad7ad1...
+  main, c41d8eb0... captioned, 9445b87a... webm);
+  encoded tracks measure AAC -16.01 LUFS / -2.51
+  dBTP and Opus -16.00 LUFS / -2.33 dBTP; durations
+  60.000 s (MP4s), WebM container 60.008 s as before.
+  New sizes: intro-1080p.mp4 9,736,063 B,
+  intro-1080p-captioned.mp4 8,486,083 B,
+  intro-1080p.webm 4,733,710 B. Hero loops untouched
+  and still silent.
