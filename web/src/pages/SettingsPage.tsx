@@ -8,7 +8,10 @@ import {
   DialogActions,
   EmptyState,
   ErrorState,
+  Checkbox,
   PageHeader,
+  Radio,
+  SelectField,
   Skeleton,
   Tabs,
   TextField,
@@ -80,20 +83,18 @@ function AppearanceTab() {
         <legend style={{ fontWeight: 500, marginBottom: 'var(--fh-space-2)' }}>Theme</legend>
         <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
           {THEME_OPTIONS.map((option) => (
-            <label
+            <Radio
               key={option.id}
-              style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start', cursor: 'pointer' }}
-            >
-              <md-radio
-                name="theme"
-                value={option.id}
-                checked={pref === option.id || undefined}
-                onChange={() => setPref(option.id)}
-              />
-              <span>
-                <strong>{option.label}</strong> - {option.help}
-              </span>
-            </label>
+              name="theme"
+              value={option.id}
+              checked={pref === option.id}
+              onChange={(value) => setPref(value as ThemePreference)}
+              label={
+                <>
+                  <strong>{option.label}</strong> - {option.help}
+                </>
+              }
+            />
           ))}
         </div>
       </fieldset>
@@ -359,23 +360,26 @@ function TokensTab() {
         <div slot="headline">New token</div>
         <div slot="content" style={{ display: 'grid', gap: 'var(--fh-space-3)', minWidth: 320 }}>
           <TextField label="Name" value={tokenName} onChange={setTokenName} supportingText="What is this token for? e.g. Laptop CLI" />
-          <label style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
-            <md-checkbox checked={readScope || undefined} onChange={() => setReadScope(!readScope)} /> Read - view
-            and run snippets
-          </label>
-          <label style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
-            <md-checkbox checked={writeScope || undefined} onChange={() => setWriteScope(!writeScope)} /> Write -
-            create and change snippets (includes read)
-          </label>
-          <label style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
-            Expires
-            <select value={expiry} onChange={(e) => setExpiry(e.target.value)} aria-label="Expiry">
-              <option value="never">Never</option>
-              <option value="30">In 30 days</option>
-              <option value="90">In 90 days</option>
-              <option value="365">In 365 days</option>
-            </select>
-          </label>
+          <Checkbox checked={readScope} onChange={setReadScope} label="Read - view and run snippets" />
+          <Checkbox
+            checked={writeScope}
+            onChange={setWriteScope}
+            label="Write - create and change snippets (includes read)"
+          />
+          <span style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
+            <SelectField
+              label="Expires"
+              ariaLabel="Expiry"
+              value={expiry}
+              onChange={setExpiry}
+              options={[
+                { value: 'never', label: 'Never' },
+                { value: '30', label: 'In 30 days' },
+                { value: '90', label: 'In 90 days' },
+                { value: '365', label: 'In 365 days' },
+              ]}
+            />
+          </span>
         </div>
         <div slot="actions">
           <DialogActions

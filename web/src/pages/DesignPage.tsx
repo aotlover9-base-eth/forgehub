@@ -15,6 +15,11 @@ import {
   SearchBar,
   Skeleton,
   StatusChip,
+  Checkbox,
+  DiffView,
+  Radio,
+  SelectField,
+  Switch,
   Tabs,
   TextField,
   useToast,
@@ -22,14 +27,18 @@ import {
 
 /**
  * The design-system review page (dev builds only, /__design):
- * every component and state in one place, in the product's
- * single dark Observe theme.
+ * every component and state in one place, in whichever theme
+ * (light, dark, system) is active.
  */
 export default function DesignPage() {
   const toast = useToast();
   const [query, setQuery] = useState('');
   const [field, setField] = useState('');
   const [tab, setTab] = useState(0);
+  const [wrap, setWrap] = useState(true);
+  const [scope, setScope] = useState(false);
+  const [choice, setChoice] = useState('system');
+  const [expiry, setExpiry] = useState('never');
   const [dialog, setDialog] = useState(false);
   const [dangerDialog, setDangerDialog] = useState(false);
   return (
@@ -81,6 +90,47 @@ export default function DesignPage() {
       <TextField label="With an error" value={field} onChange={setField} errorText="That name is taken" />
       <div style={{ height: 'var(--fh-space-3)' }} />
       <TextField label="Description" value={field} onChange={setField} multiline rows={3} />
+
+      <h2>Selection controls</h2>
+      <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
+        <Switch checked={wrap} onChange={setWrap} label="Soft wrap (switch)" />
+        <Checkbox checked={scope} onChange={setScope} label="Write - create and change snippets (checkbox)" />
+        <Radio
+          name="gallery-choice"
+          value="system"
+          checked={choice === 'system'}
+          onChange={setChoice}
+          label={
+            <>
+              <strong>System</strong> - follow the device (radio)
+            </>
+          }
+        />
+        <Radio
+          name="gallery-choice"
+          value="dark"
+          checked={choice === 'dark'}
+          onChange={setChoice}
+          label={
+            <>
+              <strong>Dark</strong> - always dark (radio)
+            </>
+          }
+        />
+        <SelectField
+          label="Expires"
+          value={expiry}
+          onChange={setExpiry}
+          options={[
+            { value: 'never', label: 'Never' },
+            { value: '30', label: 'In 30 days' },
+            { value: '90', label: 'In 90 days' },
+          ]}
+        />
+      </div>
+
+      <h2>Diff</h2>
+      <DiffView diff={'--- a/sys-info\n+++ b/sys-info\n@@ -1,2 +1,2 @@\n-echo old\n+echo new'} />
 
       <h2>Tabs and menu</h2>
       <Tabs

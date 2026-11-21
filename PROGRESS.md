@@ -34,7 +34,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [x] A1 - theme system: light, dark, system, with a real switch
 - [x] A2 - type, shape, elevation and state layers
 - [x] A3 - adaptive shell and navigation
-- [ ] A4 - component library refresh
+- [x] A4 - component library refresh
 - [ ] A5 - screen redesign (every route)
 - [ ] A6 - motion and micro-interactions
 - [ ] A7 - accessibility and quality pass

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
   Card,
+  Checkbox,
   Chip,
   CodeBlock,
   DialogActions,
@@ -304,9 +305,9 @@ export default function SnippetPage() {
               <md-list>
                 {(versions.data?.versions ?? []).map((v) => (
                   <div key={v.version} style={{ display: 'flex', alignItems: 'center', gap: 'var(--fh-space-2)' }}>
-                    <md-checkbox
-                      aria-label={`Select version ${v.version} for diff`}
-                      checked={selected.includes(v.version) || undefined}
+                    <Checkbox
+                      ariaLabel={`Select version ${v.version} for diff`}
+                      checked={selected.includes(v.version)}
                       onChange={() => toggleVersion(v.version)}
                     />
                     <div style={{ flex: 1 }}>

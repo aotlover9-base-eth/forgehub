@@ -9,7 +9,9 @@ import {
   Icon,
   IconButton,
   PageHeader,
+  Radio,
   Skeleton,
+  Switch,
   Tabs,
   TextField,
   useToast,
@@ -418,12 +420,18 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         <legend style={{ fontWeight: 500, marginBottom: 'var(--fh-space-2)' }}>Visibility</legend>
         <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
           {VISIBILITY_HELP.map((v) => (
-            <label key={v.id} style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start', cursor: 'pointer' }}>
-              <md-radio name="visibility" value={v.id} checked={visibility === v.id || undefined} onChange={() => setVisibility(v.id)} />
-              <span>
-                <strong>{v.label}</strong> - {v.help}
-              </span>
-            </label>
+            <Radio
+              key={v.id}
+              name="visibility"
+              value={v.id}
+              checked={visibility === v.id}
+              onChange={(value) => setVisibility(value as Visibility)}
+              label={
+                <>
+                  <strong>{v.label}</strong> - {v.help}
+                </>
+              }
+            />
           ))}
         </div>
       </fieldset>
@@ -456,13 +464,9 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         activeIndex={mode === 'script' ? 0 : 1}
         onChange={(i) => setMode(i === 0 ? 'script' : 'steps')}
       />
-      <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
-        <label style={{ display: 'inline-flex', gap: 'var(--fh-space-1)', alignItems: 'center' }}>
-          <md-switch selected={wrap || undefined} onChange={() => setWrap(!wrap)} aria-label="Soft wrap" /> Soft wrap
-        </label>
-        <label style={{ display: 'inline-flex', gap: 'var(--fh-space-1)', alignItems: 'center' }}>
-          <md-switch selected={showLines || undefined} onChange={() => setShowLines(!showLines)} aria-label="Line numbers" /> Line numbers
-        </label>
+      <div style={{ display: 'flex', gap: 'var(--fh-space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+        <Switch checked={wrap} onChange={setWrap} label="Soft wrap" />
+        <Switch checked={showLines} onChange={setShowLines} label="Line numbers" />
       </div>
       <div style={{ display: 'flex', background: 'var(--fh-code-bg)', borderRadius: 'var(--md-sys-shape-corner-medium)', overflow: 'hidden' }}>
         {showLines ? (

@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Icon, IconButton } from './core';
 
 /**
@@ -176,5 +176,129 @@ export function Menu({
         ))}
       </md-menu>
     </span>
+  );
+}
+
+/**
+ * Selection controls. Pages used to drop raw md-switch /
+ * md-checkbox / md-radio elements inline; these wrappers own
+ * the labelled-row anatomy (48 px row, token gap, pointer
+ * cursor) so every control reads the same and carries its
+ * label as a real <label>.
+ */
+export function Switch({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="fh-select-row">
+      <md-switch
+        selected={checked || undefined}
+        disabled={disabled}
+        aria-label={typeof label === 'string' ? label : undefined}
+        onChange={(e) => onChange((e.target as HTMLElement & { selected: boolean }).selected)}
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+export function Checkbox({
+  checked,
+  onChange,
+  label,
+  ariaLabel,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label?: ReactNode;
+  ariaLabel?: string;
+  disabled?: boolean;
+}) {
+  const box = (
+    <md-checkbox
+      checked={checked || undefined}
+      disabled={disabled}
+      aria-label={ariaLabel ?? (typeof label === 'string' ? label : undefined)}
+      onChange={(e) => onChange((e.target as HTMLElement & { checked: boolean }).checked)}
+    />
+  );
+  if (label === undefined) return box;
+  return (
+    <label className="fh-select-row">
+      {box}
+      <span>{label}</span>
+    </label>
+  );
+}
+
+export function Radio({
+  name,
+  value,
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  name: string;
+  value: string;
+  checked: boolean;
+  onChange: (value: string) => void;
+  label: ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="fh-select-row fh-select-row--start">
+      <md-radio
+        name={name}
+        value={value}
+        checked={checked || undefined}
+        disabled={disabled}
+        aria-label={typeof label === 'string' ? label : undefined}
+        onChange={() => onChange(value)}
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+/**
+ * Outlined select over md-outlined-select (the M3 menu
+ * button field), replacing the one raw <select> the app had.
+ */
+export function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  label?: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  ariaLabel?: string;
+}) {
+  return (
+    <md-outlined-select
+      label={label}
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(e) => onChange((e.target as HTMLElement & { value: string }).value)}
+    >
+      {options.map((option) => (
+        <md-select-option key={option.value} value={option.value}>
+          <span slot="headline">{option.label}</span>
+        </md-select-option>
+      ))}
+    </md-outlined-select>
   );
 }

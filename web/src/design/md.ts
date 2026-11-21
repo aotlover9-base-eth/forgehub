@@ -29,6 +29,8 @@ import '@material/web/icon/icon.js';
 import '@material/web/list/list.js';
 import '@material/web/list/list-item.js';
 import '@material/web/radio/radio.js';
+import '@material/web/select/outlined-select.js';
+import '@material/web/select/select-option.js';
 
 import type { MdFilledButton } from '@material/web/button/filled-button';
 import type { MdFilledTonalButton } from '@material/web/button/filled-tonal-button';
@@ -39,6 +41,8 @@ import type { MdOutlinedTextField } from '@material/web/textfield/outlined-text-
 import type { MdCheckbox } from '@material/web/checkbox/checkbox';
 import type { MdSwitch } from '@material/web/switch/switch';
 import type { MdRadio } from '@material/web/radio/radio';
+import type { MdOutlinedSelect } from '@material/web/select/outlined-select';
+import type { MdSelectOption } from '@material/web/select/select-option';
 import type { MdChipSet } from '@material/web/chips/chip-set';
 import type { MdAssistChip } from '@material/web/chips/assist-chip';
 import type { MdFilterChip } from '@material/web/chips/filter-chip';
@@ -85,6 +89,8 @@ declare module 'react' {
       'md-checkbox': MdProps<MdCheckbox>;
       'md-switch': MdProps<MdSwitch>;
       'md-radio': MdProps<MdRadio>;
+      'md-outlined-select': MdProps<MdOutlinedSelect>;
+      'md-select-option': MdProps<MdSelectOption>;
       'md-chip-set': MdProps<MdChipSet>;
       'md-assist-chip': MdProps<MdAssistChip>;
       'md-filter-chip': MdProps<MdFilterChip>;

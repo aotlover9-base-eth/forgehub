@@ -476,3 +476,17 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Labelled selection-control row (Switch / Checkbox /
+   Radio wrappers): one anatomy everywhere - a 48px row, a
+   token gap, the label as a real <label>. */
+.fh-select-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fh-space-2);
+  min-height: 48px;
+  cursor: pointer;
+}
+.fh-select-row--start {
+  align-items: flex-start;
+}

@@ -4,5 +4,6 @@ export * from './components/surfaces';
 export * from './components/feedback';
 export * from './components/toast';
 export * from './components/AppShell';
+export * from './components/DiffView';
 export * from './hooks';
 export * from './theme';

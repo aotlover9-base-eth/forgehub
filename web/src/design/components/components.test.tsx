@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import axe from 'axe-core';
 import { Chip, StatusChip } from './core';
+import { Checkbox, Radio, SelectField, Switch } from './inputs';
 import { CodeBlock, EmptyState, ErrorState } from './surfaces';
 
 describe('StatusChip', () => {
@@ -64,5 +65,59 @@ describe('accessibility (axe)', () => {
     );
     const results = await axe.run(container);
     expect(results.violations).toEqual([]);
+  });
+});
+
+describe('selection wrappers', () => {
+  it('Switch mirrors the selected attribute and reports the new value', () => {
+    const onChange = vi.fn();
+    const { container } = render(<Switch checked onChange={onChange} label="Soft wrap" />);
+    const el = container.querySelector('md-switch') as HTMLElement & { selected: boolean };
+    expect(el.hasAttribute('selected')).toBe(true);
+    expect(el.getAttribute('aria-label')).toBe('Soft wrap');
+    el.selected = false;
+    fireEvent.change(el);
+    expect(onChange).toHaveBeenCalledWith(false);
+  });
+
+  it('Checkbox without a label renders the bare control with its aria label', () => {
+    const onChange = vi.fn();
+    const { container } = render(<Checkbox checked={false} onChange={onChange} ariaLabel="Select version 2 for diff" />);
+    const el = container.querySelector('md-checkbox') as HTMLElement & { checked: boolean };
+    expect(el.hasAttribute('checked')).toBe(false);
+    expect(el.getAttribute('aria-label')).toBe('Select version 2 for diff');
+    el.checked = true;
+    fireEvent.change(el);
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it('Radio reports its own value when chosen', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <Radio name="theme" value="dark" checked={false} onChange={onChange} label="Dark" />,
+    );
+    const el = container.querySelector('md-radio') as HTMLElement;
+    fireEvent.change(el);
+    expect(onChange).toHaveBeenCalledWith('dark');
+  });
+
+  it('SelectField renders the options and reports changes', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <SelectField
+        label="Expires"
+        value="never"
+        onChange={onChange}
+        options={[
+          { value: 'never', label: 'Never' },
+          { value: '30', label: 'In 30 days' },
+        ]}
+      />,
+    );
+    const el = container.querySelector('md-outlined-select') as HTMLElement & { value: string };
+    expect(container.querySelectorAll('md-select-option')).toHaveLength(2);
+    el.value = '30';
+    fireEvent.change(el);
+    expect(onChange).toHaveBeenCalledWith('30');
   });
 });
