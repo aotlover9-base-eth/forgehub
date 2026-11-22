@@ -356,6 +356,8 @@ pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Resul
                 "skipped": outcome.skipped,
             })
         );
+    } else {
+        runner::print_run_report(&outcome, started.elapsed(), &snippet.name, args.step);
     }
     Ok(outcome.exit_code)
 }
@@ -820,6 +822,27 @@ mod tests {
         let err = resolve_or_prompt(&s, &std::collections::BTreeMap::new(), &mut input, true)
             .unwrap_err();
         assert!(format!("{err}").contains("WHO"));
+    }
+
+    #[test]
+    fn render_plan_golden() {
+        // Peak B3: the local plan (shown for --dry and for the
+        // confirm-before-run prompt) is safety content; pin its
+        // bytes like the cloud card.
+        let s = Snippet::from_yaml(
+            "name: g\ndescription: Greets\nshell: bash\nsteps:\n  - echo one\n  - echo two\n",
+        )
+        .unwrap();
+        let out = render_plan(
+            &s,
+            "local",
+            &std::collections::BTreeMap::new(),
+            "0123456789abcdef",
+        );
+        assert_eq!(
+            out,
+            "About to run `g` (local)\n  Greets\n  mode: steps · shell: bash · hash: 01234567\n  1. echo one\n  2. echo two\n"
+        );
     }
 
     #[test]

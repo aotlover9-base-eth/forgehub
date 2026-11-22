@@ -24,6 +24,49 @@ pub struct RunOutcome {
     pub executed: usize,
     /// Number of steps skipped by conditions.
     pub skipped: usize,
+    /// 1-based index of the step whose failure stopped the run
+    /// (Peak B3, for the re-run hint). `None` on success, for
+    /// script mode (one unit of work), for `always`-step failures
+    /// and for a user abort in step mode.
+    pub failed_step: Option<usize>,
+}
+
+/// The post-run summary line (Peak B3), shared by the local and
+/// cloud run paths so both read identically: exit code, step
+/// counts and wall-clock seconds.
+#[must_use]
+pub fn summary_line(outcome: &RunOutcome, elapsed: Duration) -> String {
+    format!(
+        "exit code {} · {} executed, {} skipped · {:.1}s",
+        outcome.exit_code,
+        outcome.executed,
+        outcome.skipped,
+        elapsed.as_secs_f64()
+    )
+}
+
+/// The failure hint (Peak B3): when a step stopped the run, say
+/// which one and how to step through it. `None` when the run did
+/// not stop on a step failure.
+#[must_use]
+pub fn failure_hint(outcome: &RunOutcome, name: &str) -> Option<String> {
+    let step = outcome.failed_step?;
+    if outcome.exit_code == 0 {
+        return None;
+    }
+    Some(format!(
+        "forgehub: step {step} failed (exit {}) - re-run with `fg run {name} --step` to step through it",
+        outcome.exit_code
+    ))
+}
+
+/// Print the summary line (stdout) and, unless the run already
+/// stepped through, the failure hint (stderr).
+pub fn print_run_report(outcome: &RunOutcome, elapsed: Duration, name: &str, step_mode: bool) {
+    println!("{}", summary_line(outcome, elapsed));
+    if let Some(hint) = failure_hint(outcome, name).filter(|_| !step_mode) {
+        eprintln!("{hint}");
+    }
 }
 
 fn subst(text: &str, values: &BTreeMap<String, String>) -> String {
@@ -404,6 +447,7 @@ pub fn execute(
             exit_code: code,
             executed: 1,
             skipped: 0,
+            failed_step: None,
         });
     }
     let steps = snippet.resolved_steps();
@@ -412,6 +456,7 @@ pub fn execute(
     let mut executed = 0usize;
     let mut skipped = 0usize;
     let mut result = 0i32;
+    let mut failed_step = None;
     for (i, step) in steps.iter().enumerate() {
         if let Some(cond) = &step.condition {
             if !condition_met(cond, snippet, step, values, base) {
@@ -435,6 +480,7 @@ pub fn execute(
                 );
             } else {
                 result = code;
+                failed_step = Some(i + 1);
                 break;
             }
         }
@@ -455,6 +501,7 @@ pub fn execute(
         exit_code: result,
         executed,
         skipped,
+        failed_step,
     })
 }
 
@@ -485,6 +532,7 @@ pub fn execute_stepwise(
     let mut executed = 0usize;
     let mut skipped = 0usize;
     let mut result = 0i32;
+    let mut failed_step = None;
     let mut aborted = false;
     for (i, step) in steps.iter().enumerate() {
         if let Some(cond) = &step.condition {
@@ -541,6 +589,7 @@ pub fn execute_stepwise(
                 );
             } else {
                 result = code;
+                failed_step = Some(i + 1);
                 break;
             }
         }
@@ -561,5 +610,68 @@ pub fn execute_stepwise(
         exit_code: result,
         executed,
         skipped,
+        failed_step,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn outcome(exit_code: i32, failed_step: Option<usize>) -> RunOutcome {
+        RunOutcome {
+            exit_code,
+            executed: 3,
+            skipped: 1,
+            failed_step,
+        }
+    }
+
+    #[test]
+    fn summary_line_shape_is_stable() {
+        assert_eq!(
+            summary_line(&outcome(0, None), Duration::from_millis(1500)),
+            "exit code 0 · 3 executed, 1 skipped · 1.5s"
+        );
+        assert_eq!(
+            summary_line(&outcome(3, Some(2)), Duration::from_secs(2)),
+            "exit code 3 · 3 executed, 1 skipped · 2.0s"
+        );
+    }
+
+    #[test]
+    fn failure_hint_names_the_step_and_the_step_flag() {
+        let hint = failure_hint(&outcome(3, Some(2)), "deploy").expect("hint");
+        assert!(hint.contains("step 2 failed (exit 3)"), "{hint}");
+        assert!(hint.contains("fg run deploy --step"), "{hint}");
+        assert!(
+            failure_hint(&outcome(0, Some(2)), "deploy").is_none(),
+            "no hint on success"
+        );
+        assert!(
+            failure_hint(&outcome(1, None), "deploy").is_none(),
+            "no hint without a step"
+        );
+    }
+
+    #[test]
+    fn execute_records_the_failing_step() {
+        let snippet =
+            Snippet::from_yaml("name: t\nsteps:\n  - \"true\"\n  - \"exit 3\"\n  - \"true\"\n")
+                .unwrap();
+        let base = std::env::temp_dir();
+        let outcome = execute(&snippet, &BTreeMap::new(), &base, &base).unwrap();
+        assert_eq!(outcome.exit_code, 3);
+        assert_eq!(outcome.executed, 2, "the third step never runs");
+        assert_eq!(outcome.failed_step, Some(2));
+    }
+
+    #[test]
+    fn execute_success_has_no_failed_step() {
+        let snippet = Snippet::from_yaml("name: t\nsteps:\n  - \"true\"\n").unwrap();
+        let base = std::env::temp_dir();
+        let outcome = execute(&snippet, &BTreeMap::new(), &base, &base).unwrap();
+        assert_eq!(outcome.exit_code, 0);
+        assert_eq!(outcome.failed_step, None);
+    }
 }

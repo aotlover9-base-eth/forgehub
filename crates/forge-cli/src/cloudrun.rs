@@ -438,6 +438,12 @@ pub fn run_cloud(
     } else {
         let sess = session(store, stdin, None)?;
         let owner = refr.owner.clone().unwrap_or_else(|| sess.username.clone());
+        if !args.json {
+            eprintln!(
+                "forgehub: fetching {owner}/{} from {}",
+                refr.name, sess.registry
+            );
+        }
         fetch_and_cache(
             store,
             &sess,
@@ -622,13 +628,7 @@ pub fn run_fetched(
             })
         );
     } else {
-        println!(
-            "exit code {} · {} executed, {} skipped · {:.1}s",
-            outcome.exit_code,
-            outcome.executed,
-            outcome.skipped,
-            started.elapsed().as_secs_f64()
-        );
+        runner::print_run_report(&outcome, started.elapsed(), &fetched.name, args.step);
     }
     Ok(outcome.exit_code)
 }
@@ -960,6 +960,35 @@ mod tests {
         assert!(!card.contains('\u{202e}'));
         assert!(card.contains("\\e"));
         assert!(card.contains("hidden-evil"));
+    }
+
+    #[test]
+    fn confirmation_card_golden() {
+        // Peak B3: the confirmation card is safety content - its
+        // bytes are pinned so no refactor can quietly change what
+        // the user approves. Any intentional change updates this
+        // golden in the same commit, with the report saying so.
+        let snippet = forge_core::Snippet::from_yaml(
+            "name: deploy\ndescription: Deploy the app\nsteps:\n  - echo deploying v3\n  - mkdir -p /tmp/app && touch /tmp/app/ok\n",
+        )
+        .unwrap();
+        let fetched = Fetched {
+            owner: "alice".into(),
+            name: "deploy".into(),
+            version: 3,
+            hash: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890".into(),
+            visibility: "public".into(),
+            body: String::new(),
+            snippet,
+            star_count: 12,
+            pull_count: 34,
+            from_cache: false,
+        };
+        let card = render_card(&fetched, false, false, None);
+        assert_eq!(
+            card,
+            "About to run `deploy` (cloud: alice/deploy)\n  Deploy the app\n  version 3 · sha256:abcdef12 · public · mode: steps\n  \u{26a0} This snippet is not yours. Owner: alice · \u{2605} 12 · 34 pulls\n  Commands:\n   1. echo deploying v3\n   2. mkdir -p /tmp/app && touch /tmp/app/ok\n"
+        );
     }
 
     #[test]

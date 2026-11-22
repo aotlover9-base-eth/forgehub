@@ -26,6 +26,12 @@
 - `cargo fmt --check` via local rustfmt over the crate: CLEAN.
 - Clippy/test/build: via CI for this head (see PROGRESS.md for the run id once verified).
 
-## 5. Next
+## 5. CI note - an e2e race, proven not a regression
+
+The first CI run for this head (`44968051124`, attempt 1) failed the E2E job at "diff should show the v2 line": the log shows the CLI panicking with `failed printing to stdout: Broken pipe (os error 32)` inside the `fg diff ... | grep -q` pipeline. Mechanism: `scripts/e2e.sh` runs under `set -euo pipefail`; `grep -q` exits the moment it matches, and a producer that prints afterwards dies on EPIPE (Rust's `println!` panics), so pipefail fails a step whose content was actually correct. Nothing in B2 touches diff's output; the race is in the script's shape and in the CLI's ungraceful EPIPE behaviour. Proof standard applied: the failed jobs were re-run on the SAME head - attempt 2 is fully green, all five jobs.
+
+The underlying product wart is real, though: a CLI built for piping (B4 adds `--plain` for fzf) should not panic with a backtrace note when a consumer closes the pipe. It is assigned to B8 (reliability) in PROGRESS.md: evaluate a safe-code mitigation (the crate forbids unsafe, so no SIGPIPE reset; a `catch_unwind` mapping of the std print-failure panic in `main` is the candidate) with tests.
+
+## 6. Next
 
 B3 - run experience.
