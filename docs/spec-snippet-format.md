@@ -140,6 +140,46 @@ A variable declared `required: true` with no default and no value is missing
 under rule 5. Declared-but-unreferenced variables are allowed (they document
 intent). Referenced-but-undeclared variables resolve by the same order.
 
+**Typed parameters (Peak C2).** The map form accepts a `type:` field:
+
+```yaml
+variables:
+  REGION:
+    type: choice
+    choices: [eu-west, us-east]
+    default: eu-west
+  COUNT:
+    type: number
+  TARGET:
+    type: path
+    required: true
+  CONFIRM:
+    type: yesno
+  API_KEY:
+    type: secret
+    required: true
+```
+
+| Type | Rule applied to the resolved value (any source) | Prompt |
+|---|---|---|
+| `text` (default) | none | one line |
+| `choice` | must equal one of `choices:` (required, max 50) | numbered menu (number or exact value) |
+| `number` | must parse as a finite number (`inf`/`NaN` rejected) | one line, re-asked on bad input |
+| `path` | must not be empty | one line |
+| `yesno` | `yes/y/true/1` and `no/n/false/0` (any case), normalised to `yes`/`no` before substitution | `[y/N]` question |
+| `secret` | none - but see below | hidden prompt (no echo) |
+
+Declaration rules, enforced at parse/validate time: an unknown `type:` is an
+error; `choices:` is only valid on `choice`; a `default` must itself satisfy
+the type (a choice default outside the list is an error); **a `secret` must
+not declare a `default`** - it would be stored in the file.
+
+Secret values are substituted only into the executed text. They are masked
+(`••••••`) in the run plan, step labels and step-through displays, are never
+sent to the server or written to the run history, and should be supplied at
+the prompt rather than as `KEY=value` (shell history is the user's own, but
+the prompt exists precisely to keep the value out of it).
+
 Substitution applies to: step commands and parallel branches, workflow and
 step `cwd`, workflow and step `env` values, condition `equals` operands, and
 the script body in script mode.

@@ -74,6 +74,58 @@ pub fn ask_line(input: &mut impl BufRead, question: &str) -> Option<String> {
     }
 }
 
+/// Ask for a secret value with terminal echo disabled (Peak
+/// C2, for `type: secret` parameters). Reads key events from
+/// the terminal directly under raw mode - nothing is echoed,
+/// nothing is printed back, and the value never passes through
+/// a line buffer that could be logged. Returns `None` when
+/// there is no terminal, on Ctrl-C / Esc, or on any terminal
+/// error (fail safe: no secret is better than a leaked one).
+/// An empty answer (bare Enter) also returns `None`, matching
+/// `ask_line`'s "no answer" treatment in the prompt loop.
+pub fn ask_secret(question: &str) -> Option<String> {
+    if !stdin_is_tty() {
+        return None;
+    }
+    eprint!("{question} ");
+    let _ = std::io::stderr().flush();
+    if crossterm::terminal::enable_raw_mode().is_err() {
+        return None;
+    }
+    let result = read_secret_keys();
+    let _ = crossterm::terminal::disable_raw_mode();
+    eprintln!();
+    result.filter(|s| !s.is_empty())
+}
+
+/// The raw-mode key loop behind [`ask_secret`]: collect
+/// characters until Enter; Backspace deletes; Ctrl-C and Esc
+/// cancel.
+fn read_secret_keys() -> Option<String> {
+    use crossterm::event::{read, Event, KeyCode, KeyEventKind, KeyModifiers};
+    let mut value = String::new();
+    loop {
+        let Ok(Event::Key(key)) = read() else {
+            continue;
+        };
+        if key.kind == KeyEventKind::Release {
+            continue;
+        }
+        match key.code {
+            KeyCode::Enter => return Some(value),
+            KeyCode::Backspace => {
+                value.pop();
+            }
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                return None;
+            }
+            KeyCode::Esc => return None,
+            KeyCode::Char(c) => value.push(c),
+            _ => {}
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

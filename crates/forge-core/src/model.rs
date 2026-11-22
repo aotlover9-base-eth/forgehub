@@ -307,6 +307,10 @@ impl StepSpec {
     }
 }
 
+/// The parameter kinds (Peak C2). `text` is the default and
+/// the only kind a pre-C2 document can express.
+pub const PARAM_KINDS: [&str; 6] = ["text", "choice", "number", "path", "yesno", "secret"];
+
 /// Declared variable, map form.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -320,6 +324,105 @@ pub struct Param {
     /// Whether a value must exist after resolution.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub required: bool,
+    /// Parameter kind (Peak C2): one of [`PARAM_KINDS`],
+    /// written as `type:` in the forge file. Absent means
+    /// `text`. `secret` values are prompted for with a hidden
+    /// prompt and are never displayed, logged or stored by the
+    /// CLI (they are substituted only into the executed text).
+    #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    /// Allowed values for `type: choice`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub choices: Vec<String>,
+}
+
+impl Param {
+    /// The effective kind (`text` when undeclared).
+    #[must_use]
+    pub fn kind(&self) -> &str {
+        self.kind.as_deref().unwrap_or("text")
+    }
+
+    /// Whether this parameter is a secret (hidden prompt,
+    /// masked display).
+    #[must_use]
+    pub fn is_secret(&self) -> bool {
+        self.kind() == "secret"
+    }
+}
+
+/// Validate one declared parameter's own consistency (Peak
+/// C2): a known kind, choices present exactly for `choice`,
+/// a default that itself satisfies the kind, and no default
+/// on a secret (a default would be stored in the file, which
+/// defeats the point of a secret).
+fn validate_param(name: &str, param: &Param) -> Result<()> {
+    let kind = param.kind();
+    if !PARAM_KINDS.contains(&kind) {
+        return Err(ForgeError::validation(format!(
+            "parameter `{name}`: unknown type `{kind}` (expected one of: {})",
+            PARAM_KINDS.join(", ")
+        )));
+    }
+    if kind == "choice" {
+        if param.choices.is_empty() {
+            return Err(ForgeError::validation(format!(
+                "parameter `{name}`: type `choice` needs a `choices:` list"
+            )));
+        }
+        if param.choices.len() > 50 {
+            return Err(ForgeError::validation(format!(
+                "parameter `{name}`: too many choices ({}, max 50)",
+                param.choices.len()
+            )));
+        }
+        for choice in &param.choices {
+            if choice.is_empty() {
+                return Err(ForgeError::validation(format!(
+                    "parameter `{name}`: choices must not be empty strings"
+                )));
+            }
+        }
+        if let Some(default) = &param.default {
+            if !param.choices.contains(default) {
+                return Err(ForgeError::validation(format!(
+                    "parameter `{name}`: default `{default}` is not one of its choices ({})",
+                    param.choices.join(", ")
+                )));
+            }
+        }
+    } else if !param.choices.is_empty() {
+        return Err(ForgeError::validation(format!(
+            "parameter `{name}`: `choices:` only applies to type `choice`"
+        )));
+    }
+    match kind {
+        "number" => {
+            if let Some(default) = &param.default {
+                if !crate::vars::is_valid_number(default) {
+                    return Err(ForgeError::validation(format!(
+                        "parameter `{name}`: default `{default}` is not a number"
+                    )));
+                }
+            }
+        }
+        "yesno" => {
+            if let Some(default) = &param.default {
+                if crate::vars::parse_yesno(default).is_none() {
+                    return Err(ForgeError::validation(format!(
+                        "parameter `{name}`: default `{default}` is not a yes/no value"
+                    )));
+                }
+            }
+        }
+        "secret" if param.default.is_some() => {
+            return Err(ForgeError::validation(format!(
+                "parameter `{name}`: secret parameters cannot have a default (it would be stored in the file)"
+            )));
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 /// A declared variable: a bare string is just a default value.
@@ -341,6 +444,8 @@ impl ParamSpec {
                 description: None,
                 default: Some(d.clone()),
                 required: false,
+                kind: None,
+                choices: Vec::new(),
             },
             ParamSpec::Detailed(p) => p.clone(),
         }
@@ -647,12 +752,13 @@ impl Snippet {
                 self.variables.len()
             )));
         }
-        for name in self.variables.keys() {
+        for (name, spec) in &self.variables {
             if !is_valid_variable_name(name) {
                 return Err(ForgeError::validation(format!(
                     "invalid variable name `{name}` (expected [A-Za-z_][A-Za-z0-9_]*)"
                 )));
             }
+            validate_param(name, &spec.resolve())?;
         }
         if self.env.len() > MAX_ENV_ENTRIES {
             return Err(ForgeError::validation(format!(

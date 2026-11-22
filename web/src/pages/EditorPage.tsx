@@ -435,6 +435,28 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
           ) : null}
         </ul>
       ) : null}
+      {validation?.summary?.parameters && validation.summary.parameters.length > 0 ? (
+        <div>
+          <p style={{ fontWeight: 500 }}>Parameters:</p>
+          <ul style={{ paddingLeft: 'var(--fh-space-4)' }}>
+            {validation.summary.parameters.map((p) => (
+              <li key={p.name}>
+                <code>{p.name}</code> <Chip label={p.type} />
+                {p.required ? ' required' : ''}
+                {p.choices ? ` - one of: ${p.choices.join(', ')}` : ''}
+                {p.default !== undefined ? ` - default: ${p.default}` : ''}
+                {p.type === 'secret' ? ' - prompted with a hidden prompt, never stored' : ''}
+                {p.description ? ` - ${p.description}` : ''}
+              </li>
+            ))}
+          </ul>
+          <p>
+            Types are declared in the YAML under <code>variables:</code> with a{' '}
+            <code>type:</code> of text, choice, number, path, yesno or secret. Values are
+            checked when the snippet runs.
+          </p>
+        </div>
+      ) : null}
       {validation?.summary && validation.summary.lint_warnings.length > 0 ? (
         <div>
           <p style={{ fontWeight: 500 }}>Warnings (not blocking):</p>

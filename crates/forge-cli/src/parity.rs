@@ -136,6 +136,8 @@ pub fn apply_parameterization(
                 ),
                 default: Some(literal.clone()),
                 required: false,
+                kind: None,
+                choices: Vec::new(),
             }),
         );
         let replacement = format!("{{{{{name}}}}}");

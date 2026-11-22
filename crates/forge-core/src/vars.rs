@@ -169,12 +169,86 @@ pub fn parse_assignments(items: &[String]) -> Result<BTreeMap<String, String>> {
     Ok(out)
 }
 
+/// Whether a string is a finite number (`1`, `-2.5`, `1e3`).
+/// `inf`/`NaN` parse as floats in Rust but are not accepted:
+/// a parameter value should be a number a shell script can
+/// compare.
+#[must_use]
+pub fn is_valid_number(value: &str) -> bool {
+    value.trim().parse::<f64>().is_ok_and(f64::is_finite)
+}
+
+/// Parse a yes/no answer to its canonical form (`yes`/`no`).
+/// Accepts yes/y/true/1 and no/n/false/0, case-insensitively.
+#[must_use]
+pub fn parse_yesno(value: &str) -> Option<&'static str> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "yes" | "y" | "true" | "1" => Some("yes"),
+        "no" | "n" | "false" | "0" => Some("no"),
+        _ => None,
+    }
+}
+
+/// Validate (and, for `yesno`, normalise) one resolved value
+/// against its parameter's declared type (Peak C2). The error
+/// names the parameter and the expectation; a secret's value
+/// is never quoted back.
+///
+/// # Errors
+/// [`ForgeError::Validation`] when the value violates the
+/// declared type (not a choice, not a number, not yes/no, or
+/// an empty path).
+pub fn coerce_value(name: &str, param: &crate::model::Param, value: &str) -> Result<String> {
+    match param.kind() {
+        "choice" => {
+            if param.choices.iter().any(|c| c == value) {
+                Ok(value.to_string())
+            } else {
+                Err(ForgeError::validation(format!(
+                    "parameter `{name}`: `{value}` is not one of its choices ({})",
+                    param.choices.join(", ")
+                )))
+            }
+        }
+        "number" => {
+            if is_valid_number(value) {
+                Ok(value.to_string())
+            } else {
+                Err(ForgeError::validation(format!(
+                    "parameter `{name}`: `{value}` is not a number"
+                )))
+            }
+        }
+        "yesno" => parse_yesno(value).map(str::to_string).ok_or_else(|| {
+            ForgeError::validation(format!(
+                "parameter `{name}`: `{value}` is not a yes/no value (expected yes or no)"
+            ))
+        }),
+        "path" => {
+            if value.trim().is_empty() {
+                Err(ForgeError::validation(format!(
+                    "parameter `{name}`: a path value must not be empty"
+                )))
+            } else {
+                Ok(value.to_string())
+            }
+        }
+        // text and secret accept any string; the secret's value
+        // is deliberately not echoed in any error.
+        _ => Ok(value.to_string()),
+    }
+}
+
 /// Resolve the values for a snippet (spec §7): CLI arguments beat
 /// declared defaults, which beat built-ins. Referenced variables and
 /// variables declared `required` must have a value afterwards.
+/// Declared parameters are then type-checked (Peak C2): a value
+/// that violates its parameter's `type:` is an error, and `yesno`
+/// values are normalised to `yes`/`no`.
 ///
 /// # Errors
-/// [`ForgeError::MissingVariables`] listing **all** missing names at once.
+/// [`ForgeError::MissingVariables`] listing **all** missing names at once,
+/// or a validation error naming the offending parameter.
 pub fn resolve(
     snippet: &Snippet,
     cli_args: &BTreeMap<String, String>,
@@ -204,7 +278,51 @@ pub fn resolve(
         missing.dedup();
         return Err(ForgeError::MissingVariables(missing));
     }
+    // Peak C2: type-check the resolved values of declared
+    // parameters (from any source: CLI, prompt or default).
+    for (name, spec) in &snippet.variables {
+        if let Some(value) = values.get(name).cloned() {
+            let coerced = coerce_value(name, &spec.resolve(), &value)?;
+            values.insert(name.clone(), coerced);
+        }
+    }
     Ok(values)
+}
+
+/// The mask shown wherever a secret parameter's value would
+/// otherwise be displayed (plans, cards, step labels).
+pub const SECRET_MASK: &str = "••••••";
+
+/// Names of the snippet's parameters declared `type: secret`.
+#[must_use]
+pub fn secret_names(snippet: &Snippet) -> Vec<String> {
+    snippet
+        .variables
+        .iter()
+        .filter(|(_, spec)| spec.resolve().is_secret())
+        .map(|(name, _)| name.clone())
+        .collect()
+}
+
+/// A copy of `values` with every secret parameter's value
+/// replaced by [`SECRET_MASK`], for display surfaces. Execution
+/// always uses the unmasked map.
+#[must_use]
+pub fn display_values(
+    snippet: &Snippet,
+    values: &BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    let secrets = secret_names(snippet);
+    if secrets.is_empty() {
+        return values.clone();
+    }
+    let mut masked = values.clone();
+    for name in secrets {
+        if masked.contains_key(&name) {
+            masked.insert(name, SECRET_MASK.to_string());
+        }
+    }
+    masked
 }
 
 /// A copy-pasteable hint for a missing-variables error, e.g.
@@ -536,5 +654,113 @@ mod tests {
         ] {
             assert!(parse_duration(bad).is_err(), "{bad}");
         }
+    }
+}
+
+#[cfg(test)]
+mod typed_param_tests {
+    use super::*;
+    use crate::Snippet;
+
+    fn map(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+            .collect()
+    }
+
+    fn snippet(yaml: &str) -> Snippet {
+        Snippet::from_yaml(yaml).unwrap()
+    }
+
+    const TYPED: &str = "name: typed\nvariables:\n  REGION:\n    type: choice\n    choices: [eu, us]\n    default: eu\n  COUNT:\n    type: number\n  CONFIRM:\n    type: yesno\n  TARGET:\n    type: path\n    required: true\n  TOKEN:\n    type: secret\n    required: true\nsteps:\n  - run: echo {{REGION}} {{TARGET}}\n";
+
+    #[test]
+    fn typed_document_validates() {
+        snippet(TYPED).validate().unwrap();
+    }
+
+    #[test]
+    fn invalid_param_declarations_are_refused() {
+        let cases = [
+            // unknown type
+            "name: x\nvariables:\n  A:\n    type: date\nsteps: [echo hi]\n",
+            // choice without choices
+            "name: x\nvariables:\n  A:\n    type: choice\nsteps: [echo hi]\n",
+            // choice default outside the list
+            "name: x\nvariables:\n  A:\n    type: choice\n    choices: [eu]\n    default: us\nsteps: [echo hi]\n",
+            // choices on a text param
+            "name: x\nvariables:\n  A:\n    choices: [eu]\nsteps: [echo hi]\n",
+            // number with a non-number default
+            "name: x\nvariables:\n  A:\n    type: number\n    default: many\nsteps: [echo hi]\n",
+            // yesno with a bad default
+            "name: x\nvariables:\n  A:\n    type: yesno\n    default: maybe\nsteps: [echo hi]\n",
+            // secret with a default
+            "name: x\nvariables:\n  A:\n    type: secret\n    default: hunter2\nsteps: [echo hi]\n",
+        ];
+        for yaml in cases {
+            // from_yaml validates, so refusal may surface at
+            // parse time or at validate() - either is a refusal.
+            let refused = match Snippet::from_yaml(yaml) {
+                Ok(s) => s.validate().is_err(),
+                Err(_) => true,
+            };
+            assert!(refused, "must refuse: {yaml}");
+        }
+    }
+
+    #[test]
+    fn resolve_type_checks_and_normalises() {
+        let s = snippet(TYPED);
+        let ok = resolve(
+            &s,
+            &map(&[
+                ("REGION", "us"),
+                ("COUNT", "3.5"),
+                ("CONFIRM", "True"),
+                ("TARGET", "/tmp/x"),
+                ("TOKEN", "s3cr3t"),
+            ]),
+        )
+        .unwrap();
+        assert_eq!(ok["REGION"], "us");
+        assert_eq!(ok["CONFIRM"], "yes", "yesno is normalised");
+        assert_eq!(ok["TOKEN"], "s3cr3t");
+
+        for (name, value) in [
+            ("REGION", "moon"),
+            ("COUNT", "many"),
+            ("COUNT", "inf"),
+            ("CONFIRM", "perhaps"),
+            ("TARGET", "  "),
+        ] {
+            let mut args = map(&[("TARGET", "/tmp/x"), ("TOKEN", "t")]);
+            args.insert(name.to_string(), value.to_string());
+            let err = resolve(&s, &args).unwrap_err();
+            assert!(
+                err.to_string().contains(name),
+                "error names the parameter: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn secret_values_are_masked_for_display_only() {
+        let s = snippet(TYPED);
+        let values = resolve(&s, &map(&[("TARGET", "/tmp/x"), ("TOKEN", "s3cr3t")])).unwrap();
+        assert_eq!(secret_names(&s), ["TOKEN"]);
+        let shown = display_values(&s, &values);
+        assert_eq!(shown["TOKEN"], SECRET_MASK);
+        assert_eq!(shown["TARGET"], "/tmp/x");
+        assert_eq!(values["TOKEN"], "s3cr3t", "execution map is untouched");
+    }
+
+    #[test]
+    fn pre_c2_documents_resolve_as_before() {
+        let s = snippet("name: old\nvariables:\n  PLAIN: hello\n  FULL:\n    default: world\n    required: true\nsteps:\n  - run: echo {{PLAIN}} {{FULL}}\n");
+        s.validate().unwrap();
+        let values = resolve(&s, &map(&[])).unwrap();
+        assert_eq!(values["PLAIN"], "hello");
+        assert_eq!(values["FULL"], "world");
     }
 }

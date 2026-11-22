@@ -333,7 +333,16 @@ fn run_step(
     let env = effective_env(snippet, Some(step), values);
     let code = if let Some(command) = &step.command {
         let rendered = subst(command, values);
-        let label = step.name.as_deref().unwrap_or(&rendered);
+        // Peak C2: the label is display only - when it falls
+        // back to the command text, secrets stay masked (the
+        // executed text above keeps the real values).
+        let masked;
+        let label = if let Some(name) = &step.name {
+            name.as_str()
+        } else {
+            masked = subst(command, &forge_core::vars::display_values(snippet, values));
+            masked.as_str()
+        };
         eprintln!("[{}/{}] {}", index + 1, total, label);
         run_command_with_retries(shell, &rendered, step, &cwd, &env)
     } else {
@@ -547,12 +556,15 @@ pub fn execute_stepwise(
                 continue;
             }
         }
+        // Peak C2: the step-through display masks secrets; the
+        // run itself (below) uses the real values.
+        let display_values = forge_core::vars::display_values(snippet, values);
         let display = if let Some(command) = &step.command {
-            subst(command, values)
+            subst(command, &display_values)
         } else if !step.parallel.is_empty() {
             step.parallel
                 .iter()
-                .map(|c| subst(c, values))
+                .map(|c| subst(c, &display_values))
                 .collect::<Vec<_>>()
                 .join(" ; ")
         } else {

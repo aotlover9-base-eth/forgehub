@@ -132,6 +132,10 @@ pub fn render_plan(
     hash: &str,
 ) -> String {
     use std::fmt::Write as _;
+    // Peak C2: the plan is a display surface - secret parameter
+    // values are masked here and never reach the terminal.
+    let masked = forge_core::vars::display_values(snippet, values);
+    let values = &masked;
     let mut out = String::new();
     // Writing to a String is infallible; ignore the results.
     let _ = writeln!(
@@ -413,6 +417,96 @@ pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Resul
 /// Resolve variable values; on a terminal, prompt for each missing
 /// variable (spec-snippet-format §7 stage 5) before giving up. The
 /// final error lists **all** still-missing variables at once.
+/// Prompt for one missing value, honouring the parameter's
+/// declared type (Peak C2): a menu for `choice`, validated
+/// re-asks for `number`, a yes/no question for `yesno`, and a
+/// hidden prompt for `secret`. Undeclared variables and `text`
+/// / `path` parameters use the plain line prompt. `None` means
+/// "no answer" (EOF, cancel, or three invalid attempts), which
+/// the caller turns into the standard missing-values error.
+fn prompt_for_value(snippet: &Snippet, name: &str, stdin: &mut impl BufRead) -> Option<String> {
+    let param = snippet
+        .variables
+        .get(name)
+        .map(forge_core::model::ParamSpec::resolve);
+    let description = param
+        .as_ref()
+        .and_then(|p| p.description.clone())
+        .unwrap_or_default();
+    let question = if description.is_empty() {
+        format!("Value for {name}:")
+    } else {
+        format!("Value for {name} ({description}):")
+    };
+    let Some(param) = param else {
+        return crate::prompt::ask_line(stdin, &question).filter(|a| !a.is_empty());
+    };
+    match param.kind() {
+        "secret" => {
+            let q = if description.is_empty() {
+                format!("Value for {name} (hidden):")
+            } else {
+                format!("Value for {name} ({description}, hidden):")
+            };
+            crate::prompt::ask_secret(&q)
+        }
+        "choice" => prompt_choice(stdin, name, &param),
+        "number" => prompt_number(stdin, &question),
+        "yesno" => Some(
+            if crate::prompt::ask_yes_no(stdin, &question) {
+                "yes"
+            } else {
+                "no"
+            }
+            .to_string(),
+        ),
+        _ => crate::prompt::ask_line(stdin, &question).filter(|a| !a.is_empty()),
+    }
+}
+
+/// The `choice` prompt: list the options once, then accept an
+/// exact value or its 1-based number, up to three attempts.
+fn prompt_choice(
+    stdin: &mut impl BufRead,
+    name: &str,
+    param: &forge_core::model::Param,
+) -> Option<String> {
+    eprintln!("Value for {name} - choose one:");
+    for (i, choice) in param.choices.iter().enumerate() {
+        eprintln!("  {}. {choice}", i + 1);
+    }
+    for _ in 0..3 {
+        let answer = crate::prompt::ask_line(stdin, "Choice:")?;
+        let answer = answer.trim();
+        if param.choices.iter().any(|c| c == answer) {
+            return Some(answer.to_string());
+        }
+        if let Ok(n) = answer.parse::<usize>() {
+            if (1..=param.choices.len()).contains(&n) {
+                return Some(param.choices[n - 1].clone());
+            }
+        }
+        eprintln!(
+            "  not a valid choice - expected one of: {}",
+            param.choices.join(", ")
+        );
+    }
+    None
+}
+
+/// The `number` prompt: re-ask until the answer parses as a
+/// finite number, up to three attempts.
+fn prompt_number(stdin: &mut impl BufRead, question: &str) -> Option<String> {
+    for _ in 0..3 {
+        let answer = crate::prompt::ask_line(stdin, question)?;
+        if forge_core::vars::is_valid_number(&answer) {
+            return Some(answer);
+        }
+        eprintln!("  that is not a number - try again");
+    }
+    None
+}
+
 pub fn resolve_or_prompt(
     snippet: &Snippet,
     cli_values: &std::collections::BTreeMap<String, String>,
@@ -427,21 +521,8 @@ pub fn resolve_or_prompt(
             }
             let mut values = cli_values.clone();
             for name in &missing {
-                let description = snippet
-                    .variables
-                    .get(name)
-                    .and_then(|spec| spec.resolve().description)
-                    .unwrap_or_default();
-                let question = if description.is_empty() {
-                    format!("Value for {name}:")
-                } else {
-                    format!("Value for {name} ({description}):")
-                };
-                match crate::prompt::ask_line(stdin, &question) {
-                    Some(answer) if !answer.is_empty() => {
-                        values.insert(name.clone(), answer);
-                    }
-                    _ => {}
+                if let Some(answer) = prompt_for_value(snippet, name, stdin) {
+                    values.insert(name.clone(), answer);
                 }
             }
             match forge_core::vars::resolve(snippet, &values) {

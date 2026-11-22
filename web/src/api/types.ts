@@ -15,10 +15,22 @@ export interface Me {
   csrf_token?: string;
 }
 
+/** One declared parameter (Peak C2 typed parameters). */
+export interface ParamInfo {
+  name: string;
+  type: 'text' | 'choice' | 'number' | 'path' | 'yesno' | 'secret';
+  required: boolean;
+  default?: string;
+  choices?: string[];
+  description?: string;
+}
+
 export interface SnippetSummaryParsed {
   mode: 'script' | 'steps';
   steps_count: number;
   variables: string[];
+  /** Declared parameters with types; absent from older servers. */
+  parameters?: ParamInfo[];
   uses_sudo: boolean;
   lint_warnings: { kind: string; line: number; message: string }[];
 }

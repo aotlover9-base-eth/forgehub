@@ -183,6 +183,30 @@ fn summary_json(body: &str) -> Result<serde_json::Value, ApiError> {
         },
         "steps_count": snippet.command_count(),
         "variables": snippet.referenced_variables(),
+        // Peak C2: the declared parameters with their types,
+        // for the editor's parameters panel. A secret's default
+        // is never reported (secrets cannot have one, and the
+        // summary must stay safe for stored legacy bodies).
+        "parameters": snippet.variables.iter().map(|(name, spec)| {
+            let param = spec.resolve();
+            let mut out = serde_json::json!({
+                "name": name,
+                "type": param.kind(),
+                "required": param.required,
+            });
+            if !param.is_secret() {
+                if let Some(default) = &param.default {
+                    out["default"] = serde_json::json!(default);
+                }
+            }
+            if !param.choices.is_empty() {
+                out["choices"] = serde_json::json!(param.choices);
+            }
+            if let Some(description) = &param.description {
+                out["description"] = serde_json::json!(description);
+            }
+            out
+        }).collect::<Vec<_>>(),
         "uses_sudo": uses_sudo,
         "lint_warnings": warnings.iter().map(|w| serde_json::json!({
             "kind": w.kind.as_str(),

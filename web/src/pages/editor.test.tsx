@@ -70,6 +70,40 @@ describe('EditorPage (new)', () => {
     expect(screen.getAllByText(/Uses sudo/).length).toBeGreaterThanOrEqual(1);
   });
 
+  it('shows the parameters panel with types, choices and the secret note', async () => {
+    server.use(
+      ...authedHandlers(),
+      http.post('/api/v1/snippets/validate', () =>
+        HttpResponse.json({
+          valid: true,
+          errors: [],
+          hash: 'a'.repeat(64),
+          summary: {
+            mode: 'script',
+            steps_count: 1,
+            variables: ['REGION', 'API_KEY'],
+            parameters: [
+              { name: 'REGION', type: 'choice', required: false, default: 'eu', choices: ['eu', 'us'] },
+              { name: 'API_KEY', type: 'secret', required: true },
+            ],
+            uses_sudo: false,
+            lint_warnings: [],
+          },
+        }),
+      ),
+      http.get('/api/v1/snippets/ada/ubuntu-setup', () =>
+        HttpResponse.json({ error: { code: 'snippet_not_found', message: 'no' } }, { status: 404 }),
+      ),
+    );
+    renderEditor('/new');
+    setField('Name', 'ubuntu-setup');
+    fireEvent.change(bodyArea(), { target: { value: 'echo ok' } });
+    await waitFor(() => expect(screen.getByText(/Parameters:/)).toBeTruthy());
+    expect(screen.getByText(/one of: eu, us/)).toBeTruthy();
+    expect(screen.getByText(/default: eu/)).toBeTruthy();
+    expect(screen.getByText(/prompted with a hidden prompt, never stored/)).toBeTruthy();
+  });
+
   it('blocks saving when the server finds secrets, without echoing the value', async () => {
     server.use(
       ...authedHandlers(),
