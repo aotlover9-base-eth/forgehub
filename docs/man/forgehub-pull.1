@@ -4,10 +4,16 @@
 .SH NAME
 pull \- Pull a cloud snippet into the local library
 .SH SYNOPSIS
-\fBpull\fR [\fB\-\-as\fR] [\fB\-\-version\fR] [\fB\-\-force\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIREFERENCE\fR> 
+\fBpull\fR [\fB\-\-all\fR] [\fB\-\-dry\-run\fR] [\fB\-\-as\fR] [\fB\-\-version\fR] [\fB\-\-force\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fIREFERENCE\fR] 
 .SH DESCRIPTION
 Pull a cloud snippet into the local library
 .SH OPTIONS
+.TP
+\fB\-\-all\fR
+Pull every tracked snippet plus remote\-only ones
+.TP
+\fB\-\-dry\-run\fR
+Show what would be pulled; change nothing
 .TP
 \fB\-\-as\fR \fI<AS_NAME>\fR
 Save under a different local name
@@ -24,8 +30,8 @@ Registry base URL (default: `FORGEHUB_REGISTRY` or config)
 \fB\-h\fR, \fB\-\-help\fR
 Print help
 .TP
-<\fIREFERENCE\fR>
-`owner/name`, or a bare name for your own snippet
+[\fIREFERENCE\fR]
+`owner/name`, or a bare name for your own snippet. Required unless \-\-all is given
 .SH EXTRA
 Examples:
   fg pull alice/deploy

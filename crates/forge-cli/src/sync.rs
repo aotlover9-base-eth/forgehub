@@ -342,7 +342,15 @@ pub fn cmd_edit_cloud(
             return Ok(2);
         }
     }
-    let outcome = push_one(store, &sess, &name, None, None, Some("Edited via fg edit"))?;
+    let outcome = push_one(
+        store,
+        &sess,
+        &name,
+        None,
+        None,
+        Some("Edited via fg edit"),
+        None,
+    )?;
     print_push_outcome(&sess.registry, &outcome, json);
     Ok(0)
 }
@@ -471,7 +479,11 @@ fn push_plan(
 
 /// Push one local snippet. `remote_name` defaults to the local
 /// name; `visibility` of None keeps/uses the defaults (private for
-/// new, unchanged for existing).
+/// new, unchanged for existing). `default_visibility` (Peak B9,
+/// the `default_visibility` config key) replaces "private" for
+/// the create branch only - existing snippets are never
+/// re-visibilitied by a default.
+#[allow(clippy::too_many_arguments)]
 pub fn push_one(
     store: &Store,
     sess: &Session,
@@ -479,6 +491,7 @@ pub fn push_one(
     remote_name: Option<&str>,
     visibility: Option<&str>,
     message: Option<&str>,
+    default_visibility: Option<&str>,
 ) -> Result<PushOutcome> {
     let (snippet, yaml) = checked_local(store, name)?;
     let remote_name = remote_name.unwrap_or(name).to_string();
@@ -495,7 +508,7 @@ pub fn push_one(
             &snippet,
             &yaml,
             &remote_name,
-            visibility,
+            visibility.or(default_visibility),
             message,
             &local_hash,
         )?,
@@ -677,6 +690,7 @@ pub fn cmd_push(
     registry_flag: Option<&str>,
     json: bool,
     dry_run: bool,
+    default_visibility: Option<&str>,
 ) -> Result<i32> {
     let sess = session(store, stdin, registry_flag)?;
     if dry_run {
@@ -691,7 +705,15 @@ pub fn cmd_push(
         let mut failed = 0;
         let mut rows: Vec<(String, String)> = Vec::new();
         for n in &names {
-            match push_one(store, &sess, n, None, visibility, message) {
+            match push_one(
+                store,
+                &sess,
+                n,
+                None,
+                visibility,
+                message,
+                default_visibility,
+            ) {
                 Ok(outcome) => {
                     let label = match outcome.status {
                         PushStatus::Created => format!("created v{}", outcome.version),
@@ -735,7 +757,15 @@ pub fn cmd_push(
             "forgehub: push needs a snippet name\n  what: no name was given\n  fix: fg push <name>, or fg push --all",
         )
     })?;
-    let outcome = push_one(store, &sess, name, as_name, visibility, message)?;
+    let outcome = push_one(
+        store,
+        &sess,
+        name,
+        as_name,
+        visibility,
+        message,
+        default_visibility,
+    )?;
     print_push_outcome(&sess.registry, &outcome, json);
     Ok(0)
 }
@@ -1894,7 +1924,7 @@ pub fn after_record_push(
                 return Ok(0);
             }
             let sess = session(store, stdin, None)?;
-            let outcome = push_one(store, &sess, name, None, None, None)?;
+            let outcome = push_one(store, &sess, name, None, None, None, None)?;
             print_push_outcome(&sess.registry, &outcome, json);
             Ok(0)
         }

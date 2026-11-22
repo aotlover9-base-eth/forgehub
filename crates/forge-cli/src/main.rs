@@ -14,6 +14,7 @@ mod cache;
 mod cloud;
 mod cloudrun;
 mod cmds;
+mod config_cmd;
 mod exit;
 mod history;
 mod output;
@@ -71,6 +72,7 @@ const KNOWN_COMMANDS: &[&str] = &[
     "completions",
     "ui",
     "cache",
+    "config",
     "update",
     "trust",
     "remote",
@@ -150,10 +152,11 @@ struct Cli {
     #[arg(long, global = true)]
     offline: bool,
 
-    /// Colour output: `auto` (default) colours only on a capable
-    /// terminal and honours `NO_COLOR`; `never` is always plain.
-    #[arg(long, global = true, value_enum, default_value_t = output::ColorMode::Auto)]
-    color: output::ColorMode,
+    /// Colour output: `auto` colours only on a capable terminal
+    /// and honours `NO_COLOR`; `never` is always plain. Default:
+    /// the `color` key from `fg config`, else `auto`.
+    #[arg(long, global = true, value_enum)]
+    color: Option<output::ColorMode>,
 
     #[command(subcommand)]
     command: Command,
@@ -618,6 +621,17 @@ enum Command {
         #[command(subcommand)]
         action: CacheCommand,
     },
+    #[command(next_help_heading = "Tools")]
+    /// Read and write the local configuration (registry, colour,
+    /// shell, default visibility, cache size). No secrets: tokens
+    /// stay in the credential store.
+    #[command(
+        after_help = "Examples:\n  fg config list\n  fg config get color\n  fg config set color never\n  fg config set registry_url https://forgehub.example"
+    )]
+    Config {
+        #[command(subcommand)]
+        action: ConfigCommand,
+    },
     #[command(next_help_heading = "Cloud")]
     /// Check whether a newer `ForgeHub` is available (never
     /// downloads or replaces anything).
@@ -647,6 +661,25 @@ enum CacheCommand {
         /// Maximum cache size after pruning.
         #[arg(long)]
         max_size: String,
+    },
+}
+
+/// Subcommands of `config` (Peak B9).
+#[derive(Subcommand)]
+enum ConfigCommand {
+    /// List every config key with its effective value and source.
+    List,
+    /// Print one key's effective value.
+    Get {
+        /// Key name (see `fg config list`).
+        key: String,
+    },
+    /// Validate and save one key's value.
+    Set {
+        /// Key name (see `fg config list`).
+        key: String,
+        /// The new value.
+        value: String,
     },
 }
 
@@ -887,6 +920,14 @@ fn dispatch_cloud(
             } else {
                 None
             };
+            // Peak B9: with no visibility flag, a push that
+            // CREATES a snippet uses the `default_visibility`
+            // config key (existing snippets keep theirs).
+            let default_visibility = if visibility.is_none() {
+                store.load_config().ok().and_then(|c| c.default_visibility)
+            } else {
+                None
+            };
             sync::cmd_push(
                 store,
                 stdin,
@@ -898,6 +939,7 @@ fn dispatch_cloud(
                 registry.as_deref(),
                 json,
                 *dry_run,
+                default_visibility.as_deref(),
             )
         }
         Command::Pull { .. } => dispatch_pull(cli, store, stdin),
@@ -1010,6 +1052,7 @@ fn dispatch_ui(
                 ))
                 .into());
             }
+            let default_visibility = store.load_config().ok().and_then(|c| c.default_visibility);
             sync::cmd_push(
                 store,
                 stdin,
@@ -1021,6 +1064,7 @@ fn dispatch_ui(
                 None,
                 json,
                 false,
+                default_visibility.as_deref(),
             )
         }
         tui::Action::Pull(item) => sync::cmd_pull(
@@ -1140,6 +1184,13 @@ fn dispatch_manage(
             CacheCommand::Path => cache::cmd_cache_path(store, cli.json),
             CacheCommand::Prune { max_size } => cache::cmd_cache_prune(store, max_size, cli.json),
         }),
+        Command::Config { action } => match action {
+            ConfigCommand::List => config_cmd::cmd_config_list(store, cli.json),
+            ConfigCommand::Get { key } => config_cmd::cmd_config_get(store, key, cli.json),
+            ConfigCommand::Set { key, value } => {
+                config_cmd::cmd_config_set(store, key, value, cli.json)
+            }
+        },
         Command::Update { registry, .. } => {
             update::cmd_update_check(store, registry.as_deref(), cli.json)
         }
@@ -1197,11 +1248,34 @@ fn dispatch_manage(
     })
 }
 
+/// The colour mode for this process (Peak B9): the `--color`
+/// flag wins, then the `color` config key, then `auto`.
+fn resolve_color(cli: &Cli, store: &store::Store) -> output::ColorMode {
+    cli.color
+        .or_else(|| {
+            store
+                .load_config()
+                .ok()
+                .and_then(|c| c.color.as_deref().and_then(output::ColorMode::from_config))
+        })
+        .unwrap_or_default()
+}
+
 fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
-    output::init(cli.color);
     cloud::VERBOSE.store(cli.verbose > 0, std::sync::atomic::Ordering::Relaxed);
     cloud::OFFLINE.store(cli.offline, std::sync::atomic::Ordering::Relaxed);
-    let store = store::Store::open()?;
+    let store = match store::Store::open() {
+        Ok(store) => {
+            output::init(resolve_color(&cli, &store));
+            store
+        }
+        Err(e) => {
+            // No store, no config: the flag (or the plain
+            // default) still styles the error report.
+            output::init(cli.color.unwrap_or_default());
+            return Err(e);
+        }
+    };
     if let Some(result) = dispatch_cloud(&cli, &store, stdin) {
         return result;
     }

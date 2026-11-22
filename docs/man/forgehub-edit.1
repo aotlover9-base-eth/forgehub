@@ -2,11 +2,11 @@
 .el .ds Aq '
 .TH edit 1  "edit " 
 .SH NAME
-edit \- Edit a snippet in $EDITOR; invalid edits are rolled back
+edit \- Edit a snippet in $EDITOR; invalid edits are rolled back. An `owner/name` reference edits your cloud snippet and pushes the result as a new version after confirmation
 .SH SYNOPSIS
 \fBedit\fR [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> 
 .SH DESCRIPTION
-Edit a snippet in $EDITOR; invalid edits are rolled back
+Edit a snippet in $EDITOR; invalid edits are rolled back. An `owner/name` reference edits your cloud snippet and pushes the result as a new version after confirmation
 .SH OPTIONS
 .TP
 \fB\-h\fR, \fB\-\-help\fR
@@ -17,3 +17,4 @@ Snippet name
 .SH EXTRA
 Examples:
   fg edit ubuntu\-setup
+  fg edit alice/deploy

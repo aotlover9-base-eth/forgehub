@@ -1,0 +1,19 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH lint 1  "lint " 
+.SH NAME
+lint \- Lint a snippet (danger lints + secret scan) without running anything. Exit 0 clean, 1 warnings, 2 blocking
+.SH SYNOPSIS
+\fBlint\fR [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> 
+.SH DESCRIPTION
+Lint a snippet (danger lints + secret scan) without running anything. Exit 0 clean, 1 warnings, 2 blocking
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Snippet name
+.SH EXTRA
+Examples:
+  fg lint ubuntu\-setup

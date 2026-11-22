@@ -409,3 +409,86 @@ fn push_all_summary() {
         "{stdout}"
     );
 }
+
+/// Peak B9: the `default_visibility` config key applies when a
+/// push CREATES a snippet; an existing snippet keeps its
+/// visibility when no flag is given, even if the default has
+/// changed since.
+#[test]
+fn push_uses_config_default_visibility_for_creates_only() {
+    let base = start_server();
+    let (token, _, _) = signup_and_token(&base, "anna");
+    let a = rig(&base);
+    cli_login(&a, &token);
+    let (code, _, stderr) = a.run(&["config", "set", "default_visibility", "public"], None);
+    assert_eq!(code, 0, "config set: {stderr}");
+    a.write_local("fresh", "echo one");
+    let (code, _, stderr) = a.run(&["push", "fresh"], None);
+    assert_eq!(code, 0, "push: {stderr}");
+    let (status, detail) = api_get(&base, &token, "/api/v1/snippets/anna/fresh");
+    assert_eq!(status, 200);
+    assert_eq!(detail["version"], 1);
+    assert_eq!(
+        detail["visibility"], "public",
+        "create uses the config default"
+    );
+
+    let (code, _, stderr) = a.run(&["config", "set", "default_visibility", "private"], None);
+    assert_eq!(code, 0, "config set 2: {stderr}");
+    a.write_local("fresh", "echo two");
+    let (code, _, stderr) = a.run(&["push", "fresh"], None);
+    assert_eq!(code, 0, "push 2: {stderr}");
+    let (_, detail) = api_get(&base, &token, "/api/v1/snippets/anna/fresh");
+    assert_eq!(detail["version"], 2);
+    assert_eq!(
+        detail["visibility"], "public",
+        "existing snippets keep their visibility without a flag"
+    );
+}
+
+/// Peak B5's owed live verification, closed in B9: `fg edit
+/// <owner/name>` against the real server downloads the snippet,
+/// runs $EDITOR over it and pushes the result as a new version.
+#[test]
+fn cloud_edit_pushes_a_new_version_live() {
+    let base = start_server();
+    let (token, _, _) = signup_and_token(&base, "anna");
+    let a = rig(&base);
+    cli_login(&a, &token);
+    a.write_local("hello", "echo MARKER");
+    let (code, _, stderr) = a.run(&["push", "hello"], None);
+    assert_eq!(code, 0, "push: {stderr}");
+
+    // A scripted $EDITOR that rewrites the marker in place.
+    let editor = a.p("editor.sh");
+    std::fs::write(&editor, "#!/bin/sh\nsed -i 's/MARKER/edited/' \"$1\"\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&editor, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    let out = a
+        .cmd()
+        .args(["-y", "edit", "anna/hello"])
+        .env("EDITOR", &editor)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap()
+        .wait_with_output()
+        .unwrap();
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "cloud edit: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let (status, detail) = api_get(&base, &token, "/api/v1/snippets/anna/hello");
+    assert_eq!(status, 200);
+    assert_eq!(detail["version"], 2, "the edit became a new version");
+    assert!(
+        detail["body"].as_str().unwrap().contains("echo edited"),
+        "the edited body was pushed: {detail}"
+    );
+}

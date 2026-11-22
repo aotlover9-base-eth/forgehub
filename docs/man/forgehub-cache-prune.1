@@ -1,0 +1,16 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH prune 1  "prune " 
+.SH NAME
+prune \- Evict least\-recently\-used entries until the cache fits the given size (e.g. 50MB, 500KB, 2GB)
+.SH SYNOPSIS
+\fBprune\fR [\fB\-h\fR|\fB\-\-help\fR] <\fB\-\-max\-size\fR> 
+.SH DESCRIPTION
+Evict least\-recently\-used entries until the cache fits the given size (e.g. 50MB, 500KB, 2GB)
+.SH OPTIONS
+.TP
+\fB\-\-max\-size\fR \fI<MAX_SIZE>\fR
+Maximum cache size after pruning
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help

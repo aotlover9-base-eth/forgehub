@@ -1,10 +1,10 @@
 .ie \n(.g .ds Aq \(aq
 .el .ds Aq '
-.TH forgehub 1  "forgehub 0.1.0" 
+.TH forgehub 1  "forgehub 0.1.6" 
 .SH NAME
-forgehub \- ForgeHub - a cloud home for shell command snippets
+forgehub \- ForgeHub \- a cloud home for shell command snippets
 .SH SYNOPSIS
-\fBforgehub\fR [\fB\-\-json\fR] [\fB\-y\fR|\fB\-\-yes\fR] [\fB\-v\fR|\fB\-\-verbose\fR]... [\fB\-\-offline\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+\fBforgehub\fR [\fB\-\-json\fR] [\fB\-y\fR|\fB\-\-yes\fR] [\fB\-v\fR|\fB\-\-verbose\fR]... [\fB\-\-offline\fR] [\fB\-\-color\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
 .SH DESCRIPTION
 Save shell command snippets once, run them anywhere with `fg <name>`. Local commands work fully offline; cloud commands (login, push, pull, fork) sync with your ForgeHub server.
 .SH OPTIONS
@@ -20,6 +20,21 @@ Verbose request logging to stderr (method, status, timing; tokens are never prin
 .TP
 \fB\-\-offline\fR
 Offline mode: cloud commands fail fast with an offline message; local commands and `run \-\-offline` still work
+.TP
+\fB\-\-color\fR \fI<COLOR>\fR
+Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto`
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+auto: Colour when stdout is a terminal, `NO_COLOR` is unset and `TERM` is not `dumb`
+.IP \(bu 2
+always: Colour even when piped (still honours nothing else)
+.IP \(bu 2
+never: Never colour
+.RE
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Print help (see a summary with \*(Aq\-h\*(Aq)
@@ -46,6 +61,9 @@ Show a snippet (card + numbered commands)
 forgehub\-search(1)
 Search local snippets (name, description, tags, commands)
 .TP
+forgehub\-find(1)
+Fuzzy\-find snippets by name (local library + cached cloud names), ranked
+.TP
 forgehub\-tag(1)
 Add or remove tags: fg tag <name> add|remove <tag>…
 .TP
@@ -55,8 +73,14 @@ Rename a local snippet
 forgehub\-delete(1)
 Delete a local snippet
 .TP
+forgehub\-new(1)
+Create a snippet from a template and open it in $EDITOR; validation errors loop back into the editor
+.TP
+forgehub\-lint(1)
+Lint a snippet (danger lints + secret scan) without running anything. Exit 0 clean, 1 warnings, 2 blocking
+.TP
 forgehub\-edit(1)
-Edit a snippet in $EDITOR; invalid edits are rolled back
+Edit a snippet in $EDITOR; invalid edits are rolled back. An `owner/name` reference edits your cloud snippet and pushes the result as a new version after confirmation
 .TP
 forgehub\-parameterize(1)
 Turn repeated literals into variables
@@ -127,10 +151,15 @@ Browse snippets in a terminal UI (Local · Mine · Explore)
 forgehub\-cache(1)
 Inspect and manage the cloud run cache
 .TP
+forgehub\-config(1)
+Read and write the local configuration (registry, colour, shell, default visibility, cache size). No secrets: tokens stay in the credential store
+.TP
 forgehub\-update(1)
 Check whether a newer `ForgeHub` is available (never downloads or replaces anything)
 .TP
 forgehub\-help(1)
 Print this message or the help of the given subcommand(s)
+.SH EXTRA
+Concepts: fg help <topic> \- alias, trust, hash\-pinning, yes, offline
 .SH VERSION
-v0.1.0
+v0.1.6 (6df66541c1f3, built 2026\-11\-20)

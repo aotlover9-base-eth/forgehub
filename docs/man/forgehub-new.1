@@ -1,0 +1,23 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH new 1  "new " 
+.SH NAME
+new \- Create a snippet from a template and open it in $EDITOR; validation errors loop back into the editor
+.SH SYNOPSIS
+\fBnew\fR [\fB\-\-script\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> 
+.SH DESCRIPTION
+Create a snippet from a template and open it in $EDITOR; validation errors loop back into the editor
+.SH OPTIONS
+.TP
+\fB\-\-script\fR
+Start from the script\-mode template (default: steps)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Name for the new snippet
+.SH EXTRA
+Examples:
+  fg new deploy
+  fg new deploy \-\-script

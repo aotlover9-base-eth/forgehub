@@ -4,7 +4,7 @@
 .SH NAME
 list \- List local snippets
 .SH SYNOPSIS
-\fBlist\fR [\fB\-\-tag\fR] [\fB\-\-long\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+\fBlist\fR [\fB\-\-tag\fR] [\fB\-\-visibility\fR] [\fB\-\-sort\fR] [\fB\-\-since\fR] [\fB\-\-long\fR] [\fB\-h\fR|\fB\-\-help\fR] 
 .SH DESCRIPTION
 List local snippets
 .SH OPTIONS
@@ -12,12 +12,32 @@ List local snippets
 \fB\-\-tag\fR \fI<TAG>\fR
 Only show snippets with this tag
 .TP
+\fB\-\-visibility\fR \fI<VISIBILITY>\fR
+Only show snippets whose last\-synced visibility matches (public, unlisted or private)
+.TP
+\fB\-\-sort\fR \fI<SORT>\fR
+Sort order (default: as listed)
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+name: Name, A\-Z
+.IP \(bu 2
+recent: Most recently modified first
+.RE
+.TP
+\fB\-\-since\fR \fI<SINCE>\fR
+Only show snippets modified within this duration (e.g. 30m, 24h, 7d, 2w)
+.TP
 \fB\-\-long\fR
-Show mode, shell and hash for each snippet
+Show a table with mode, shell and hash for each snippet
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-Print help
+Print help (see a summary with \*(Aq\-h\*(Aq)
 .SH EXTRA
 Examples:
   fg list \-\-long
   fg list \-\-tag ubuntu
+  fg list \-\-sort recent \-\-since 7d

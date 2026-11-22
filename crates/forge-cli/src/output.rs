@@ -18,15 +18,40 @@ use std::io::IsTerminal;
 use std::sync::OnceLock;
 
 /// The `--color` flag values.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, clap::ValueEnum)]
 pub enum ColorMode {
     /// Colour when stdout is a terminal, `NO_COLOR` is unset and
     /// `TERM` is not `dumb`.
+    #[default]
     Auto,
     /// Colour even when piped (still honours nothing else).
     Always,
     /// Never colour.
     Never,
+}
+
+impl ColorMode {
+    /// Parse a config-file value (Peak B9: the `color` key of
+    /// `fg config`); the canonical spellings are the flag's.
+    #[must_use]
+    pub fn from_config(value: &str) -> Option<Self> {
+        match value {
+            "auto" => Some(Self::Auto),
+            "always" => Some(Self::Always),
+            "never" => Some(Self::Never),
+            _ => None,
+        }
+    }
+
+    /// The canonical config-file spelling of this mode.
+    #[must_use]
+    pub fn as_config(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Always => "always",
+            Self::Never => "never",
+        }
+    }
 }
 
 /// The environment capabilities style resolution needs,

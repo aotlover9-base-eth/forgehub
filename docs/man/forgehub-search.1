@@ -4,16 +4,42 @@
 .SH NAME
 search \- Search local snippets (name, description, tags, commands)
 .SH SYNOPSIS
-\fBsearch\fR [\fB\-h\fR|\fB\-\-help\fR] <\fIQUERY\fR> 
+\fBsearch\fR [\fB\-\-tag\fR] [\fB\-\-visibility\fR] [\fB\-\-sort\fR] [\fB\-\-since\fR] [\fB\-\-long\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIQUERY\fR> 
 .SH DESCRIPTION
 Search local snippets (name, description, tags, commands)
 .SH OPTIONS
 .TP
+\fB\-\-tag\fR \fI<TAG>\fR
+Only show snippets with this tag
+.TP
+\fB\-\-visibility\fR \fI<VISIBILITY>\fR
+Only show snippets whose last\-synced visibility matches (public, unlisted or private)
+.TP
+\fB\-\-sort\fR \fI<SORT>\fR
+Sort order (default: as listed)
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+name: Name, A\-Z
+.IP \(bu 2
+recent: Most recently modified first
+.RE
+.TP
+\fB\-\-since\fR \fI<SINCE>\fR
+Only show snippets modified within this duration (e.g. 30m, 24h, 7d, 2w)
+.TP
+\fB\-\-long\fR
+Show the long table instead of compact rows
+.TP
 \fB\-h\fR, \fB\-\-help\fR
-Print help
+Print help (see a summary with \*(Aq\-h\*(Aq)
 .TP
 <\fIQUERY\fR>
 Search text
 .SH EXTRA
 Examples:
   fg search docker
+  fg search docker \-\-tag ubuntu \-\-long

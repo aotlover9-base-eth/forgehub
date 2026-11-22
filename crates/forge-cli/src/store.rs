@@ -31,6 +31,17 @@ pub struct Config {
     /// Server base URL (Step 11+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub server: Option<String>,
+    /// Colour mode for terminal output (Peak B9): `auto`,
+    /// `always` or `never`. The `--color` flag wins over this;
+    /// see `fg config`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    /// Visibility a push applies when it CREATES a snippet and
+    /// no `--public`/`--unlisted`/`--private` flag was given
+    /// (Peak B9): `private`, `unlisted` or `public`. Existing
+    /// snippets keep their visibility unless a flag changes it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_visibility: Option<String>,
     /// Seconds of human overhead (recall + typing) credited per
     /// automated command by `fg stats` (Forgenesis default: 12).
     #[serde(default = "default_overhead")]
@@ -136,6 +147,8 @@ impl Default for Config {
             cache_max_mb: default_cache_max_mb(),
             username: None,
             server: None,
+            color: None,
+            default_visibility: None,
             human_overhead_seconds: default_overhead(),
             analyze_min_count: default_analyze_min_count(),
             analyze_max_len: default_analyze_max_len(),

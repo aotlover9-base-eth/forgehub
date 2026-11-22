@@ -61,7 +61,7 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 | `doctor [topic]` | Home perms, config validity, shell, alias presence, workflow parse, ecosystem topics, (Step 11+) registry reachability, token validity, credential perms, clock skew. Non-zero exit on real breakage |
 | `alias install\|uninstall\|show [--shell bash\|zsh\|fish] [-y]` | Idempotent marked block in the rc file (`alias fg='forgehub'` + `alias jobs-fg='builtin fg'`; fish: a `fg` function + `jobs-fg`); backs up the rc file first; asks unless `-y` |
 | `completions <bash\|zsh\|fish\|powershell\|elvish>` | Prints the registration snippet for `clap_complete`'s dynamic env protocol (`COMPLETE=<shell> forgehub`); completion of local workflow names is dynamic, served by the binary from the live library |
-| `config` | **Not a command in v1** (see forgenesis-analysis §5). Edit `config.yaml` directly |
+| `config list` · `config get <key>` · `config set <key> <value>` | Peak B9: the user-facing face of `config.yaml`. Keys: `registry_url` (config `server`), `color` (`auto`/`always`/`never`; the `--color` flag wins over it), `shell` (config `default_shell`), `default_visibility` (applied only when a push creates a snippet; existing snippets keep theirs), `cache_size_mb` (config `cache_max_mb`, 1-10240). `set` validates before saving; unknown keys are refused. No secrets ever: tokens live only in the credential store |
 
 ## 5. Commands - cloud (Steps 11–13, 18)
 

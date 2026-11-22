@@ -6,6 +6,8 @@ Help layout (Peak B2): `forgehub --help` groups commands under Library, Cloud, S
 
 Listing (Peak B4): `fg list` and `fg search` share `--tag`, `--visibility` (last-synced visibility from the snippet's `.meta` sidecar), `--sort name|recent`, `--since 30m|24h|7d|2w` and `--long` (aligned table). `fg find <query>` fuzzy-matches local and cached cloud names, ranked; `--plain` prints bare names for piping (e.g. into fzf), `--limit` caps the results. Push and pull record the snippet's visibility in the sidecar so the filter works offline. Exit codes: 0 ok · 1 failure · 2 refused/not confirmed · 3 not found · 4 auth required · 130 interrupted.
 
+Config (Peak B9): `fg config list|get|set` manages five validated keys of `config.yaml`: `registry_url`, `color` (the `--color` flag wins over it), `shell`, `default_visibility` (applies only when a push creates a snippet; existing snippets keep theirs) and `cache_size_mb` (1-10240). `list` shows each key's effective value and its source (config, default or unset); `--json` shapes are stable. Secrets are refused as keys - tokens live only in the credential store.
+
 ## Commands at a glance
 
 - `forgehub init` - Create the `ForgeHub` home and config
@@ -41,6 +43,7 @@ Listing (Peak B4): `fg list` and `fg search` share `--tag`, `--visibility` (last
 - `forgehub completions` - Print shell completions (dynamic: local snippet names included)
 - `forgehub ui` - Browse snippets in a terminal UI (Local · Mine · Explore)
 - `forgehub cache` - Inspect and manage the cloud run cache
+- `forgehub config` - Read and write the local configuration (registry, colour, shell, default visibility, cache size)
 - `forgehub update` - Check whether a newer `ForgeHub` is available (never downloads or replaces anything)
 
 ## Per-command help
@@ -913,6 +916,89 @@ Options:
 
 Examples:
   fg ui
+```
+
+### `forgehub config`
+
+```text
+Read and write the local configuration (registry, colour, shell, default visibility, cache size). No secrets: tokens stay in the credential store
+
+Usage: forgehub config [OPTIONS] <COMMAND>
+
+Commands:
+  list  List every config key with its effective value and source
+  get   Print one key's effective value
+  set   Validate and save one key's value
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+
+Examples:
+  fg config list
+  fg config get color
+  fg config set color never
+  fg config set registry_url https://forgehub.example
+```
+
+#### `forgehub config list`
+
+```text
+List every config key with its effective value and source
+
+Usage: forgehub config list [OPTIONS]
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub config get`
+
+```text
+Print one key's effective value
+
+Usage: forgehub config get [OPTIONS] <KEY>
+
+Arguments:
+  <KEY>  Key name (see `fg config list`)
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub config set`
+
+```text
+Validate and save one key's value
+
+Usage: forgehub config set [OPTIONS] <KEY> <VALUE>
+
+Arguments:
+  <KEY>    Key name (see `fg config list`)
+  <VALUE>  The new value
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
 ```
 
 ### `forgehub cache`

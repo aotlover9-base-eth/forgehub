@@ -1,0 +1,16 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH show 1  "show " 
+.SH NAME
+show \- Show one trust pin in full, with the diff against the newest cached copy when it changed
+.SH SYNOPSIS
+\fBshow\fR [\fB\-h\fR|\fB\-\-help\fR] <\fIREFERENCE\fR> 
+.SH DESCRIPTION
+Show one trust pin in full, with the diff against the newest cached copy when it changed
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIREFERENCE\fR>
+`owner/name` whose trust pin to show

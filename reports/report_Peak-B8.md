@@ -37,3 +37,31 @@ CI run 44971342984 for the B7 head failed the Rust Clippy step with two `unreada
 ## 5. Next
 
 B9 - `fg config`, release measurements, man regeneration, docs refresh; then the Phase B summary and tag.
+
+
+---
+
+## Addendum (2026-11-22, third builder): the clippy chain is broken
+
+CI run 44971836192 for the B8 head failed the Rust job at Clippy,
+the fifth consecutive WP to land red that way (B4-B8). The fixes
+were already sitting uncommitted in the local working tree; the
+third builder verified them (local clippy without them fails on
+`assigning_clones` in `cloudrun.rs`; with them the full workspace
+is clean) and committed them on their own, per the B1 precedent:
+
+- **Commit `602d8f3` "peak B8: fix clippy and the stale offline
+  test"**: `cloudrun.rs` uses `clone_from` for the cached
+  `fetched_at`; `cmds.rs` uses `Duration::from_mins` /
+  `from_hours` instead of `from_secs` literals in the `--since`
+  parser; `tests/cloud.rs` asserts the B8 transport wording
+  ("cannot connect") instead of the pre-B8 "cannot reach" - a
+  stale assertion CI had never reached because Clippy stopped
+  the job first.
+- **CI run `44973090836` for `602d8f3` is fully green - all
+  five jobs** (Rust fmt/clippy/test, Web, E2E, Docker, Supply
+  chain). Main is green for the first time since B3.
+- Local verification in a good write window: `cargo clippy
+  --workspace --all-targets -- -D warnings` clean, `cargo fmt
+  --all --check` clean, `cargo test --workspace` 467 passed /
+  0 failed on the B8 tree.

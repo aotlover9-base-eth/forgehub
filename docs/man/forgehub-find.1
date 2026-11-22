@@ -1,0 +1,26 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH find 1  "find " 
+.SH NAME
+find \- Fuzzy\-find snippets by name (local library + cached cloud names), ranked
+.SH SYNOPSIS
+\fBfind\fR [\fB\-\-plain\fR] [\fB\-\-limit\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIQUERY\fR> 
+.SH DESCRIPTION
+Fuzzy\-find snippets by name (local library + cached cloud names), ranked
+.SH OPTIONS
+.TP
+\fB\-\-plain\fR
+Print bare names only, one per line (for piping into tools like fzf)
+.TP
+\fB\-\-limit\fR \fI<LIMIT>\fR [default: 10]
+Maximum number of matches to print
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIQUERY\fR>
+Fuzzy query (characters in order, not necessarily adjacent)
+.SH EXTRA
+Examples:
+  fg find dep
+  fg find dep \-\-plain

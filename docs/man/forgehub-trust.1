@@ -11,6 +11,7 @@ Manage execution trust for cloud snippets (Step 13): `trust list`, `trust revoke
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Print help
+.SH SAFETY
 .TP
 [\fIREFERENCE\fR]
 Shorthand for `trust add`: `owner/name@hash` or `owner/name@version`
@@ -24,6 +25,9 @@ Revoke trust for one snippet
 .TP
 trust\-add(1)
 Approve an exact snippet without running it
+.TP
+trust\-show(1)
+Show one trust pin in full, with the diff against the newest cached copy when it changed
 .TP
 trust\-help(1)
 Print this message or the help of the given subcommand(s)
