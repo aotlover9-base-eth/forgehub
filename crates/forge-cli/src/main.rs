@@ -18,6 +18,7 @@ mod collections_cmd;
 mod config_cmd;
 mod exit;
 mod history;
+mod history_cmd;
 mod output;
 mod parity;
 mod prompt;
@@ -60,6 +61,8 @@ const KNOWN_COMMANDS: &[&str] = &[
     "fork",
     "status",
     "diff",
+    "history",
+    "rollback",
     "clone",
     "import",
     "export",
@@ -548,6 +551,31 @@ enum Command {
         /// Local snippet name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Show a cloud snippet's version history (versions are
+    /// immutable; local-only snippets have none).
+    #[command(after_help = "Examples:\n  fg history ubuntu-setup\n  fg history anna/ubuntu-setup")]
+    History {
+        /// Snippet reference: name or owner/name.
+        reference: String,
+        /// How many versions to list at most.
+        #[arg(long, default_value_t = 50)]
+        limit: u32,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Roll a snippet back: publish an old version's content
+    /// as a NEW version (history is never rewritten).
+    #[command(after_help = "Examples:\n  fg rollback ubuntu-setup 2")]
+    Rollback {
+        /// Snippet reference: name or owner/name (your own).
+        reference: String,
+        /// The version whose content to restore.
+        version: i64,
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
         registry: Option<String>,
@@ -1068,6 +1096,16 @@ fn dispatch_cloud(
         Command::Diff { name, registry } => {
             sync::cmd_diff(store, stdin, name, registry.as_deref(), json)
         }
+        Command::History {
+            reference,
+            limit,
+            registry,
+        } => history_cmd::cmd_history(store, stdin, reference, registry.as_deref(), json, *limit),
+        Command::Rollback {
+            reference,
+            version,
+            registry,
+        } => history_cmd::cmd_rollback(store, stdin, reference, *version, registry.as_deref(), yes),
         Command::Fork {
             reference,
             as_name,

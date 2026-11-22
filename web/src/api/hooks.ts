@@ -238,6 +238,39 @@ export function useUpdateSnippet() {
   });
 }
 
+/**
+ * Roll a snippet back (Peak C3): fetch the target version's
+ * body and PUT it as a NEW version with an If-Match on the
+ * current latest. History is never rewritten - the rollback
+ * is itself a version.
+ */
+export function useRollbackSnippet() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    Snippet,
+    ApiError,
+    { owner: string; name: string; ifMatch: number; version: number }
+  >({
+    mutationFn: async ({ owner, name, ifMatch, version }) => {
+      const target = await api<Snippet>(`${snippetPath(owner, name)}/versions/${version}`);
+      return api<Snippet>(snippetPath(owner, name), {
+        method: 'PUT',
+        headers: { 'If-Match': String(ifMatch) },
+        body: JSON.stringify({
+          name,
+          body: target.body,
+          message: `Rollback to v${version}`,
+        }),
+      });
+    },
+    onSuccess: (_data, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ['snippet', vars.owner, vars.name] });
+      void queryClient.invalidateQueries({ queryKey: ['versions', vars.owner, vars.name] });
+      void queryClient.invalidateQueries({ queryKey: ['my-snippets'] });
+    },
+  });
+}
+
 export function usePatchSnippet() {
   const queryClient = useQueryClient();
   return useMutation<

@@ -1,0 +1,26 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH history 1  "history " 
+.SH NAME
+history \- Show a cloud snippet\*(Aqs version history (versions are immutable; local\-only snippets have none)
+.SH SYNOPSIS
+\fBhistory\fR [\fB\-\-limit\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIREFERENCE\fR> 
+.SH DESCRIPTION
+Show a cloud snippet\*(Aqs version history (versions are immutable; local\-only snippets have none)
+.SH OPTIONS
+.TP
+\fB\-\-limit\fR \fI<LIMIT>\fR [default: 50]
+How many versions to list at most
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIREFERENCE\fR>
+Snippet reference: name or owner/name
+.SH EXTRA
+Examples:
+  fg history ubuntu\-setup
+  fg history anna/ubuntu\-setup

@@ -1,0 +1,25 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH rollback 1  "rollback " 
+.SH NAME
+rollback \- Roll a snippet back: publish an old version\*(Aqs content as a NEW version (history is never rewritten)
+.SH SYNOPSIS
+\fBrollback\fR [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIREFERENCE\fR> <\fIVERSION\fR> 
+.SH DESCRIPTION
+Roll a snippet back: publish an old version\*(Aqs content as a NEW version (history is never rewritten)
+.SH OPTIONS
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fIREFERENCE\fR>
+Snippet reference: name or owner/name (your own)
+.TP
+<\fIVERSION\fR>
+The version whose content to restore
+.SH EXTRA
+Examples:
+  fg rollback ubuntu\-setup 2

@@ -127,6 +127,59 @@ describe('SnippetPage', () => {
     expect(container.querySelector('.fh-diff__row--remove')?.textContent).toContain('echo old');
   });
 
+  it('rolls back to an old version by publishing it as a new version', async () => {
+    const put: { ifMatch: string | null; body: { body?: string; message?: string } | null } = {
+      ifMatch: null,
+      body: null,
+    };
+    server.use(
+      ...authedHandlers(),
+      http.get('/api/v1/snippets/ada/ubuntu-setup', () => HttpResponse.json(snippetFixture())),
+      http.get('/api/v1/snippets/ada/ubuntu-setup/versions', () =>
+        HttpResponse.json({
+          versions: [
+            { version: 3, hash: 'c'.repeat(64), short_hash: 'cccccccc', message: 'third', created_at: '2026-01-03T00:00:00Z' },
+            { version: 1, hash: 'a'.repeat(64), short_hash: 'aaaaaaaa', message: 'first', created_at: '2026-01-01T00:00:00Z' },
+          ],
+        }),
+      ),
+      http.get('/api/v1/snippets/ada/ubuntu-setup/versions/1', () =>
+        HttpResponse.json(snippetFixture({ version: 1, body: 'name: ubuntu-setup\n# v1 body' })),
+      ),
+      http.put('/api/v1/snippets/ada/ubuntu-setup', async ({ request }) => {
+        put.ifMatch = request.headers.get('if-match');
+        put.body = (await request.json()) as { body?: string; message?: string };
+        return HttpResponse.json(snippetFixture({ version: 4 }));
+      }),
+    );
+    renderSnippet('/ada/ubuntu-setup');
+    await waitFor(() => expect(screen.getByText('fg ubuntu-setup')).toBeTruthy());
+    const tabs = document.querySelector('md-tabs');
+    (tabs as unknown as { activeTabIndex: number }).activeTabIndex = 1;
+    fireEvent.change(tabs!);
+    // Wait for the version rows; the only row-level Roll back
+    // button belongs to v1 (v3 is current). The dialog's own
+    // confirm button shares the label, so pick by ancestry.
+    await waitFor(() => expect(screen.getByText(/v1 · aaaaaaaa/)).toBeTruthy());
+    const rowButton = screen
+      .getAllByText('Roll back')
+      .find((b) => !b.closest('md-dialog'));
+    if (!rowButton) throw new Error('row Roll back button not found');
+    fireEvent.click(rowButton);
+    const dialog = Array.from(document.querySelectorAll('md-dialog')).find((d) =>
+      d.textContent?.includes('Roll back to v1'),
+    );
+    if (!dialog) throw new Error('rollback dialog not found');
+    const confirm = Array.from(dialog.querySelectorAll('md-text-button')).find(
+      (b) => b.textContent?.trim() === 'Roll back',
+    );
+    if (!confirm) throw new Error('confirm button not found');
+    fireEvent.click(confirm);
+    await waitFor(() => expect(put.body?.message).toBe('Rollback to v1'));
+    expect(put.ifMatch).toBe('3');
+    expect(put.body?.body).toContain('# v1 body');
+  });
+
   it('has no axe violations', async () => {
     server.use(
       ...authedHandlers(),

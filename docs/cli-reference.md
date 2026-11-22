@@ -6,6 +6,8 @@ Help layout (Peak B2): `forgehub --help` groups commands under Library, Cloud, S
 
 Listing (Peak B4): `fg list` and `fg search` share `--tag`, `--visibility` (last-synced visibility from the snippet's `.meta` sidecar), `--sort name|recent`, `--since 30m|24h|7d|2w` and `--long` (aligned table). `fg find <query>` fuzzy-matches local and cached cloud names, ranked; `--plain` prints bare names for piping (e.g. into fzf), `--limit` caps the results. Push and pull record the snippet's visibility in the sidecar so the filter works offline. Exit codes: 0 ok · 1 failure · 2 refused/not confirmed · 3 not found · 4 auth required · 130 interrupted.
 
+History and rollback (Peak C3): `fg history <name|owner/name>` lists a cloud snippet's versions (newest first, current marked); local-only snippets get an explanation instead of history. `fg rollback <name> <version>` shows the diff, asks, and publishes the old version's content as a NEW version - history is never rewritten; rolling back to the current content is a no-op.
+
 Collections (Peak C1): `fg collection list|create|show|add|remove|order|visibility|delete` manages ordered snippet collections on the registry. A collection never widens access: the server filters its items through the snippet read rules for every viewer. `fg run <collection>` (bare name for yours, `owner/name` for someone else's) runs the visible members in order through the normal trust flow, stopping at the first failure or refusal.
 
 Config (Peak B9): `fg config list|get|set` manages five validated keys of `config.yaml`: `registry_url`, `color` (the `--color` flag wins over it), `shell`, `default_visibility` (applies only when a push creates a snippet; existing snippets keep theirs) and `cache_size_mb` (1-10240). `list` shows each key's effective value and its source (config, default or unset); `--json` shapes are stable. Secrets are refused as keys - tokens live only in the credential store.
@@ -44,6 +46,8 @@ Config (Peak B9): `fg config list|get|set` manages five validated keys of `confi
 - `forgehub alias` - Manage the `fg` shell alias (install|uninstall|show)
 - `forgehub completions` - Print shell completions (dynamic: local snippet names included)
 - `forgehub ui` - Browse snippets in a terminal UI (Local · Mine · Explore)
+- `forgehub history` - Show a cloud snippet's version history
+- `forgehub rollback` - Publish an old version's content as a new version
 - `forgehub collection` - Manage snippet collections (ordered runbooks)
 - `forgehub cache` - Inspect and manage the cloud run cache
 - `forgehub config` - Read and write the local configuration (registry, colour, shell, default visibility, cache size)
@@ -1002,6 +1006,55 @@ Options:
       --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
       --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
   -h, --help           Print help (see more with '--help')
+```
+
+### `forgehub history`
+
+```text
+Show a cloud snippet's version history (versions are immutable; local-only snippets have none)
+
+Usage: forgehub history [OPTIONS] <REFERENCE>
+
+Arguments:
+  <REFERENCE>  Snippet reference: name or owner/name
+
+Options:
+      --json                 Print machine-readable JSON instead of human output
+      --limit <LIMIT>        How many versions to list at most [default: 50]
+      --registry <REGISTRY>  Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+  -y, --yes                  Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...           Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline              Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>        Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help                 Print help (see more with '--help')
+
+Examples:
+  fg history ubuntu-setup
+  fg history anna/ubuntu-setup
+```
+
+### `forgehub rollback`
+
+```text
+Roll a snippet back: publish an old version's content as a NEW version (history is never rewritten)
+
+Usage: forgehub rollback [OPTIONS] <REFERENCE> <VERSION>
+
+Arguments:
+  <REFERENCE>  Snippet reference: name or owner/name (your own)
+  <VERSION>    The version whose content to restore
+
+Options:
+      --json                 Print machine-readable JSON instead of human output
+      --registry <REGISTRY>  Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+  -y, --yes                  Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...           Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline              Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>        Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help                 Print help (see more with '--help')
+
+Examples:
+  fg rollback ubuntu-setup 2
 ```
 
 ### `forgehub collection`

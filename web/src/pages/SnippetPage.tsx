@@ -28,6 +28,7 @@ import {
   useFork,
   useMe,
   useReport,
+  useRollbackSnippet,
   useSetVisibility,
   useSnippet,
   useSnippetVersion,
@@ -50,6 +51,8 @@ export default function SnippetPage() {
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [rollbackTarget, setRollbackTarget] = useState<number | null>(null);
+  const rollback = useRollbackSnippet();
   const [deleteName, setDeleteName] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -327,6 +330,11 @@ export default function SnippetPage() {
                     >
                       View code
                     </Button>
+                    {own && v.version !== s.version ? (
+                      <Button variant="text" onClick={() => setRollbackTarget(v.version)}>
+                        Roll back
+                      </Button>
+                    ) : null}
                   </div>
                 ))}
               </md-list>
@@ -418,6 +426,36 @@ export default function SnippetPage() {
                 },
               )
             }
+          />
+        </div>
+      </md-dialog>
+
+      {/* Rollback: publishes the old content as a new version (Peak C3). */}
+      <md-dialog open={rollbackTarget !== null || undefined} onClose={() => setRollbackTarget(null)}>
+        <div slot="headline">Roll back to v{rollbackTarget}?</div>
+        <div slot="content">
+          <p>
+            This publishes a NEW version (v{s.version + 1}) with v{rollbackTarget}&apos;s
+            content. The current v{s.version} stays in the history - nothing is rewritten or
+            deleted.
+          </p>
+        </div>
+        <div slot="actions">
+          <DialogActions
+            confirmLabel="Roll back"
+            onCancel={() => setRollbackTarget(null)}
+            onConfirm={() => {
+              if (rollbackTarget === null) return;
+              rollback.mutate(
+                { owner, name, ifMatch: s.version, version: rollbackTarget },
+                {
+                  onSuccess: (data) =>
+                    toast({ message: `Rolled back - v${data.version} published` }),
+                  onError: (e) => toast({ message: e.uiMessage }),
+                  onSettled: () => setRollbackTarget(null),
+                },
+              );
+            }}
           />
         </div>
       </md-dialog>
