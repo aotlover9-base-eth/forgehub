@@ -88,6 +88,9 @@ pub struct Fetched {
     pub pull_count: i64,
     /// True when served from the local cache (`--offline`).
     pub from_cache: bool,
+    /// Snippet creation timestamp from the API (empty when
+    /// served from the cache, which does not store it).
+    pub created_at: String,
 }
 
 /// Fetch one version with ONE request (`intent=run`), verify
@@ -164,6 +167,7 @@ fn verify_body(
         star_count: body["star_count"].as_i64().unwrap_or(0),
         pull_count: body["pull_count"].as_i64().unwrap_or(0),
         from_cache,
+        created_at: body["created_at"].as_str().unwrap_or_default().to_string(),
     })
 }
 
@@ -483,6 +487,61 @@ fn changed_diff(
     )
 }
 
+/// Whole days from a `YYYY-MM-DD...` date to today, via
+/// Howard Hinnant's days-from-civil conversion.
+fn days_since(date: &str) -> Option<i64> {
+    let year: i64 = date.get(0..4)?.parse().ok()?;
+    let month: i64 = date.get(5..7)?.parse().ok()?;
+    let day: i64 = date.get(8..10)?.parse().ok()?;
+    let y_adj = if month <= 2 { year - 1 } else { year };
+    let era = if y_adj >= 0 { y_adj } else { y_adj - 399 } / 400;
+    let yoe = y_adj - era * 400;
+    let mp = (month + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let created_days = era * 146097 + doe - 719468;
+    let now_days = i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .ok()?
+            .as_secs()
+            / 86400,
+    )
+    .ok()?;
+    Some(now_days - created_days)
+}
+
+/// "3 days ago" / "about 2 months ago" for a creation
+/// timestamp; None when the timestamp is missing or in the
+/// future (never guess about safety context).
+fn age_text(created_at: &str) -> Option<String> {
+    let days = days_since(created_at)?;
+    if days < 0 {
+        return None;
+    }
+    Some(match days {
+        0 => "today".to_string(),
+        1 => "yesterday".to_string(),
+        2..=29 => format!("{days} days ago"),
+        30..=364 => {
+            let months = days / 30;
+            if months == 1 {
+                "about 1 month ago".to_string()
+            } else {
+                format!("about {months} months ago")
+            }
+        }
+        _ => {
+            let years = days / 365;
+            if years == 1 {
+                "about 1 year ago".to_string()
+            } else {
+                format!("about {years} years ago")
+            }
+        }
+    })
+}
+
 /// The confirmation gate: `Ok(true)` = proceed, `Ok(false)` =
 /// declined (the caller exits 2), `Err(refused)` = the non-TTY
 /// fail-safe. `-y` skips only where the trust model allows.
@@ -524,7 +583,27 @@ fn confirm_run(
     eprint!("{}", render_card(fetched, own, changed, diff));
     let confirmed = match kind {
         ConfirmKind::YesNo => prompt::ask_yes_no(stdin, "Run this on this machine?"),
-        ConfirmKind::TypedYes => prompt::ask_typed_yes(stdin, "Run this on this machine?"),
+        ConfirmKind::TypedYes => {
+            // Peak B7: the typed-yes prompt names the owner,
+            // the snippet's age and its version count, so the
+            // strongest confirmation also carries the context.
+            let versions = if fetched.version == 1 {
+                "1 version".to_string()
+            } else {
+                format!("{} versions", fetched.version)
+            };
+            let context = match age_text(&fetched.created_at) {
+                Some(age) => format!("{} published it {age}; it has {versions}.", fetched.owner),
+                None => format!("It has {versions}."),
+            };
+            prompt::ask_typed_yes(
+                stdin,
+                &format!(
+                    "Run {}/{} on this machine? {context}",
+                    fetched.owner, fetched.name
+                ),
+            )
+        }
     };
     if !confirmed {
         eprintln!("forgehub: not run (declined)");
@@ -712,6 +791,7 @@ pub fn cmd_trust_list(store: &Store, json: bool) -> Result<i32> {
         let arr: Vec<Value> = records
             .iter()
             .map(|r| {
+                let (changed, cached_version) = trust_changed(store, r);
                 serde_json::json!({
                     "owner": r.owner,
                     "name": r.name,
@@ -720,6 +800,8 @@ pub fn cmd_trust_list(store: &Store, json: bool) -> Result<i32> {
                     "runs": r.runs,
                     "first_trusted_at": r.first_trusted_at,
                     "last_run_at": r.last_run_at,
+                    "changed_since": changed,
+                    "cached_version": cached_version,
                 })
             })
             .collect();
@@ -730,16 +812,127 @@ pub fn cmd_trust_list(store: &Store, json: bool) -> Result<i32> {
         println!("No trusted cloud snippets yet. Trust is recorded when you run one.");
         return Ok(0);
     }
+    // Peak B7: proper columns - owner/name, short pinned hash,
+    // version, when trusted, runs, and whether the newest
+    // cached copy has changed since the pin.
+    let width = records
+        .iter()
+        .map(|r| r.owner.len() + 1 + r.name.len())
+        .max()
+        .unwrap_or(0);
+    println!(
+        "{:<width$}  {:<8}  {:<7}  {:<10}  {:>4}  CHANGED-SINCE",
+        "SNIPPET", "PINNED", "VERSION", "TRUSTED", "RUNS"
+    );
     for r in &records {
+        let (changed, cached_version) = trust_changed(store, r);
+        let changed_cell = match (changed, cached_version) {
+            ("changed", Some(v)) => format!("changed (v{v} cached)"),
+            ("changed", None) => "changed".to_string(),
+            ("unchanged", _) => "unchanged".to_string(),
+            _ => "unknown (not cached)".to_string(),
+        };
         println!(
-            "{}/{}  v{}  sha256:{}  ({} runs, trusted since {})",
-            r.owner,
-            r.name,
-            r.version,
+            "{:<width$}  {:<8}  v{:<6}  {:<10}  {:>4}  {}",
+            format!("{}/{}", r.owner, r.name),
             r.hash.get(..8).unwrap_or(&r.hash),
+            r.version,
+            r.first_trusted_at.get(..10).unwrap_or(&r.first_trusted_at),
             r.runs,
-            r.first_trusted_at
+            changed_cell
         );
+    }
+    Ok(0)
+}
+
+/// Whether the newest cached copy differs from a trust pin:
+/// ("changed" | "unchanged" | "unknown", cached version).
+/// Offline by design - trust surfaces never need the network.
+fn trust_changed(store: &Store, record: &crate::trust::TrustRecord) -> (&'static str, Option<i64>) {
+    match cache_latest(store, &record.owner, &record.name) {
+        Some(c) if c.hash != record.hash => ("changed", Some(c.version)),
+        Some(c) => ("unchanged", Some(c.version)),
+        None => ("unknown", None),
+    }
+}
+
+/// `forgehub trust show <owner/name>` (Peak B7): the pin in
+/// full, plus the complete diff between the pinned body and
+/// the newest cached copy when it has changed.
+pub fn cmd_trust_show(store: &Store, reference: &str, json: bool) -> Result<i32> {
+    let Some((owner, name)) = reference.split_once('/') else {
+        return Err(CliError::failure(format!(
+            "forgehub: trust records are keyed by owner/name\n  what: `{reference}` has no owner\n  fix: fg trust show <owner/name> (see `fg trust list`)"
+        ))
+        .into());
+    };
+    let db = TrustDb::open(&store.trust_db_path())?;
+    let record = db.get(owner, name)?.ok_or_else(|| {
+        CliError::not_found(format!(
+            "forgehub: no trust recorded for {owner}/{name}\n  fix: run it once and approve it, or `fg trust add {owner}/{name}`"
+        ))
+    })?;
+    let latest = cache_latest(store, owner, name);
+    let (changed, cached_version) = trust_changed(store, &record);
+    let pinned_body = cache_body(store, owner, name, record.version);
+    let diff = match (&pinned_body, &latest) {
+        (Some(old), Some(new)) if new.hash != record.hash => {
+            let d = similar::TextDiff::from_lines(old, &new.body);
+            Some(
+                d.unified_diff()
+                    .header(
+                        &format!("{owner}/{name} v{} (pinned)", record.version),
+                        &format!("{owner}/{name} v{} (newest cached)", new.version),
+                    )
+                    .to_string(),
+            )
+        }
+        _ => None,
+    };
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "owner": record.owner,
+                "name": record.name,
+                "hash": record.hash,
+                "version": record.version,
+                "runs": record.runs,
+                "first_trusted_at": record.first_trusted_at,
+                "last_run_at": record.last_run_at,
+                "changed_since": changed,
+                "cached_version": cached_version,
+                "diff": diff,
+            })
+        );
+        return Ok(0);
+    }
+    println!("{}/{}", record.owner, record.name);
+    println!("  pinned: v{} · sha256:{}", record.version, record.hash);
+    println!(
+        "  trusted since {} · last run {} · {} runs",
+        record.first_trusted_at, record.last_run_at, record.runs
+    );
+    match (changed, cached_version) {
+        ("unchanged", Some(v)) => {
+            println!("  the newest cached copy (v{v}) matches the pin - unchanged");
+        }
+        ("changed", Some(v)) => {
+            println!("  CHANGED since the pin (newest cached: v{v})");
+            if let Some(diff) = &diff {
+                for line in crate::sync::render_diff(diff, crate::output::style()) {
+                    println!("  {line}");
+                }
+            } else {
+                println!(
+                    "  the pinned v{} body is no longer in the cache, so no diff can be shown",
+                    record.version
+                );
+            }
+        }
+        _ => {
+            println!("  no cached copy to compare against - run it once online to fetch one");
+        }
     }
     Ok(0)
 }
@@ -953,6 +1146,7 @@ mod tests {
             star_count: 0,
             pull_count: 0,
             from_cache: false,
+            created_at: String::new(),
         };
         let diff = "+echo safe\n+\u{1b}[2K\rhidden-evil \u{202e}cmd";
         let card = render_card(&fetched, false, true, Some(diff));
@@ -983,6 +1177,7 @@ mod tests {
             star_count: 12,
             pull_count: 34,
             from_cache: false,
+            created_at: String::new(),
         };
         let card = render_card(&fetched, false, false, None);
         assert_eq!(

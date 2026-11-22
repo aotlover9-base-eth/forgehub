@@ -1037,10 +1037,10 @@ pub fn cmd_lint(store: &Store, name: &str, json: bool) -> Result<i32> {
     let snippet = store.load(name)?;
     let lints = forge_core::lint::lint_snippet(&snippet);
     let secrets = forge_core::scan::scan_snippet(&snippet);
-    let code = if !secrets.is_empty() {
-        2
-    } else {
+    let code = if secrets.is_empty() {
         i32::from(!lints.is_empty())
+    } else {
+        2
     };
     if json {
         println!(

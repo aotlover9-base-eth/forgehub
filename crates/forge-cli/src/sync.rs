@@ -373,6 +373,62 @@ fn version_conflict(
     ))
 }
 
+/// The `push --dry-run` report (Peak B6): plan every target
+/// and print it; nothing is pushed.
+fn push_dry_run(
+    store: &Store,
+    sess: &Session,
+    name: Option<&str>,
+    all: bool,
+    as_name: Option<&str>,
+    visibility: Option<&str>,
+    json: bool,
+) -> Result<i32> {
+    let names: Vec<String> = if all {
+        store.list().iter().map(|s| s.name.clone()).collect()
+    } else if let Some(n) = name {
+        vec![n.to_string()]
+    } else {
+        return Err(CliError::failure(
+            "forgehub: push needs a snippet name\n  what: no name was given\n  fix: fg push <name>, or fg push --all",
+        )
+        .into());
+    };
+    if names.is_empty() {
+        println!("No local snippets to push.");
+        return Ok(0);
+    }
+    let mut plan: Vec<(String, &'static str, i64)> = Vec::new();
+    for n in &names {
+        plan.push(push_plan(
+            store,
+            sess,
+            n,
+            if all { None } else { as_name },
+            visibility,
+        )?);
+    }
+    if json {
+        let arr: Vec<Value> = plan
+            .iter()
+            .map(|(n, a, v)| serde_json::json!({"name": n, "action": a, "version": v}))
+            .collect();
+        println!("{}", serde_json::json!({"dry_run": true, "plan": arr}));
+    } else {
+        for (n, action, version) in &plan {
+            let label = match *action {
+                "create" => format!("would create v{version}"),
+                "update" => format!("would update to v{version}"),
+                "visibility" => format!("would set visibility (stays v{version})"),
+                _ => "unchanged".to_string(),
+            };
+            println!("{n:<24} {label}");
+        }
+        println!("Dry run: nothing was pushed.");
+    }
+    Ok(0)
+}
+
 /// What a push would do, without doing it (Peak B6 dry-run):
 /// the local validate + secret scan still run, and the remote
 /// check is a read-only GET. Actions: create / update /
@@ -617,49 +673,7 @@ pub fn cmd_push(
 ) -> Result<i32> {
     let sess = session(store, stdin, registry_flag)?;
     if dry_run {
-        let names: Vec<String> = if all {
-            store.list().iter().map(|s| s.name.clone()).collect()
-        } else if let Some(n) = name {
-            vec![n.to_string()]
-        } else {
-            return Err(CliError::failure(
-                "forgehub: push needs a snippet name\n  what: no name was given\n  fix: fg push <name>, or fg push --all",
-            )
-            .into());
-        };
-        if names.is_empty() {
-            println!("No local snippets to push.");
-            return Ok(0);
-        }
-        let mut plan: Vec<(String, &'static str, i64)> = Vec::new();
-        for n in &names {
-            plan.push(push_plan(
-                store,
-                &sess,
-                n,
-                if all { None } else { as_name },
-                visibility,
-            )?);
-        }
-        if json {
-            let arr: Vec<Value> = plan
-                .iter()
-                .map(|(n, a, v)| serde_json::json!({"name": n, "action": a, "version": v}))
-                .collect();
-            println!("{}", serde_json::json!({"dry_run": true, "plan": arr}));
-        } else {
-            for (n, action, version) in &plan {
-                let label = match *action {
-                    "create" => format!("would create v{version}"),
-                    "update" => format!("would update to v{version}"),
-                    "visibility" => format!("would set visibility (stays v{version})"),
-                    _ => "unchanged".to_string(),
-                };
-                println!("{n:<24} {label}");
-            }
-            println!("Dry run: nothing was pushed.");
-        }
-        return Ok(0);
+        return push_dry_run(store, &sess, name, all, as_name, visibility, json);
     }
     if all {
         let names: Vec<String> = store.list().iter().map(|s| s.name.clone()).collect();
@@ -911,21 +925,25 @@ struct PullItem {
     snippet: forge_core::Snippet,
 }
 
-/// `fg pull --all [--dry-run]` (Peak B6): pull every tracked
-/// snippet plus remote-only ones of mine. Everything is fetched
-/// and classified before anything changes; local copies with
-/// unsynced changes need one shared confirmation (or --force).
-#[allow(clippy::too_many_arguments)]
-pub fn cmd_pull_all(
-    store: &Store,
-    stdin: &mut impl BufRead,
-    dry_run: bool,
-    force: bool,
-    yes: bool,
-    registry_flag: Option<&str>,
-    json: bool,
-) -> Result<i32> {
-    let sess = session(store, stdin, registry_flag)?;
+/// Flags for `fg pull --all` (Peak B6).
+#[allow(clippy::struct_excessive_bools)]
+pub struct PullAllArgs {
+    /// Print the plan; change nothing.
+    pub dry_run: bool,
+    /// Overwrite risky local copies without asking.
+    pub force: bool,
+    /// The global -y: same effect as force for the overwrite gate.
+    pub yes: bool,
+    /// Registry override flag.
+    pub registry: Option<String>,
+    /// JSON output.
+    pub json: bool,
+}
+
+/// The `pull --all` candidate set: tracked snippets (via their
+/// sidecars) plus remote-only snippets of mine - the same set
+/// `fg status` shows.
+fn pull_candidates(store: &Store, sess: &Session) -> Result<Vec<(String, String)>> {
     let mut candidates: Vec<(String, String)> = Vec::new();
     for snippet in store.list() {
         let meta = load_meta(store, &snippet.name);
@@ -936,13 +954,23 @@ pub fn cmd_pull_all(
         candidates.push((owner, rname));
     }
     let tracked: Vec<String> = candidates.iter().map(|(_, n)| n.clone()).collect();
-    let mine = get_all_pages(&sess, "/me/snippets?limit=100&sort=name")?;
+    let mine = get_all_pages(sess, "/me/snippets?limit=100&sort=name")?;
     for s in &mine {
         let rname = s["name"].as_str().unwrap_or_default().to_string();
         if !tracked.contains(&rname) && !store.exists(&rname) {
             candidates.push((sess.username.clone(), rname));
         }
     }
+    Ok(candidates)
+}
+
+/// `fg pull --all [--dry-run]` (Peak B6): pull every tracked
+/// snippet plus remote-only ones of mine. Everything is fetched
+/// and classified before anything changes; local copies with
+/// unsynced changes need one shared confirmation (or --force).
+pub fn cmd_pull_all(store: &Store, stdin: &mut impl BufRead, args: &PullAllArgs) -> Result<i32> {
+    let sess = session(store, stdin, args.registry.as_deref())?;
+    let candidates = pull_candidates(store, &sess)?;
     let mut items: Vec<PullItem> = Vec::new();
     let mut errors: Vec<String> = Vec::new();
     for (owner, name) in &candidates {
@@ -967,41 +995,12 @@ pub fn cmd_pull_all(
             .map(|i| i.name.clone())
             .collect()
     };
-    if dry_run {
-        if json {
-            println!(
-                "{}",
-                serde_json::json!({
-                    "dry_run": true,
-                    "new": names_of(&PullClass::New),
-                    "update": names_of(&PullClass::Update),
-                    "risky": names_of(&PullClass::Risky),
-                    "unchanged": names_of(&PullClass::Unchanged),
-                    "errors": errors,
-                })
-            );
-        } else {
-            for i in &items {
-                let label = match i.class {
-                    PullClass::New => "would pull (new)",
-                    PullClass::Update => "would pull (update)",
-                    PullClass::Risky => "would OVERWRITE unsynced local changes",
-                    PullClass::Unchanged => "unchanged",
-                };
-                println!("{:<24} {}", i.name, label);
-            }
-            println!(
-                "Dry run: {} to pull, {} risky, {} unchanged, {} error(s). Nothing was changed.",
-                names_of(&PullClass::New).len() + names_of(&PullClass::Update).len(),
-                names_of(&PullClass::Risky).len(),
-                names_of(&PullClass::Unchanged).len(),
-                errors.len()
-            );
-        }
-        return Ok(if errors.is_empty() { 0 } else { 1 });
+    if args.dry_run {
+        print_pull_plan(&items, &errors, args.json);
+        return Ok(i32::from(!errors.is_empty()));
     }
     let risky = names_of(&PullClass::Risky);
-    let mut overwrite_ok = force || yes;
+    let mut overwrite_ok = args.force || args.yes;
     if !risky.is_empty() && !overwrite_ok {
         println!(
             "These local snippets have changes that were never pushed: {}",
@@ -1015,34 +1014,8 @@ pub fn cmd_pull_all(
         }
     }
     let unchanged = names_of(&PullClass::Unchanged);
-    let mut pulled: Vec<String> = Vec::new();
-    for item in items {
-        let take = match item.class {
-            PullClass::New | PullClass::Update => true,
-            PullClass::Risky => overwrite_ok,
-            PullClass::Unchanged => false,
-        };
-        if take {
-            save_pulled(
-                store,
-                &sess,
-                &item.owner,
-                &item.name,
-                &item.name,
-                item.snippet,
-                &item.remote,
-            )?;
-            println!(
-                "{}/{} v{} -> saved as `{}`",
-                item.owner,
-                item.name,
-                item.remote["version"].as_i64().unwrap_or(0),
-                item.name
-            );
-            pulled.push(item.name);
-        }
-    }
-    if json {
+    let pulled = execute_pulls(store, &sess, items, overwrite_ok)?;
+    if args.json {
         println!(
             "{}",
             serde_json::json!({
@@ -1064,7 +1037,86 @@ pub fn cmd_pull_all(
             eprintln!("forgehub: {e}");
         }
     }
-    Ok(if errors.is_empty() { 0 } else { 1 })
+    Ok(i32::from(!errors.is_empty()))
+}
+
+/// Print the `pull --all --dry-run` plan (Peak B6).
+fn print_pull_plan(items: &[PullItem], errors: &[String], json: bool) {
+    let names_of = |class: &PullClass| -> Vec<String> {
+        items
+            .iter()
+            .filter(|i| &i.class == class)
+            .map(|i| i.name.clone())
+            .collect()
+    };
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "dry_run": true,
+                "new": names_of(&PullClass::New),
+                "update": names_of(&PullClass::Update),
+                "risky": names_of(&PullClass::Risky),
+                "unchanged": names_of(&PullClass::Unchanged),
+                "errors": errors,
+            })
+        );
+        return;
+    }
+    for i in items {
+        let label = match i.class {
+            PullClass::New => "would pull (new)",
+            PullClass::Update => "would pull (update)",
+            PullClass::Risky => "would OVERWRITE unsynced local changes",
+            PullClass::Unchanged => "unchanged",
+        };
+        println!("{:<24} {}", i.name, label);
+    }
+    println!(
+        "Dry run: {} to pull, {} risky, {} unchanged, {} error(s). Nothing was changed.",
+        names_of(&PullClass::New).len() + names_of(&PullClass::Update).len(),
+        names_of(&PullClass::Risky).len(),
+        names_of(&PullClass::Unchanged).len(),
+        errors.len()
+    );
+}
+
+/// Execute the confirmed pulls of `pull --all`, printing one
+/// line per save; returns the pulled names.
+fn execute_pulls(
+    store: &Store,
+    sess: &Session,
+    items: Vec<PullItem>,
+    overwrite_ok: bool,
+) -> Result<Vec<String>> {
+    let mut pulled: Vec<String> = Vec::new();
+    for item in items {
+        let take = match item.class {
+            PullClass::New | PullClass::Update => true,
+            PullClass::Risky => overwrite_ok,
+            PullClass::Unchanged => false,
+        };
+        if take {
+            save_pulled(
+                store,
+                sess,
+                &item.owner,
+                &item.name,
+                &item.name,
+                item.snippet,
+                &item.remote,
+            )?;
+            println!(
+                "{}/{} v{} -> saved as `{}`",
+                item.owner,
+                item.name,
+                item.remote["version"].as_i64().unwrap_or(0),
+                item.name
+            );
+            pulled.push(item.name);
+        }
+    }
+    Ok(pulled)
 }
 
 /// `fg pull <ref> --dry-run` (Peak B6): show what a pull would
@@ -1323,7 +1375,7 @@ pub fn cmd_status(
     Ok(0)
 }
 
-/// Render a unified diff with the web DiffView's gutter
+/// Render a unified diff with the web `DiffView`'s gutter
 /// discipline (Peak B6): additions and deletions are told apart
 /// by the gutter symbol AND colour - never colour alone - the
 /// sign moves into the gutter, hunk headers are accented, and

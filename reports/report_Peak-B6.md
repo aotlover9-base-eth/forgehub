@@ -34,3 +34,7 @@ CI run 44970331789 for the B5 head failed the Rust Clippy step with two errors, 
 ## 6. Next
 
 B7 - trust and cache surfaces.
+
+## Addendum (2026-11-22, after CI run 44970723239)
+
+The B6 head's CI failed the Rust Clippy step with eight errors, all in B6 code (if_not_else, doc_markdown, bool_to_int_with_if x2, excessive bools + too_many_lines on cmd_pull_all, too_many_lines on cmd_push and dispatch_cloud). All fixed behaviour-preservingly in the B7 commit - the full list is in the B7 report, section 5; the B7 CI run is the verification for both.

@@ -639,6 +639,15 @@ enum CacheCommand {
     List,
     /// Remove every cached snippet.
     Clear,
+    /// Print the cache directory path.
+    Path,
+    /// Evict least-recently-used entries until the cache fits
+    /// the given size (e.g. 50MB, 500KB, 2GB).
+    Prune {
+        /// Maximum cache size after pruning.
+        #[arg(long)]
+        max_size: String,
+    },
 }
 
 /// Subcommands of `trust` (Step 13).
@@ -655,6 +664,13 @@ enum TrustCommand {
     /// Approve an exact snippet without running it.
     Add {
         /// `owner/name@hash` or `owner/name@version`.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
+        reference: String,
+    },
+    /// Show one trust pin in full, with the diff against the
+    /// newest cached copy when it changed.
+    Show {
+        /// `owner/name` whose trust pin to show.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         reference: String,
     },
@@ -675,6 +691,9 @@ fn dispatch_trust(
         }
         (Some(TrustCommand::Add { reference }), _) => {
             cloudrun::cmd_trust_add(store, stdin, &reference, json)
+        }
+        (Some(TrustCommand::Show { reference }), _) => {
+            cloudrun::cmd_trust_show(store, &reference, json)
         }
         (None, Some(reference)) => cloudrun::cmd_trust_add(store, stdin, &reference, json),
     }
@@ -881,50 +900,7 @@ fn dispatch_cloud(
                 *dry_run,
             )
         }
-        Command::Pull {
-            reference,
-            all,
-            dry_run,
-            as_name,
-            version,
-            force,
-            registry,
-        } => {
-            if *all {
-                sync::cmd_pull_all(
-                    store,
-                    stdin,
-                    *dry_run,
-                    *force,
-                    yes,
-                    registry.as_deref(),
-                    json,
-                )
-            } else if *dry_run {
-                // A single pull already shows the snippet and
-                // asks before overwriting; --dry-run means: show
-                // the plan, save nothing.
-                let Some(reference) = reference else {
-                    unreachable!("clap: reference is required unless --all")
-                };
-                sync::cmd_pull_dry_run(store, stdin, reference, registry.as_deref(), json)
-            } else {
-                let Some(reference) = reference else {
-                    unreachable!("clap: reference is required unless --all")
-                };
-                sync::cmd_pull(
-                    store,
-                    stdin,
-                    reference,
-                    as_name.as_deref(),
-                    *version,
-                    *force,
-                    yes,
-                    registry.as_deref(),
-                    json,
-                )
-            }
-        }
+        Command::Pull { .. } => dispatch_pull(cli, store, stdin),
         Command::Status { name, registry } => {
             sync::cmd_status(store, stdin, name.as_deref(), registry.as_deref(), json)
         }
@@ -946,6 +922,56 @@ fn dispatch_cloud(
         Command::Remote { action } => dispatch_remote(action, store, stdin, yes, json),
         _ => return None,
     })
+}
+
+/// Dispatch for `pull` (split out of `dispatch_cloud` in
+/// Peak B7 so every function stays inside the line budget).
+fn dispatch_pull(cli: &Cli, store: &store::Store, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
+    let Command::Pull {
+        reference,
+        all,
+        dry_run,
+        as_name,
+        version,
+        force,
+        registry,
+    } = &cli.command
+    else {
+        unreachable!("dispatch_pull called for a non-pull command")
+    };
+    if *all {
+        return sync::cmd_pull_all(
+            store,
+            stdin,
+            &sync::PullAllArgs {
+                dry_run: *dry_run,
+                force: *force,
+                yes: cli.yes,
+                registry: registry.clone(),
+                json: cli.json,
+            },
+        );
+    }
+    let Some(reference) = reference else {
+        unreachable!("clap: reference is required unless --all")
+    };
+    if *dry_run {
+        // A single pull already shows the snippet and asks
+        // before overwriting; --dry-run means: show the plan,
+        // save nothing.
+        return sync::cmd_pull_dry_run(store, stdin, reference, registry.as_deref(), cli.json);
+    }
+    sync::cmd_pull(
+        store,
+        stdin,
+        reference,
+        as_name.as_deref(),
+        *version,
+        *force,
+        cli.yes,
+        registry.as_deref(),
+        cli.json,
+    )
 }
 
 /// `forgehub ui` (Step 18): browse in the TUI, then execute
@@ -1111,6 +1137,8 @@ fn dispatch_manage(
         Command::Cache { action } => Ok(match action {
             CacheCommand::List => cache::cmd_cache_list(store, cli.json),
             CacheCommand::Clear => cache::cmd_cache_clear(store, cli.json),
+            CacheCommand::Path => cache::cmd_cache_path(store, cli.json),
+            CacheCommand::Prune { max_size } => cache::cmd_cache_prune(store, max_size, cli.json),
         }),
         Command::Update { registry, .. } => {
             update::cmd_update_check(store, registry.as_deref(), cli.json)

@@ -198,9 +198,92 @@ pub fn cmd_cache_clear(store: &Store, json: bool) -> i32 {
     0
 }
 
+/// `fg cache path` (Peak B7, audit F5): where the cache lives.
+pub fn cmd_cache_path(store: &Store, json: bool) -> i32 {
+    let dir = store.cache_dir();
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({ "path": dir.display().to_string() })
+        );
+    } else {
+        println!("{}", dir.display());
+    }
+    0
+}
+
+/// Parse a size like `500`, `500KB`, `50MB`, `2GB`
+/// (case-insensitive, binary units). Errors are one-liners.
+pub fn parse_size(text: &str) -> Result<u64, String> {
+    let t = text.trim().to_ascii_uppercase();
+    let (num, mult) = if let Some(n) = t.strip_suffix("GB") {
+        (n, 1_073_741_824u64)
+    } else if let Some(n) = t.strip_suffix("MB") {
+        (n, 1_048_576)
+    } else if let Some(n) = t.strip_suffix("KB") {
+        (n, 1_024)
+    } else if let Some(n) = t.strip_suffix('B') {
+        (n, 1)
+    } else {
+        (t.as_str(), 1)
+    };
+    let value: u64 = num
+        .trim()
+        .parse()
+        .map_err(|_| format!("`{text}` is not a size - use e.g. 500KB, 50MB or 2GB"))?;
+    value
+        .checked_mul(mult)
+        .ok_or_else(|| format!("`{text}` is too large"))
+}
+
+/// `fg cache prune --max-size <size>` (Peak B7, audit F5):
+/// evict least-recently-used entries until the cache fits.
+pub fn cmd_cache_prune(store: &Store, max_size: &str, json: bool) -> i32 {
+    let cap = match parse_size(max_size) {
+        Ok(cap) => cap,
+        Err(e) => {
+            eprintln!("forgehub: {e}");
+            return 1;
+        }
+    };
+    let before = total_bytes(&entries(store));
+    let evicted = evict_lru(store, cap);
+    let after = total_bytes(&entries(store));
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "max_bytes": cap,
+                "evicted": evicted,
+                "before_bytes": before,
+                "after_bytes": after,
+            })
+        );
+    } else {
+        println!(
+            "Pruned {evicted} cached snippet(s): {} -> {} (cap {}).",
+            human_bytes(before),
+            human_bytes(after),
+            human_bytes(cap)
+        );
+    }
+    0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_size_units() {
+        assert_eq!(parse_size("500"), Ok(500));
+        assert_eq!(parse_size("500KB"), Ok(500 * 1_024));
+        assert_eq!(parse_size("50mb"), Ok(50 * 1_048_576));
+        assert_eq!(parse_size("2GB"), Ok(2 * 1_073_741_824));
+        assert_eq!(parse_size("10B"), Ok(10));
+        assert!(parse_size("soon").is_err());
+        assert!(parse_size("18446744073709551615GB").is_err());
+    }
 
     #[test]
     fn parses_entry_names() {
