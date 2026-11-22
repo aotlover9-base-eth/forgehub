@@ -361,7 +361,7 @@ fn bad_and_unreachable_registries_fail_clearly() {
         None,
     );
     assert_eq!(code, 1);
-    assert!(stderr.contains("cannot reach"), "{stderr}");
+    assert!(stderr.contains("cannot connect"), "{stderr}");
 }
 
 #[test]

@@ -1202,19 +1202,19 @@ mod tests {
         assert_eq!(parse_since(None).unwrap(), None);
         assert_eq!(
             parse_since(Some("30m")).unwrap(),
-            Some(Duration::from_secs(1_800))
+            Some(Duration::from_mins(30))
         );
         assert_eq!(
             parse_since(Some("24h")).unwrap(),
-            Some(Duration::from_secs(86_400))
+            Some(Duration::from_hours(24))
         );
         assert_eq!(
             parse_since(Some("7d")).unwrap(),
-            Some(Duration::from_secs(604_800))
+            Some(Duration::from_hours(168))
         );
         assert_eq!(
             parse_since(Some("2w")).unwrap(),
-            Some(Duration::from_secs(1_209_600))
+            Some(Duration::from_hours(336))
         );
         assert!(parse_since(Some("7x")).is_err());
         assert!(parse_since(Some("d")).is_err());

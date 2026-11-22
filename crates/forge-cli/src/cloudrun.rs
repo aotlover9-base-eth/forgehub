@@ -217,7 +217,7 @@ fn fetch_offline(store: &Store, owner: &str, name: &str, pin: Option<i64>) -> Re
     // for a pinned older version it is only honest when the
     // pointer is that version.
     if cached.version == version {
-        fetched.cached_at = cached.fetched_at.clone();
+        fetched.cached_at.clone_from(&cached.fetched_at);
     }
     Ok(fetched)
 }
