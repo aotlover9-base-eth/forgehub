@@ -1412,3 +1412,38 @@ Options:
 Examples:
   fg update --check
 ```
+
+### `forgehub self-check`
+
+```text
+Verify this binary against the published release checksums (Peak C10). Always prints the binary's own SHA-256; with --archive it verifies a downloaded release archive against the published SHA256SUMS (fetched online, or read from --sums offline)
+
+Usage: forgehub self-check [OPTIONS]
+
+Options:
+      --archive <ARCHIVE>  A downloaded release archive to verify
+      --json               Print machine-readable JSON instead of human output
+      --sums <SUMS>        A local SHA256SUMS file to verify against (instead of fetching the published one)
+  -y, --yes                Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...         Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline            Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+  -h, --help               Print help
+
+Examples:
+  fg self-check
+  fg self-check --archive forgehub-0.1.6-x86_64-unknown-linux-gnu.tar.gz
+  fg self-check --archive release.tar.gz --sums SHA256SUMS
+```
+
+Notes: the releases publish SHA256SUMS over the release
+archives, not the extracted binary, so the binary itself
+cannot be matched against them directly - self-check
+says so, prints the binary's hash for comparison, and
+verifies archives end-to-end. The sums URL can be
+overridden with the `FORGEHUB_SUMS_URL` environment
+variable (mirrors, tests). When the sums cannot be
+fetched (offline, or the private repository needs the
+authenticated `gh` flow), the command prints the manual
+verification steps and still exits 0; a requested archive
+verification that cannot complete, or a mismatch, exits
+1.

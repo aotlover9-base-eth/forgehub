@@ -24,6 +24,7 @@ mod parity;
 mod prompt;
 mod record;
 mod runner;
+mod selfcheck;
 mod store;
 mod sync;
 mod topics;
@@ -81,6 +82,7 @@ const KNOWN_COMMANDS: &[&str] = &[
     "update",
     "trust",
     "activity",
+    "self-check",
     "remote",
     "help",
 ];
@@ -590,6 +592,23 @@ enum Command {
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
         registry: Option<String>,
+    },
+    /// Verify this binary against the published release
+    /// checksums (Peak C10). Always prints the binary's own
+    /// SHA-256; with --archive it verifies a downloaded
+    /// release archive against the published SHA256SUMS
+    /// (fetched online, or read from --sums offline).
+    #[command(
+        after_help = "Examples:\n  fg self-check\n  fg self-check --archive forgehub-0.1.6-x86_64-unknown-linux-gnu.tar.gz\n  fg self-check --archive release.tar.gz --sums SHA256SUMS"
+    )]
+    SelfCheck {
+        /// A downloaded release archive to verify.
+        #[arg(long)]
+        archive: Option<std::path::PathBuf>,
+        /// A local SHA256SUMS file to verify against
+        /// (instead of fetching the published one).
+        #[arg(long)]
+        sums: Option<std::path::PathBuf>,
     },
     /// Roll a snippet back: publish an old version's content
     /// as a NEW version (history is never rewritten).
@@ -1409,6 +1428,9 @@ fn dispatch_manage(
         },
         Command::Update { registry, .. } => {
             update::cmd_update_check(store, registry.as_deref(), cli.json)
+        }
+        Command::SelfCheck { archive, sums } => {
+            selfcheck::cmd_self_check(archive.as_deref(), sums.as_deref(), cli.json)
         }
         Command::Import {
             file,

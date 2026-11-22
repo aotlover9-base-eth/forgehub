@@ -133,6 +133,9 @@ Show a cloud snippet\*(Aqs version history (versions are immutable; local\-only 
 forgehub\-activity(1)
 Show the account activity log (Peak C7): sign\-ins, snippet creates/pushes/forks, token changes and trust grants, newest first. The same log is in the web app under Settings \- Security, exportable as JSON
 .TP
+forgehub\-self\-check(1)
+Verify this binary against the published release checksums (Peak C10). Always prints the binary\*(Aqs own SHA\-256; with \-\-archive it verifies a downloaded release archive against the published SHA256SUMS (fetched online, or read from \-\-sums offline)
+.TP
 forgehub\-rollback(1)
 Roll a snippet back: publish an old version\*(Aqs content as a NEW version (history is never rewritten)
 .TP

@@ -6,6 +6,76 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Collections (Peak C1).** Group snippets into an
+  ordered runbook and run it end to end with
+  `fg run owner/name` - every step still confirms first.
+  `fg collection` manages them; the web app has a
+  Collections section and a collection page. A collection
+  never widens access: items you cannot read stay hidden.
+- **Typed snippet parameters (Peak C2).** `variables:`
+  entries can declare `type:` - text, choice, number,
+  path, yesno or secret - plus choices, defaults and
+  ranges. Values are checked before anything runs;
+  secret parameters are prompted hidden, never stored,
+  and never take a default.
+- **Version history and rollback (Peak C3).** `fg history`
+  shows every version; `fg rollback` publishes an old
+  version's content as a NEW version (history is never
+  rewritten). The web snippet page has the same rollback.
+- **Public snippet pages (Peak C4).** Every public
+  snippet has a shareable read-only page at
+  `/s/owner/name` that works without JavaScript.
+- **Import helpers (Peak C5).** The Library imports from
+  a public GitHub Gist (files become private snippets;
+  anything that looks like a secret is skipped with a
+  reason) and from an uploaded shell history file, mined
+  with the same pipeline as `fg analyze` - secrets are
+  filtered on the server before anything comes back.
+  CLI: `fg import --from-gist <url>`.
+- **Shared collection links (Peak C6).** Owners can mint
+  expiring (1/7/30 days), revocable read-only links to a
+  collection (`fg collection share`). Anyone with the
+  link can read the current members - including private
+  snippets - without an account; running still needs an
+  account and access. The full link is shown once.
+- **Activity log (Peak C7).** Sign-ins (new devices
+  flagged), snippet creates/pushes/forks, token changes
+  and trust grants, in Settings - Security, in
+  `fg activity`, and exportable as JSON. Only the owner
+  ever sees it.
+- **Your library stats (Peak C8).** The Library page
+  shows your own cloud runs: totals, commands automated,
+  estimated time saved, top workflows. `fg stats` stays
+  local-only, as documented.
+- **`forgehub self-check` (Peak C10).** Prints the
+  binary's SHA-256 and version, fetches the published
+  release SHA256SUMS when online, and verifies a
+  downloaded release archive end to end with
+  `--archive` (offline against `--sums`). Offline, it
+  explains the manual `gh` + `sha256sum -c` flow.
+
+### Changed
+
+- **Web UI rebuilt as faithful Material You 3 (Peak
+  Phase A).** Light, dark and system themes with a real
+  switch, Roboto Flex throughout, token-only colours,
+  responsive navigation, and a calmer Library with bulk
+  actions and previews. The previous dark glass theme is
+  gone.
+- **CLI output and help (Peak Phase B).** One output
+  design system (colour that honours NO_COLOR, consistent
+  errors with what/why/fix), grouped help, dynamic shell
+  completions, `fg find`, `fg new`, `fg lint`,
+  `fg config`, multi-snippet push/pull/status, and
+  network resilience (timeouts, retries, a fast-failing
+  `--offline` mode).
+- **Internationalisation groundwork (Peak C9).** All web
+  UI strings live in one structured message catalogue
+  (English only for now), ready for translations; RTL
+  layout is covered by a dedicated test page.
+
 ### Removed
 
 - **Windows support.** The `x86_64-pc-windows-msvc` release
