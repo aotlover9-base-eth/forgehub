@@ -5,6 +5,8 @@ import type {
   Collection,
   CollectionDetail,
   CreatedToken,
+  GistImportResult,
+  HistoryAnalysis,
   Me,
   PublicProfile,
   SearchPage,
@@ -481,6 +483,34 @@ export function useDeviceDecision() {
         method: 'POST',
         body: JSON.stringify({ user_code }),
       }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Imports (Peak C5)
+// ---------------------------------------------------------------------------
+
+/** Analyze an uploaded shell-history file's text server-side. */
+export function useHistoryAnalyze() {
+  return useMutation<HistoryAnalysis, ApiError, { text: string }>({
+    mutationFn: (input) =>
+      api<HistoryAnalysis>('/imports/history/analyze', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+  });
+}
+
+/** Import a public GitHub Gist by URL (server fetches, ADR 0010). */
+export function useGistImport() {
+  const queryClient = useQueryClient();
+  return useMutation<GistImportResult, ApiError, { url: string }>({
+    mutationFn: (input) =>
+      api<GistImportResult>('/imports/gist', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-snippets'] }),
   });
 }
 

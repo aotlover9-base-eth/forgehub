@@ -82,6 +82,26 @@ export interface CollectionItem {
   position: number;
 }
 
+/** One mined history candidate (Peak C5). */
+export interface HistoryCandidate {
+  name: string;
+  commands: string[];
+  count: number;
+}
+
+/** Result of POST /imports/history/analyze. */
+export interface HistoryAnalysis {
+  parsed: number;
+  kept: number;
+  candidates: HistoryCandidate[];
+}
+
+/** Result of POST /imports/gist. */
+export interface GistImportResult {
+  created: { name: string; file: string }[];
+  skipped: { file: string; reason: string }[];
+}
+
 /** Collection detail: the collection plus its visible items
  * in order. `total_items` is present only for the owner and
  * counts items the server hid from this view. */

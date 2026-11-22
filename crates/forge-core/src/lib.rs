@@ -27,6 +27,7 @@
 
 pub mod error;
 pub mod hash;
+pub mod history_mine;
 pub mod import;
 pub mod lint;
 pub mod model;

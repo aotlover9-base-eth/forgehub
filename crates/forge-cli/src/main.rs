@@ -377,6 +377,15 @@ enum Command {
         /// ($`FORGENESIS_HOME/workflows` or ~/.forgenesis/workflows).
         #[arg(long)]
         from_forgenesis: bool,
+        /// Import a public GitHub Gist by URL: the server
+        /// fetches it (ADR 0010) and imports its files as
+        /// private snippets.
+        #[arg(long)]
+        from_gist: Option<String>,
+        /// Registry base URL for --from-gist (default:
+        /// `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
         /// Save under a different name (single file only).
         #[arg(long)]
         name: Option<String>,
@@ -1354,16 +1363,24 @@ fn dispatch_manage(
         Command::Import {
             file,
             from_forgenesis,
+            from_gist,
+            registry,
             name,
             force,
-        } => dispatch_import(
-            store,
-            file.clone(),
-            *from_forgenesis,
-            name.as_deref(),
-            *force,
-            cli.json,
-        ),
+        } => {
+            if let Some(url) = from_gist {
+                sync::cmd_import_gist(store, stdin, url, registry.as_deref(), cli.json)
+            } else {
+                dispatch_import(
+                    store,
+                    file.clone(),
+                    *from_forgenesis,
+                    name.as_deref(),
+                    *force,
+                    cli.json,
+                )
+            }
+        }
         Command::Export { name, out } => parity::cmd_export(store, name, out.as_ref()),
         Command::Analyze {
             min_count,

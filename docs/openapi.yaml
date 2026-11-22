@@ -970,6 +970,94 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SnippetPage' }
         '404': { $ref: '#/components/responses/Error' }
+  /imports/history/analyze:
+    post:
+      tags: [imports]
+      summary: Analyze an uploaded shell-history file with the shared mining pipeline (Peak C5; secrets are filtered before anything is returned)
+      operationId: analyzeHistoryImport
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, description: 'The history file text, at most 64 KiB.' }
+      responses:
+        '200':
+          description: Mining outcome and ranked candidates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [parsed, kept, candidates]
+                properties:
+                  parsed: { type: integer }
+                  kept: { type: integer }
+                  candidates:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, commands, count]
+                      properties:
+                        name: { type: string }
+                        commands: { type: array, items: { type: string } }
+                        count: { type: integer }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+  /imports/gist:
+    post:
+      tags: [imports]
+      summary: Import a public GitHub Gist as private snippets (the server fetches it under ADR 0010; files with secrets or name collisions are skipped with reasons)
+      operationId: importGist
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, example: 'https://gist.github.com/anna/0123abcd' }
+      responses:
+        '200':
+          description: Per-file outcome
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [created, skipped]
+                properties:
+                  created:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, file]
+                      properties:
+                        name: { type: string }
+                        file: { type: string }
+                  skipped:
+                    type: array
+                    items:
+                      type: object
+                      required: [file, reason]
+                      properties:
+                        file: { type: string }
+                        reason: { type: string }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
   /collections:
     post:
       tags: [collections]

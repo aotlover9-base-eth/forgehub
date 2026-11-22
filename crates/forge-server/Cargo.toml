@@ -26,6 +26,9 @@ forge-core = { version = "0.1.0", path = "../forge-core" }
 # builder only, rustls for smtps (no async runtime features -
 # sends happen on spawn_blocking).
 lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "builder", "rustls-tls"] }
+# Gist import (Peak C5, ADR 0010): the server's only outbound
+# HTTP client. rustls with the OS trust store, as in the CLI.
+reqwest = { version = "0.12", default-features = false, features = ["json", "gzip", "rustls-tls-native-roots"] }
 serde = { version = "1", features = ["derive"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 serde_json = "1"
@@ -42,7 +45,6 @@ uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 forge-core = { version = "0.1.0", path = "../forge-core" }
-reqwest = { version = "0.12", default-features = false, features = ["json", "gzip"] }
 serde_json = "1"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite"] }
 tempfile = "3"

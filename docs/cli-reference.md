@@ -332,6 +332,8 @@ Arguments:
 
 Options:
       --from-forgenesis  Import from the Forgenesis workflows directory instead ($`FORGENESIS_HOME/workflows` or ~/.forgenesis/workflows)
+      --from-gist <URL>  Import a public GitHub Gist by URL: the server fetches it (ADR 0010) and imports its files as private snippets
+      --registry <URL>   Registry base URL for --from-gist (default: `FORGEHUB_REGISTRY` or config)
       --json             Print machine-readable JSON instead of human output
       --name <NAME>      Save under a different name (single file only)
   -y, --yes              Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
@@ -343,6 +345,7 @@ Options:
 Examples:
   fg import snippets.yaml
   fg import --from-forgenesis
+  fg import --from-gist https://gist.github.com/anna/0123abcd
 ```
 
 ### `forgehub export`

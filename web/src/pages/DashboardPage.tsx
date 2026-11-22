@@ -36,6 +36,7 @@ import {
   type VisibilityFilter,
 } from '../api/hooks';
 import CollectionsPanel from './CollectionsPanel';
+import ImportPanel from './ImportPanel';
 import type { Snippet, Visibility } from '../api/types';
 import { relativeTime } from '../validation';
 
@@ -448,6 +449,9 @@ export default function DashboardPage() {
 
         <div style={{ marginTop: 'var(--fh-space-4)' }}>
           <CollectionsPanel />
+        </div>
+        <div style={{ marginTop: 'var(--fh-space-4)' }}>
+          <ImportPanel />
         </div>
       </div>
 

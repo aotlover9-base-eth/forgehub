@@ -177,6 +177,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(crate::device::routes())
         .merge(crate::snippets::routes())
         .merge(crate::collections::routes())
+        .merge(crate::imports::routes())
         .merge(crate::discovery::routes())
         .fallback(api_not_found);
     // Static web app (skipped with a warning when not built yet).

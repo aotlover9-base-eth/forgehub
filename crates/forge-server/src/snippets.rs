@@ -43,17 +43,17 @@ use serde::Deserialize;
 
 /// A parsed, validated, scan-clean submission ready to store.
 #[derive(Debug)]
-struct ParsedInput {
+pub(crate) struct ParsedInput {
     /// Canonical forge-file YAML (what gets stored).
-    canonical_body: String,
+    pub(crate) canonical_body: String,
     /// Content hash (spec §9) of the parsed snippet.
-    hash: String,
+    pub(crate) hash: String,
     /// Final description (request field wins over the file's).
-    description: String,
+    pub(crate) description: String,
     /// Final tags (request field wins over the file's).
-    tags: Vec<String>,
+    pub(crate) tags: Vec<String>,
     /// `script` or `steps`.
-    mode: &'static str,
+    pub(crate) mode: &'static str,
 }
 
 /// Does this text look like an (attempted) forge file rather than
@@ -82,7 +82,7 @@ fn looks_like_forge_file(body: &str) -> bool {
 ///
 /// # Errors
 /// 400 validation, 413 body too large, 422 secret findings.
-fn parse_submission(
+pub(crate) fn parse_submission(
     name: &str,
     description: Option<&str>,
     tags: Option<&[String]>,

@@ -1802,6 +1802,57 @@ pub(crate) fn url_encode(text: &str) -> String {
 
 /// `fg fork <owner/name> [--as name]` - server fork, then an
 /// optional pull (prompted on a TTY).
+/// `fg import --from-gist <url>` (Peak C5): the server
+/// fetches the gist (ADR 0010) and imports its files as
+/// private snippets; this prints the per-file outcome.
+pub fn cmd_import_gist(
+    store: &Store,
+    stdin: &mut impl BufRead,
+    url: &str,
+    registry: Option<&str>,
+    json_out: bool,
+) -> Result<i32> {
+    let sess = session(store, stdin, registry)?;
+    let (_, body, _) = sess
+        .client
+        .post_json(
+            "/imports/gist",
+            &serde_json::json!({ "url": url }),
+            Some(&sess.entry.token),
+        )
+        .map_err(|e| api_fail(&e, &sess.entry.token))?;
+    if json_out {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&body).unwrap_or_default()
+        );
+        return Ok(0);
+    }
+    let created = body["created"].as_array().cloned().unwrap_or_default();
+    let skipped = body["skipped"].as_array().cloned().unwrap_or_default();
+    for c in &created {
+        println!(
+            "{}",
+            crate::output::style().success(&format!(
+                "imported {} (from {})",
+                c["name"].as_str().unwrap_or_default(),
+                c["file"].as_str().unwrap_or_default()
+            ))
+        );
+    }
+    for s in &skipped {
+        eprintln!(
+            "forgehub: skipped {}: {}",
+            s["file"].as_str().unwrap_or_default(),
+            s["reason"].as_str().unwrap_or_default()
+        );
+    }
+    if created.is_empty() && skipped.is_empty() {
+        println!("the gist has no files to import");
+    }
+    Ok(0)
+}
+
 pub fn cmd_fork(
     store: &Store,
     stdin: &mut impl BufRead,

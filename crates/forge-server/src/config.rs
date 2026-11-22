@@ -69,6 +69,11 @@ pub struct Config {
     pub smtp_url: Option<String>,
     /// From address for outgoing mail (`FORGEHUB_MAIL_FROM`).
     pub mail_from: String,
+    /// GitHub API base for Gist import (`FORGEHUB_GIST_API_BASE`,
+    /// default `https://api.github.com`; ADR 0010). Operator
+    /// configuration only - user input never influences the
+    /// fetch host.
+    pub gist_api_base: String,
 }
 
 /// How outgoing mail will be handled, for the startup summary.
@@ -191,6 +196,19 @@ fn snippet_limits(get: &dyn Fn(&str) -> Option<String>) -> Result<(i64, i64)> {
     Ok((per_user, per_snippet))
 }
 
+/// The GitHub API base for gist import (ADR 0010): an
+/// operator setting, never user input; must be http(s).
+fn parse_gist_api_base(raw: Option<String>) -> Result<String> {
+    let base = raw
+        .unwrap_or_else(|| "https://api.github.com".to_string())
+        .trim_end_matches('/')
+        .to_string();
+    if !base.starts_with("http://") && !base.starts_with("https://") {
+        bail!("FORGEHUB_GIST_API_BASE must start with http:// or https://, got `{base}`");
+    }
+    Ok(base)
+}
+
 impl Config {
     /// Load and validate configuration from the process environment.
     ///
@@ -283,6 +301,7 @@ impl Config {
         }
         let mail_from = get("FORGEHUB_MAIL_FROM")
             .unwrap_or_else(|| "ForgeHub <no-reply@localhost>".to_string());
+        let gist_api_base = parse_gist_api_base(get("FORGEHUB_GIST_API_BASE"))?;
         if !mail_from.contains('@') {
             bail!("FORGEHUB_MAIL_FROM must contain an email address, got `{mail_from}`");
         }
@@ -305,6 +324,7 @@ impl Config {
             max_versions_per_snippet,
             smtp_url,
             mail_from,
+            gist_api_base,
         })
     }
 
