@@ -252,6 +252,14 @@ export default function SnippetPage() {
         <p style={{ color: 'var(--md-sys-color-on-surface-variant)', marginBottom: 0 }}>
           New to <code>fg</code>? Install instructions are in the ForgeHub README.
         </p>
+        {s.visibility === 'public' ? (
+          <p style={{ marginBottom: 0 }}>
+            <a href={`/s/${owner}/${name}`} target="_blank" rel="noreferrer">
+              Public page
+            </a>{' '}
+            - a shareable, read-only page for this snippet (works without JavaScript).
+          </p>
+        ) : null}
       </Card>
 
       <Tabs

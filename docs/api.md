@@ -82,6 +82,8 @@ internals).
 | Tokens | `GET/POST /tokens`, `DELETE /tokens/{id}`, `DELETE /tokens/current` |
 | Snippets | `POST /snippets`, `GET/PUT/PATCH/DELETE /snippets/{owner}/{name}`, `GET /snippets/{owner}/{name}/versions[/{n}]`, `GET …/diff?from&to`, `POST /snippets/validate`, `GET /me/snippets` |
 | Discovery | `GET /search`, `GET /explore`, `GET /tags`, `GET /users/{username}`, `PUT/DELETE /snippets/{o}/{n}/star`, `POST /snippets/{o}/{n}/fork`, `POST /snippets/{o}/{n}/report` |
+| Collections | `POST /collections`, `GET /me/collections`, `GET/PATCH/DELETE /collections/{owner}/{name}`, `PUT/DELETE /collections/{o}/{n}/items/{so}/{sn}`, `POST /collections/{o}/{n}/reorder` |
+| Public pages (not JSON) | `GET /s/{owner}/{name}` - server-rendered HTML for public snippets only (Peak C4); everything else is the same 404 |
 
 Rate limits: a per-IP/token request budget (default 600/min)
 plus a dedicated login throttle with exponential backoff and

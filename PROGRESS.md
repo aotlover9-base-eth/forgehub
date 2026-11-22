@@ -55,8 +55,8 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 ### Phase C - new features
 - [x] C1 - snippet collections (migration 0003 + CollectionRepo + 8 endpoints in `collections.rs`, never-widens-access item filtering; `fg collection` 8 subcommands + `fg run <collection>` fallback with stop-on-failure; web Library Collections section + `/collections/:owner/:name` page + add-from-menu; OpenAPI + man + cli-reference updated. Tests: 7 server + 3 CLI integration, 5 web. Local gates: fmt clean, clippy clean, 491 Rust tests passed, web lint/typecheck/test/build green. CI run `44976274680` FULLY GREEN, all five jobs.)
 - [x] C2 - typed parameters and prompts (forge-core: `type:` + `choices:` on Param with declaration validation incl. no-default-for-secret and hash stability; resolve-time coercion with yesno normalisation; CLI typed prompts incl. hidden secret prompt via crossterm raw mode; secrets masked via display_values in plan/step labels/step-through; server summary `parameters` + web editor Parameters panel; spec section 7 updated. Tests: +5 core, +5 CLI integration, +1 web. Local gates: fmt clean, clippy clean, 501 Rust tests passed, web typecheck/lint clean. CI run `44977381414` FULLY GREEN, all five jobs.)
-- [x] C3 - snippet history and rollback in the CLI (`fg history` newest-first with current marker + local-only explanation; `fg rollback` = diff + confirm + If-Match PUT publishing the old content as a NEW version, hash no-op detection, foreign rollback refused; web Versions tab gains owner-only Roll back with semantics dialog + `useRollbackSnippet`. No server changes needed. Tests: +4 CLI integration, +1 web. Local gates: fmt clean, clippy clean, 505 Rust tests passed, web typecheck/lint clean. CI verification pending at commit time.)
-- [ ] C4 - public pages and sharing
+- [x] C3 - snippet history and rollback in the CLI (`fg history` newest-first with current marker + local-only explanation; `fg rollback` = diff + confirm + If-Match PUT publishing the old content as a NEW version, hash no-op detection, foreign rollback refused; web Versions tab gains owner-only Roll back with semantics dialog + `useRollbackSnippet`. No server changes needed. Tests: +4 CLI integration, +1 web. Local gates: fmt clean, clippy clean, 505 Rust tests passed, web typecheck/lint clean. CI run `44978258087` FULLY GREEN, all five jobs.)
+- [x] C4 - public pages and sharing (server-rendered `/s/{owner}/{name}` in new `pages.rs` for PUBLIC snippets only - private/unlisted/missing share one 404; canonical + OG from FORGEHUB_BASE_URL; `fg pull` install line + `fg` run line with self-hosted copy.js; full HTML escaping proven by hostile-content test; CSP inherited and asserted; web snippet page links "Public page" for public snippets. Tests: +3 server integration. Local gates: fmt clean, clippy clean, 508 Rust tests passed, web typecheck clean. CI verification pending at commit time.)
 - [ ] C5 - import helpers
 - [ ] C6 - shared read-only collection links
 - [ ] C7 - activity log
@@ -66,7 +66,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 
 Phase A COMPLETE 2026-11-22: summary in `reports/report_Peak-A-summary.md`, tagged `peak-phase-a`. CI green on the A8 head (`3bb18b0`, run `44965399856`, all five jobs) and on the WP-0b fix head (`0ab22f8`, run `44963120867`).
 
-Next WP: C4 - public snippet pages.
+Next WP: C5 - import helpers (ADR first for the Gist surface).
 
 ### A8 blocker note (2026-11-22, ~23:25 IST) - READ FIRST ON RESUME
 
