@@ -7,7 +7,7 @@
 **Save a shell command once. Run it anywhere.** ⚒️
 
 ![Release](https://img.shields.io/badge/release-v0.1.6-FFFFFF?style=flat-square&labelColor=0D1117)
-![Tests](https://img.shields.io/badge/tests-478%20passing-2EA043?style=flat-square&labelColor=0D1117)
+![Tests](https://img.shields.io/badge/tests-617%20passing-2EA043?style=flat-square&labelColor=0D1117)
 ![License](https://img.shields.io/badge/license-MIT-9E9E9E?style=flat-square&labelColor=0D1117)
 ![Platform](https://img.shields.io/badge/platform-Linux-6E7F8D?style=flat-square&labelColor=0D1117)
 
@@ -16,7 +16,7 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black&labelColor=0D1117)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white&labelColor=0D1117)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white&labelColor=0D1117)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white&labelColor=0D1117)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=0D1117)
 
 </div>
 
@@ -36,18 +36,53 @@ through shell history, no more "it worked on my old laptop".
 - **Safety is the product** - other people's snippets need a
   typed `yes`, a changed snippet shows a diff and asks again,
   and nothing runs silently, ever
-- **Tested like it matters** - 428 Rust + 50 web tests, CI on
+- **Runbooks, not just snippets** - group snippets into
+  ordered collections and run the whole set with one command,
+  each step confirmed in turn
+- **Tested like it matters** - 535 Rust + 82 web tests, CI on
   every push, secret scanning on every save
-- **Featherweight** - the CLI download is ~4.5 MB, the server
-  is a single SQLite file, the snippets are text only
-  (≤ 64 KiB - no uploads, no binaries)
+- **Featherweight** - the CLI binary is about 10 MB, answers
+  `--version` in about 5 ms, the server is a single SQLite
+  file, and snippets are text only (≤ 64 KiB - no uploads,
+  no binaries)
 
 | | |
 |---|---|
 | Stack | Rust (CLI + axum/SQLite server) · React 19 web |
-| Status | v0.1.4 · 478 tests green · MIT |
+| Status | v0.1.6 · 617 tests green · MIT |
 
-![ForgeHub home - the Observe theme](docs/screenshots/home-observe.jpg)
+![ForgeHub landing page, light theme](docs/screenshots/landing-light.jpg)
+
+## ✨ What is inside
+
+- **Snippets with versions** - every push is a new immutable
+  version; `fg history` shows them and `fg rollback` republishes
+  an old version's content as a new one (history is never
+  rewritten)
+- **Typed parameters** - declare `{{name:type}}` prompts
+  (text, choice, number, path, yes/no, secret); secrets are
+  asked for hidden and never shown in the run plan
+- **Collections** - ordered runbooks in the CLI and on the web;
+  run one end to end, or share it with an expiring, revocable
+  read-only link
+- **Public pages** - every public snippet gets a shareable,
+  read-only page at `/s/<owner>/<name>` that works without
+  JavaScript; private snippets answer 404 there, always
+- **Imports** - mine your shell history for repeated commands,
+  or import a GitHub Gist; likely secrets are filtered before
+  anything is stored
+- **Activity and stats that are yours** - a per-account
+  activity log (sign-ins, pushes, forks, token changes, trust
+  grants; exportable as JSON) and usage stats counted per
+  runner, never per owner
+- **A CLI that respects you** - fuzzy `fg find`, `fg lint`
+  before you run, `fg config` for settings, grouped help,
+  dynamic completions, network retries that honour
+  `Retry-After`, and `forgehub self-check` to verify your
+  binary against the published checksums
+- **Internationalisation groundwork** - every web string
+  lives in one message catalogue (about 430 strings), ready
+  for the first real translation; English ships today
 
 ## 🚀 Quickstart - server (Docker)
 
@@ -91,17 +126,50 @@ downloads and only works once a repository is public.)
 
 ## 📸 Screenshots
 
-One theme - dark glass - from the home page through every
-signed-in section. (The serif display type lives on the
-public landing page only.)
+The current design is faithful Material You 3 - one seed
+colour, light + dark + system themes, Roboto Flex throughout.
+Every capture below is the real app, taken from a local
+server with a seeded demo account.
 
-| Library | Explore |
+| Landing, light | Landing, dark |
 |---|---|
-| ![Library](docs/screenshots/library-observe.jpg) | ![Explore](docs/screenshots/explore-observe.jpg) |
+| ![Landing light](docs/screenshots/landing-light.jpg) | ![Landing dark](docs/screenshots/landing-dark.jpg) |
 
-| Profile | A snippet |
+| Library, light | Library, dark |
 |---|---|
-| ![Profile](docs/screenshots/profile-observe.jpg) | ![Snippet page](docs/screenshots/snippet-observe.jpg) |
+| ![Library light](docs/screenshots/library-light.jpg) | ![Library dark](docs/screenshots/library-dark.jpg) |
+
+| Home | A snippet |
+|---|---|
+| ![Home](docs/screenshots/home-light.jpg) | ![Snippet page](docs/screenshots/snippet-light.jpg) |
+
+| A collection | Explore |
+|---|---|
+| ![Collection page](docs/screenshots/collection-light.jpg) | ![Explore](docs/screenshots/explore-light.jpg) |
+
+| New snippet editor | Profile |
+|---|---|
+| ![Editor](docs/screenshots/editor-light.jpg) | ![Profile](docs/screenshots/profile-light.jpg) |
+
+Settings (theme picker included) and the landing on a phone:
+
+| Settings | Landing, mobile |
+|---|---|
+| ![Settings](docs/screenshots/settings-light.jpg) | ![Landing on mobile](docs/screenshots/landing-mobile.jpg) |
+
+## 🎨 Design
+
+- **Material You 3**, generated from a single seed colour
+  (`#36618E`) - colour comes from tokens, never hard-coded
+- **Three themes, one switch** - light, dark, or follow the
+  system; the same picker lives in Settings and the account
+  menu, and the choice is applied before first paint
+- **Roboto Flex everywhere**, self-hosted like every other
+  asset - no CDNs, no third-party fonts or scripts
+- **Responsive shell** - navigation rail on desktop, compact
+  bar on small screens; WCAG 2.2 AA contrast checked by an
+  automated suite, and a 72-screenshot visual regression
+  suite runs in CI
 
 ## 🧰 Commands
 
@@ -111,7 +179,10 @@ public landing page only.)
 |---|---|
 | `fg <name>` / `fg run <name>` | Show a snippet's commands, ask, run it |
 | `fg record <name>` | Record a shell session as a snippet |
+| `fg new` | Create from a template in `$EDITOR`; validation errors loop back in |
 | `fg list` · `fg show <name>` · `fg search <text>` | Browse the local library |
+| `fg find <text>` | Fuzzy-find by name across the local library and cached cloud names |
+| `fg lint <name>` | Danger lints + secret scan without running anything (exit 0 clean, 1 warnings, 2 blocking) |
 | `fg edit` · `fg rename` · `fg delete` · `fg tag` · `fg clone` | Manage snippets |
 | `fg parameterize <name>` | Turn repeated literals into prompted variables |
 | `fg import` · `fg export` | Move snippets as YAML (Forgenesis files included) |
@@ -126,17 +197,26 @@ public landing page only.)
 | `fg push <name> [--public]` | Upload; re-push creates a new version |
 | `fg pull <name>` | Download a cloud snippet into the local library |
 | `fg status` · `fg diff <name>` | Local vs cloud: ahead / behind / diverged |
+| `fg history <name>` · `fg rollback <name>` | Version history; republish an old version as a new one |
 | `fg fork <owner>/<name>` | Copy a public snippet into your account |
+| `fg edit <owner>/<name>` | Edit your cloud snippet; pushes the result as a new version after confirmation |
+| `fg collection` | Ordered runbooks: create, add, reorder, share, run end to end |
 | `fg remote list` | List your snippets on the server |
 | `fg trust list` · `fg trust revoke <owner>/<name>` | Manage run approvals |
+| `fg activity` | Your account activity log (also in the web app, exportable) |
 
 **Utility:** `fg ui` (terminal browser) · `fg doctor` (health
-check) · `fg cache list|clear` · `fg update --check` ·
-`fg completions <shell>` · `fg alias show`
+check) · `fg config` (read/write local settings) ·
+`fg cache list|clear|prune` · `fg update --check` ·
+`forgehub self-check` (verify the binary against the
+published checksums) · `fg completions <shell>` ·
+`fg alias show` · `fg help <topic>`
 
-**Flags that matter:** `--json` (list/show/stats/doctor) ·
+**Flags that matter:** `--json` (machine-readable output) ·
 `-y` (skip `[y/N]` on your own snippets - never skips trust
-prompts) · `--offline` (run from cache) · `-v` (request log).
+prompts) · `--offline` (run from cache, cloud fails fast) ·
+`--color auto|always|never` and `NO_COLOR` · `-v` (request
+log).
 
 Full reference: [docs/cli-reference.md](docs/cli-reference.md) ·
 [docs/user-guide.md](docs/user-guide.md)
@@ -145,13 +225,16 @@ Full reference: [docs/cli-reference.md](docs/cli-reference.md) ·
 
 - Nothing runs unseen: every run prints the full command list first.
 - Your snippet: `[y/N]`. Someone else's, first time: type `yes`.
-- Approval is pinned to the content hash. Changed content → you
+- Approval is pinned to the content hash. Changed content: you
   see a diff and approve again. `-y` never skips this.
-- No interactive terminal → unskippable prompts fail closed (exit 2).
+- No interactive terminal: unskippable prompts fail closed (exit 2).
 - A secret scanner blocks likely credentials at record, push and
   web save. Findings name the kind and line, never the value.
 - Passwords argon2id-hashed; tokens SHA-256 at rest, shown once.
   No telemetry. No third-party scripts or fonts.
+- One bounded exception, documented in ADR 0011: collection
+  share links are read-only bearer grants - expiring,
+  revocable, and they never grant running anything.
 
 Detail: [docs/security.md](docs/security.md) ·
 [docs/threat-model.md](docs/threat-model.md)
@@ -160,12 +243,15 @@ Detail: [docs/security.md](docs/security.md) ·
 
 | Variable | Meaning |
 |---|---|
-| `FORGEHUB_REGISTRY` | CLI: server URL (or `--registry`, or config) |
+| `FORGEHUB_REGISTRY` | CLI: server URL (or `--registry`, or `fg config`) |
 | `FORGEHUB_HOME` | CLI: local library location (default `~/.forgehub`) |
 | `FORGEHUB_TOKEN` | CLI: token from the environment, for scripts |
 | `FORGEHUB_CREDENTIAL_STORE` | CLI: `auto` (default) / `file` / `keyring` - OS keyring vs credentials file |
 | `FORGEHUB_SECRET_KEY` | Server: session secret, ≥ 32 random bytes (`.env`) |
 | `FORGEHUB_DOMAIN` | Server (compose/Caddy): domain to serve, default `localhost` |
+| `FORGEHUB_ALLOW_SIGNUP` | Server: allow public account creation (`true`/`false`) |
+| `FORGEHUB_BASE_URL` | Server: public base URL, used for links and public-page metadata |
+| `FORGEHUB_GIST_API_BASE` | Server: GitHub API base for Gist import (default `https://api.github.com`; point it somewhere unreachable to disable outbound fetches) |
 | `FORGEHUB_SMTP_URL` | Server: SMTP URL for password-reset mail, e.g. `smtps://user:pass@host:465` |
 | `FORGEHUB_MAIL_FROM` | Server: From address for outgoing mail |
 
@@ -188,8 +274,10 @@ cargo test --workspace
 cd web && npm run lint && npm run typecheck && npm test && npm run build
 ```
 
-History: 22 build steps, one commit + report each -
-[PROGRESS.md](PROGRESS.md), [reports/](reports/).
+History: 22 build steps, then the Peak phase (29 work
+packages: UI overhaul, CLI overhaul, new features) - one
+commit + report each - [PROGRESS.md](PROGRESS.md),
+[reports/](reports/).
 
 ## License
 
