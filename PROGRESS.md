@@ -38,7 +38,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [x] A5 - screen redesign (every route)
 - [x] A6 - motion and micro-interactions
 - [x] A7 - accessibility and quality pass
-- [ ] A8 - visual regression suite
+- [x] A8 - visual regression suite (72 goldens; generated on a CI runner - the sandbox write fault blocked local generation; see `reports/report_Peak-A8.md`)
 
 ### Phase B - CLI improvements
 - [ ] B0 - audit and baseline
@@ -64,4 +64,30 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [ ] C9 - i18n groundwork and RTL check
 - [ ] C10 - release and upgrade hygiene
 
-Next WP: A1.
+Next WP: Phase A summary (`reports/report_Peak-A-summary.md`) + tag `peak-phase-a`, then Phase B (B0).
+
+### A8 blocker note (2026-11-22, ~23:25 IST) - READ FIRST ON RESUME
+
+Phase A is complete through A7 (commit `46722ba`, pushed; CI verification of A5-A7 heads was still to be eyeballed when this note was written - check `gh run list` for the A7 head). A8's suite is WRITTEN and sitting uncommitted in the working tree:
+
+- `web/e2e/visual/visual.spec.ts` - 12 screens x 2 themes x 3 widths, gated behind `VISUAL_TESTS=1`; deterministic seed (one user per theme, login-not-signup for later contexts), frozen clock for relative-time screens, masked profile "joined" line.
+- `web/e2e/visual/README.md` - how to run and update goldens.
+- `scripts/visual-web.sh` - runner (`--update` regenerates goldens, `--skip-build` reuses the build).
+- `web/playwright.config.ts` - gained `snapshotPathTemplate` pointing at `web/e2e/visual/__screenshots__/`.
+- `web/e2e/visual/__screenshots__/` - EMPTY. Goldens are not generated yet.
+
+**Blocker: the sandbox environment is denying positioned writes.** Since ~23:07 IST, `pwrite64` returns EPERM on every path (proven with strace on a python sqlite probe: opens and fcntl locks succeed, `pwrite64` on the sqlite journal file fails with EPERM). Consequences: sqlite cannot write at all (forge-server dies at startup with sqlx error 778 "disk I/O error"), cargo cannot write fingerprint files (EPERM), and every server-backed suite (e2e, visual) fails. Sequential writes (editors, shell redirection) still work, and plain opens flap - sometimes denied for seconds at a time. This began after a runtime restart at ~22:22 IST; the full A7 e2e pass at ~23:03 shows the block comes in long waves. It is an environment fault, not a code fault: nothing in the repo changed when it started.
+
+**Resume steps when writes work again** (test with: `python3 -c "import sqlite3; c=sqlite3.connect('/tmp/x.db'); c.execute('CREATE TABLE t (x)'); c.commit(); print('ok')"`):
+1. `bash scripts/visual-web.sh --update --skip-build` - generates the 72 goldens. EYEBALL all of them (a mid-run write wave would poison some with error states; regenerate any that show errors).
+2. `bash scripts/visual-web.sh --skip-build` - the check run must pass against the goldens.
+3. Run the full section 9 gates (cargo fmt/clippy/test/deny, web lint/typecheck/tests/build, `bash scripts/e2e-web.sh --skip-build`).
+4. Write `reports/report_Peak-A8.md` (the suite, the determinism rules, golden count/size, this blocker and its resolution), tick A8 above, set Next WP to the Phase A summary.
+5. Commit `peak A8: visual regression suite`, push.
+6. Then: `reports/report_Peak-A-summary.md` (before/after screenshots from `docs/screenshots/peak-audit/`), tag `peak-phase-a`, `git push --follow-tags`, and continue with Phase B (B0) per the plan.
+
+### WP-0b update (2026-11-22, ~05:10 IST) - CI WAS RED FROM A3, NOW FIXED IN CODE
+
+The A8 note above says CI verification of A5-A7 heads was still to be eyeballed. It has now been eyeballed: **CI has been red since the A3 head** (runs `44952892060` A3, `44953663243` A4, `44956717654` A5, `44957277460` A6, `44960000289` A7 - all failed in the Web job's Lint step only; Rust/E2E/Docker/Supply chain green throughout). Root cause, proven from the job logs and reproduced locally at HEAD with the pinned toolchain (eslint 10.15.0, eslint-plugin-react-hooks 7.1.1, lockfile identical to installed): three genuine react-hooks v7 compiler-rule violations - ExplorePage `?q=` sync effect (landed A3), DashboardPage cursor-clamp effect and EditorPage `saveRef.current = save` during render (both landed A5). The A3-A7 reports' "local lint pass" claims do not reproduce at the committed heads.
+
+**Fix written, verified, committed and CI-green:** ExplorePage and DashboardPage now use the React-endorsed adjust-state-during-render pattern; EditorPage writes the ref inside an effect. `npm run lint` passes locally (0 errors; check-tokens clean); typecheck passes via direct `tsc --noEmit` on both projects (the scripted form's tsbuildinfo writes are fault-blocked). Full story: `reports/report_Peak-0b.md`. The commit is **`0ab22f8` `peak 0: fix ci (web lint)`** (3 page files + that report ONLY). Because local git object writes stayed fault-denied for over an hour of retries, the commit was created through the GitHub Git API (blobs/tree/commit/ref-update, fast-forward, repo identity as author/committer); the resulting blob SHAs match the local `git diff` index lines exactly, so the committed tree is byte-identical to the intended local commit. **CI run `44963120867` for head `0ab22f8` is fully green - all five jobs, including Web (lint/typecheck/test/build).** CI is green on main again for the first time since A2. LOCAL REPO NOTE: local `main` still points at `46722ba` and the working tree holds the same 4 files' contents as `0ab22f8`; when git writes work again, run `git fetch origin && git reset --mixed origin/main` to re-sync the local ref/index WITHOUT touching the working tree (PROGRESS.md, playwright.config.ts and the A8 files must stay as they are). Next: A8 at step 1 above. RESOLVED (2026-11-22): the local window never came (the actor/probe loops were stopped after ~1.5 h of continuous EPERM), so A8 was finished via CI: suite committed as `2952c34` through the Git API, goldens generated + check-run-verified on a healthy runner (workflow run `44964200459`), harvested from its artifact and committed with `reports/report_Peak-A8.md`; the temporary dispatch workflow was deleted in the same commit. Golden verification of record: exact 72-file set, IHDR dimensions per width class, 72 unique hashes, dark/light mean luminance 0.08-0.16 / 0.91-0.97 across all pairs (no blanks, error pages or wrong themes). The Phase A summary draft is at `~/workspace/.peak-a-summary-draft.md` (fill in the A8 placeholders) for the summary commit + tag `peak-phase-a`. Local git re-sync (`git fetch origin && git reset --mixed origin/main`) is STILL pending the write fault - local `main` points at `46722ba` while origin has advanced; the working tree contents are correct.
