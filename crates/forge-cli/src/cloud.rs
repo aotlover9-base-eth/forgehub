@@ -584,7 +584,19 @@ impl ApiClient {
         let resp = req.send().map_err(|e| ApiFailure {
             status: 0,
             code: "network_error".into(),
-            message: format!("cannot reach {}: {e}", self.base),
+            // Peak B8: name the failure mode (timeout, refused
+            // connection, other) instead of dumping the raw
+            // transport error.
+            message: if e.is_timeout() {
+                format!("request to {} timed out", self.base)
+            } else if e.is_connect() {
+                format!(
+                    "cannot connect to {} (connection refused or DNS failure)",
+                    self.base
+                )
+            } else {
+                format!("cannot reach {}: {e}", self.base)
+            },
             details: None,
             retry_after: None,
         })?;
@@ -601,7 +613,23 @@ impl ApiClient {
             .get(reqwest::header::RETRY_AFTER)
             .and_then(|v| v.to_str().ok())
             .and_then(|s| s.parse::<u64>().ok());
-        let body: Value = resp.json().unwrap_or(Value::Null);
+        let text = resp.text().unwrap_or_default();
+        let body: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
+        if status < 400 && body.is_null() && !text.trim().is_empty() && text.trim() != "null" {
+            // Peak B8: a success status with a non-JSON body is
+            // a malformed response - say so, instead of letting
+            // callers trip over a Null document downstream.
+            return Err(ApiFailure {
+                status,
+                code: "malformed_response".into(),
+                message: format!(
+                    "the server at {} returned a response that is not valid JSON (HTTP {status})",
+                    self.base
+                ),
+                details: None,
+                retry_after,
+            });
+        }
         if status >= 400 {
             let (code, message) = match (&body["error"]["code"], &body["error"]["message"]) {
                 (Value::String(c), Value::String(m)) => (c.clone(), m.clone()),
@@ -647,8 +675,10 @@ impl ApiClient {
         self.send(req)
     }
 
-    /// GET with retries (transport errors and 502/503/504, twice,
-    /// with backoff) - GETs are idempotent.
+    /// GET with retries (transport errors, 502/503/504 and 429,
+    /// twice, with backoff; a 429 waits out its `Retry-After`,
+    /// capped at 5 s) - GETs are idempotent. Writes are never
+    /// retried anywhere in this client (Peak B8).
     pub fn get(
         &self,
         path: &str,
@@ -664,8 +694,17 @@ impl ApiClient {
             }
             match self.send(req) {
                 Ok(ok) => return Ok(ok),
-                Err(e) if attempt < 3 && (e.status == 0 || [502, 503, 504].contains(&e.status)) => {
-                    std::thread::sleep(delay);
+                Err(e)
+                    if attempt < 3
+                        && (e.status == 0 || [429, 502, 503, 504].contains(&e.status)) =>
+                {
+                    let wait = if e.status == 429 {
+                        e.retry_after
+                            .map_or(delay, |s| Duration::from_secs(s.min(5)))
+                    } else {
+                        delay
+                    };
+                    std::thread::sleep(wait);
                     delay *= 3;
                 }
                 Err(e) => return Err(e),

@@ -33,3 +33,7 @@ CI run 44970723239 for the B6 head failed the Rust Clippy step with eight errors
 ## 6. Next
 
 B8 - network failure modes, retries for idempotent calls, the offline-cache staleness note, and the EPIPE mitigation found in B2.
+
+## Addendum (2026-11-22, after CI run 44971342984)
+
+The B7 head's CI failed the Rust Clippy step with two `unreadable_literal` errors (the age helper's civil-date constants). Fixed in the B8 commit (disclosed in its report, section 4); the B8 CI run is the verification for both.

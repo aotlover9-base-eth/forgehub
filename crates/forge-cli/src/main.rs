@@ -1434,12 +1434,47 @@ fn main() -> ExitCode {
     let json = cli.json;
     let stdin = std::io::stdin();
     let mut lock = stdin.lock();
-    match run_cli(cli, &mut lock) {
-        Ok(code) => ExitCode::from(u8::try_from(code).unwrap_or(1)),
-        Err(err) => {
+    // Peak B8: a closed output pipe (`fg list | head -1`,
+    // `fg diff | grep -q`) panics inside println! with "failed
+    // printing to stdout". That is a normal end of a pipeline,
+    // not a crash - keep the panic hook silent for exactly that
+    // payload, catch it, and exit successfully and quietly.
+    // Every other panic keeps the stock hook and propagates.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let is_pipe = info
+            .payload()
+            .downcast_ref::<&str>()
+            .is_some_and(|s| s.contains("failed printing to stdout"))
+            || info
+                .payload()
+                .downcast_ref::<String>()
+                .is_some_and(|s| s.contains("failed printing to stdout"));
+        if !is_pipe {
+            default_hook(info);
+        }
+    }));
+    let outcome =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_cli(cli, &mut lock)));
+    match outcome {
+        Ok(Ok(code)) => ExitCode::from(u8::try_from(code).unwrap_or(1)),
+        Ok(Err(err)) => {
             let (text, code) = exit::render_error(&err, json, output::style());
             eprintln!("{text}");
             ExitCode::from(code)
+        }
+        Err(payload) => {
+            let is_pipe = payload
+                .downcast_ref::<&str>()
+                .is_some_and(|s| s.contains("failed printing to stdout"))
+                || payload
+                    .downcast_ref::<String>()
+                    .is_some_and(|s| s.contains("failed printing to stdout"));
+            if is_pipe {
+                ExitCode::from(0)
+            } else {
+                std::panic::resume_unwind(payload);
+            }
         }
     }
 }

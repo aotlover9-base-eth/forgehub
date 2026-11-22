@@ -91,6 +91,9 @@ pub struct Fetched {
     /// Snippet creation timestamp from the API (empty when
     /// served from the cache, which does not store it).
     pub created_at: String,
+    /// When this copy was fetched into the cache (Peak B8;
+    /// only set for `--offline` replays, empty otherwise).
+    pub cached_at: String,
 }
 
 /// Fetch one version with ONE request (`intent=run`), verify
@@ -168,6 +171,7 @@ fn verify_body(
         pull_count: body["pull_count"].as_i64().unwrap_or(0),
         from_cache,
         created_at: body["created_at"].as_str().unwrap_or_default().to_string(),
+        cached_at: String::new(),
     })
 }
 
@@ -208,7 +212,14 @@ fn fetch_offline(store: &Store, owner: &str, name: &str, pin: Option<i64>) -> Re
         "version": version,
         "visibility": visibility,
     });
-    verify_body(owner, name, &body, &body_text, true)
+    let mut fetched = verify_body(owner, name, &body, &body_text, true)?;
+    // The pointer's fetch time belongs to the latest version;
+    // for a pinned older version it is only honest when the
+    // pointer is that version.
+    if cached.version == version {
+        fetched.cached_at = cached.fetched_at.clone();
+    }
+    Ok(fetched)
 }
 
 // ---------------------------------------------------------------------------
@@ -332,7 +343,18 @@ pub fn render_card(fetched: &Fetched, own: bool, changed: bool, diff: Option<&st
         }
     );
     if fetched.from_cache {
-        out.push_str("  (from the local cache - offline replay)\n");
+        // Peak B8: name the staleness honestly, with the time
+        // the copy was fetched when the cache recorded it.
+        if fetched.cached_at.is_empty() {
+            out.push_str("  (from cache - may be outdated)\n");
+        } else {
+            let when = fetched
+                .cached_at
+                .get(..16)
+                .unwrap_or(&fetched.cached_at)
+                .replace('T', " ");
+            let _ = writeln!(out, "  (from cache, fetched {when} UTC - may be outdated)");
+        }
     }
     if !own {
         let _ = writeln!(
@@ -499,7 +521,7 @@ fn days_since(date: &str) -> Option<i64> {
     let mp = (month + 9) % 12;
     let doy = (153 * mp + 2) / 5 + day - 1;
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    let created_days = era * 146097 + doe - 719468;
+    let created_days = era * 146_097 + doe - 719_468;
     let now_days = i64::try_from(
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -1147,6 +1169,7 @@ mod tests {
             pull_count: 0,
             from_cache: false,
             created_at: String::new(),
+            cached_at: String::new(),
         };
         let diff = "+echo safe\n+\u{1b}[2K\rhidden-evil \u{202e}cmd";
         let card = render_card(&fetched, false, true, Some(diff));
@@ -1178,6 +1201,7 @@ mod tests {
             pull_count: 34,
             from_cache: false,
             created_at: String::new(),
+            cached_at: String::new(),
         };
         let card = render_card(&fetched, false, false, None);
         assert_eq!(

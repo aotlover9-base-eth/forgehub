@@ -127,6 +127,13 @@ pub fn api_fail(e: &ApiFailure, token: &str) -> CliError {
         0 => CliError::failure(format!(
             "forgehub: cannot reach the server\n  what: {msg}\n  fix: check the registry URL and your network; local commands keep working offline"
         )),
+        500..=599 => CliError::failure(format!(
+            "forgehub: server error ({})\n  what: {msg}\n  fix: this is the server's problem, not your snippet's - reads were already retried; wait a moment and try again, and run `fg doctor` if it persists",
+            e.status
+        )),
+        _ if e.code == "malformed_response" => CliError::failure(format!(
+            "forgehub: the server's response could not be understood\n  what: {msg}\n  fix: retry; if it persists, the registry may be running an incompatible version - check with `fg doctor`"
+        )),
         _ => CliError::failure(format!(
             "forgehub: server error ({} {})\n  what: {msg}",
             e.status, e.code

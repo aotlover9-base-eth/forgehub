@@ -185,6 +185,10 @@ pub struct CachePointer {
     pub hash: String,
     /// Its visibility at fetch time.
     pub visibility: String,
+    /// When this version was fetched (ISO-8601 UTC; Peak B8 -
+    /// older pointers predate the field and read as empty).
+    #[serde(default)]
+    pub fetched_at: String,
 }
 
 /// A snippet body recovered from the cache.
@@ -198,6 +202,9 @@ pub struct CachedSnippet {
     pub visibility: String,
     /// The canonical forge-file body.
     pub body: String,
+    /// When the latest version was fetched (may be empty for
+    /// pointers written before Peak B8).
+    pub fetched_at: String,
 }
 
 pub fn cache_body_path(store: &Store, owner: &str, name: &str, version: i64) -> PathBuf {
@@ -233,6 +240,7 @@ pub fn cache_put(
         version,
         hash: hash.to_string(),
         visibility: visibility.to_string(),
+        fetched_at: now_iso(),
     };
     std::fs::write(
         pointer_path(store, owner, name),
@@ -274,6 +282,7 @@ pub fn cache_latest(store: &Store, owner: &str, name: &str) -> Option<CachedSnip
         hash: pointer.hash,
         visibility: pointer.visibility,
         body,
+        fetched_at: pointer.fetched_at,
     })
 }
 

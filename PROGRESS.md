@@ -48,8 +48,8 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [x] B4 - listing, search and find (one `ListQuery` filter set for list+search: `--tag`/`--visibility`/`--sort`/`--since`/`--long` table; sidecar Meta records visibility at push/pull so the filter works offline; search JSON unified to the list schema; new `fg find` fuzzy search with `--plain`/`--limit`). CI run 44969502861: Web/E2E/Docker/Supply green, Rust FAILED clippy (6 errors in B4 code). Behaviour-preserving fix-forward rides in the B5 commit - see the B4 report addendum.
 - [x] B5 - editing and authoring (`fg new` templates + editor validation loop; `fg edit <owner/name>` cloud edit with confirmed push; `fg lint` exit 0/1/2; carries the B4 clippy fix-forward). CI run 44970331789: Web/E2E/Docker/Supply green, Rust FAILED clippy (sort_by_key + bool_to_int_with_if) - fix-forward rides in B6, see the B5 report addendum. Cloud edit's live run not yet verified (fault).
 - [x] B6 - sync and status quality (status rows gain the exact next command + JSON `next`; `pull --all` with classify-first + one shared overwrite confirmation; push/pull `--dry-run` plans; DiffView gutter parity via `render_diff` in `fg diff` and the run card; carries the B5 clippy fix-forward). CI run 44970723239: Web/E2E/Docker/Supply green, Rust FAILED clippy (8 errors in B6 code) - fix-forward rides in B7, see the B6 report addendum.
-- [x] B7 - trust and safety UX polish (trust list columns incl. changed-since vs cache; `trust show` with full diff vs pinned; typed-yes prompt shows owner + snippet age + version count; F5 landed: `cache path` + `cache prune --max-size`; carries the B6 clippy fix-forward). CI verification pending at commit time.
-- [ ] B8 - reliability (includes the EPIPE wart found at B2: CLI panics `failed printing to stdout: Broken pipe` when a pipe consumer closes early; crate forbids unsafe so no SIGPIPE reset - evaluate a `catch_unwind` mapping in `main`)
+- [x] B7 - trust and safety UX polish (trust list columns incl. changed-since vs cache; `trust show` with full diff vs pinned; typed-yes prompt shows owner + snippet age + version count; F5 landed: `cache path` + `cache prune --max-size`; carries the B6 clippy fix-forward). CI run 44971342984: Web/E2E/Docker/Supply green, Rust FAILED clippy (2 unreadable_literal) - fix-forward rides in B8, see the B7 report addendum.
+- [x] B8 - reliability (429 GET retries honouring Retry-After capped 5 s; 5xx + malformed-response api_fail arms; transport errors name timeout/connect modes; cache pointers record fetched_at and the run card says "from cache, fetched ... - may be outdated"; EPIPE closed: print-failure panics are hook-silenced and mapped to a quiet exit 0 in main, other panics untouched; carries the B7 clippy fix-forward). CI verification pending at commit time.
 - [ ] B9 - config
 
 ### Phase C - new features
@@ -66,7 +66,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 
 Phase A COMPLETE 2026-11-22: summary in `reports/report_Peak-A-summary.md`, tagged `peak-phase-a`. CI green on the A8 head (`3bb18b0`, run `44965399856`, all five jobs) and on the WP-0b fix head (`0ab22f8`, run `44963120867`).
 
-Next WP: B8 - network resilience.
+Next WP: B9 - config command and verification.
 
 ### A8 blocker note (2026-11-22, ~23:25 IST) - READ FIRST ON RESUME
 
