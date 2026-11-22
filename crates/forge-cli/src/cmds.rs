@@ -442,6 +442,25 @@ pub struct ListQuery {
     pub long: bool,
 }
 
+impl ListQuery {
+    /// Build from raw flag values, parsing `--since`.
+    pub fn build(
+        tag: Option<String>,
+        visibility: Option<String>,
+        sort: Option<SortKey>,
+        since: Option<&str>,
+        long: bool,
+    ) -> Result<Self> {
+        Ok(Self {
+            tag,
+            visibility,
+            sort,
+            since: parse_since(since)?,
+            long,
+        })
+    }
+}
+
 /// Parse a `--since` value: `<n>(m|h|d|w)` (minutes, hours,
 /// days, weeks), capped at about 100 years so the cutoff
 /// arithmetic cannot underflow.
@@ -486,7 +505,7 @@ fn apply_list_query(store: &Store, mut snippets: Vec<Snippet>, query: &ListQuery
         snippets.retain(|s| store.modified(&s.name).is_some_and(|m| m >= cutoff));
     }
     match query.sort {
-        Some(SortKey::Name) => snippets.sort_by(|a, b| a.name.cmp(&b.name)),
+        Some(SortKey::Name) => snippets.sort_by_key(|s| s.name.clone()),
         Some(SortKey::Recent) => {
             snippets.sort_by(|a, b| store.modified(&b.name).cmp(&store.modified(&a.name)));
         }
@@ -697,7 +716,7 @@ pub fn cmd_show(store: &Store, name: &str, json: bool) -> Result<i32> {
 /// and commands.
 pub fn cmd_search(store: &Store, query: &str, list_query: &ListQuery, json: bool) -> i32 {
     let q = query.to_lowercase();
-    let matched: Vec<Snippet> = store
+    let found: Vec<Snippet> = store
         .list()
         .into_iter()
         .filter(|s| {
@@ -709,7 +728,7 @@ pub fn cmd_search(store: &Store, query: &str, list_query: &ListQuery, json: bool
                     .any(|c| c.to_lowercase().contains(&q))
         })
         .collect();
-    let matches = apply_list_query(store, matched, list_query);
+    let matches = apply_list_query(store, found, list_query);
     if json {
         // Same schema as `list` (spec-cli §3), Peak B4: search
         // used to return a bare array with fewer keys.
@@ -905,6 +924,170 @@ pub fn cmd_delete(
 
 /// `fg edit <name>` - open in the editor; re-validate afterwards and
 /// restore the original when the edit breaks the file.
+/// The editor for `edit`/`new`: config first, then `$EDITOR`,
+/// then `$VISUAL`, then `vi`.
+fn resolve_editor(store: &Store) -> Result<String> {
+    let config = store.load_config()?;
+    Ok(config
+        .editor
+        .clone()
+        .or_else(|| std::env::var("EDITOR").ok())
+        .or_else(|| std::env::var("VISUAL").ok())
+        .unwrap_or_else(|| "vi".to_string()))
+}
+
+/// Run an editor on a file; a non-zero editor exit is an error.
+fn run_editor(editor: &str, path: &std::path::Path) -> Result<()> {
+    let status = std::process::Command::new(editor)
+        .arg(path)
+        .status()
+        .with_context(|| format!("running editor `{editor}`"))?;
+    if !status.success() {
+        return Err(
+            CliError::failure(format!("forgehub: editor `{editor}` exited with {status}")).into(),
+        );
+    }
+    Ok(())
+}
+
+/// The `fg new` templates: valid forge files as written, in
+/// steps mode (default) or script mode (`--script`).
+fn new_template(name: &str, script: bool) -> String {
+    if script {
+        format!(
+            "name: {name}\ndescription: \ntags: []\nmode: script\nshell: bash\nscript: |\n  echo \"hello from {name}\"\n"
+        )
+    } else {
+        format!("name: {name}\ndescription: \ntags: []\nsteps:\n  - echo \"hello from {name}\"\n")
+    }
+}
+
+/// Validate a freshly edited `fg new` file: it must parse, keep
+/// the requested name, and carry no secrets. The problem is
+/// returned as one line for the edit loop.
+fn validate_new(bytes: &[u8], name: &str) -> Result<Snippet, String> {
+    let snippet = Snippet::from_bytes(bytes).map_err(|e| format!("not a valid snippet: {e}"))?;
+    if snippet.name != name {
+        return Err(format!(
+            "the name field is `{}` - it must stay `{name}` (rename later with `fg rename`)",
+            snippet.name
+        ));
+    }
+    if let Some(f) = forge_core::scan::scan_snippet(&snippet).first() {
+        return Err(format!(
+            "possible secret on line {} ({}) - secrets are never saved; use a variable instead",
+            f.line,
+            f.kind.as_str()
+        ));
+    }
+    Ok(snippet)
+}
+
+/// `fg new <name> [--script]` - create a snippet from a
+/// template and open it in the editor (Peak B5). Validation
+/// errors loop back into the editor instead of losing the work;
+/// without a terminal the file is kept and the error reported.
+pub fn cmd_new(store: &Store, stdin: &mut impl BufRead, name: &str, script: bool) -> Result<i32> {
+    let path = store.path_for(name)?;
+    if path.exists() {
+        return Err(CliError::failure(format!(
+            "forgehub: `{name}` already exists\n  what: fg new creates a snippet from a template\n  fix: `fg edit {name}` to change it, or pick another name"
+        ))
+        .into());
+    }
+    std::fs::write(&path, new_template(name, script))
+        .with_context(|| format!("writing {}", path.display()))?;
+    let editor = resolve_editor(store)?;
+    loop {
+        if let Err(e) = run_editor(&editor, &path) {
+            eprintln!("forgehub: the template was kept at {}", path.display());
+            return Err(e);
+        }
+        let bytes = std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
+        match validate_new(&bytes, name) {
+            Ok(_) => {
+                println!("Created `{name}`.");
+                return Ok(0);
+            }
+            Err(problem) => {
+                eprintln!("forgehub: {problem}");
+                if !crate::prompt::stdin_is_tty() {
+                    eprintln!(
+                        "forgehub: the file was kept at {} - fix it there, or run `fg edit {name}`",
+                        path.display()
+                    );
+                    return Ok(1);
+                }
+                if !crate::prompt::ask_yes_no(stdin, "Reopen the editor to fix it?") {
+                    println!(
+                        "Kept {} as-is; it will not run until fixed.",
+                        path.display()
+                    );
+                    return Ok(1);
+                }
+            }
+        }
+    }
+}
+
+/// `fg lint <name>` - danger lints and the secret scan, without
+/// running anything (Peak B5). Exit 0 clean, 1 warnings only,
+/// 2 blocking findings (possible secrets).
+pub fn cmd_lint(store: &Store, name: &str, json: bool) -> Result<i32> {
+    let snippet = store.load(name)?;
+    let lints = forge_core::lint::lint_snippet(&snippet);
+    let secrets = forge_core::scan::scan_snippet(&snippet);
+    let code = if !secrets.is_empty() {
+        2
+    } else if !lints.is_empty() {
+        1
+    } else {
+        0
+    };
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "name": name,
+                "lints": lints
+                    .iter()
+                    .map(|w| serde_json::json!({"line": w.line, "message": w.kind.message()}))
+                    .collect::<Vec<_>>(),
+                "secrets": secrets
+                    .iter()
+                    .map(|f| serde_json::json!({"line": f.line, "kind": f.kind.as_str()}))
+                    .collect::<Vec<_>>(),
+                "verdict": match code {
+                    2 => "blocking",
+                    1 => "warnings",
+                    _ => "clean",
+                },
+            })
+        );
+        return Ok(code);
+    }
+    if code == 0 {
+        println!("`{name}` is clean: no lints, no possible secrets.");
+        return Ok(0);
+    }
+    for w in &lints {
+        println!("line {}: {}", w.line, w.kind.message());
+    }
+    for f in &secrets {
+        println!(
+            "line {}: possible secret ({}) - remove it or turn it into a variable",
+            f.line,
+            f.kind.as_str()
+        );
+    }
+    println!(
+        "{} blocking finding(s), {} warning(s)",
+        secrets.len(),
+        lints.len()
+    );
+    Ok(code)
+}
+
 pub fn cmd_edit(store: &Store, name: &str) -> Result<i32> {
     let path = store.path_for(name)?;
     if !path.exists() {
@@ -913,13 +1096,7 @@ pub fn cmd_edit(store: &Store, name: &str) -> Result<i32> {
         );
     }
     let original = std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
-    let config = store.load_config()?;
-    let editor = config
-        .editor
-        .clone()
-        .or_else(|| std::env::var("EDITOR").ok())
-        .or_else(|| std::env::var("VISUAL").ok())
-        .unwrap_or_else(|| "vi".to_string());
+    let editor = resolve_editor(store)?;
     let status = std::process::Command::new(&editor)
         .arg(&path)
         .status()
@@ -1006,6 +1183,19 @@ mod tests {
         let err = resolve_or_prompt(&s, &std::collections::BTreeMap::new(), &mut input, true)
             .unwrap_err();
         assert!(format!("{err}").contains("WHO"));
+    }
+
+    #[test]
+    fn new_templates_are_valid_and_keep_the_name() {
+        for script in [false, true] {
+            let text = new_template("my-tool", script);
+            let snippet = validate_new(text.as_bytes(), "my-tool").unwrap();
+            assert_eq!(snippet.name, "my-tool");
+        }
+        let renamed = new_template("my-tool", false).replace("my-tool", "other-name");
+        assert!(validate_new(renamed.as_bytes(), "my-tool").is_err());
+        let secret = "name: my-tool\nsteps:\n  - echo -----BEGIN OPENSSH PRIVATE KEY-----\n";
+        assert!(validate_new(secret.as_bytes(), "my-tool").is_err());
     }
 
     #[test]

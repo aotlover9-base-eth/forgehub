@@ -27,3 +27,7 @@
 ## 4. Next
 
 B5 - editing and authoring (`fg new`, cloud `fg edit`, `fg lint`).
+
+## Addendum (2026-11-22, after CI run 44969502861)
+
+The B4 head's CI failed the Rust job's Clippy step with six errors, all in B4-touched code: `similar_names` (`matched`/`matches` in `cmd_search`), `sort_by_key` (the name sort), `map_unwrap_or` x2 (the push visibility fallbacks), and `too_many_lines` x2 (`push_one` 102, `run_cli` 130). Fixes, all behaviour-preserving: `matched` renamed `found`; name sort via `sort_by_key`; a shared `outcome_visibility(preferred, fallback)` helper (requested value first for updates, server response first for creates - the original precedence in each arm); `push_baseline` and `version_conflict` extracted from `push_one` (94 code lines; the conflict message is byte-identical); `run_cli`'s match split into `dispatch_local`/`dispatch_author` following the existing dispatcher pattern, with `ListQuery::build` absorbing the duplicated query construction (Trust stays in `run_cli` because `TrustCommand` is not Clone). Because the sandbox fault prevents hunk-level commit splitting via local git, the fix-forward lands inside the B5 commit, disclosed here and in the B5 report; the B5 CI run is the verification for both.

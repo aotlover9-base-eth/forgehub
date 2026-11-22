@@ -244,6 +244,135 @@ fn checked_local(store: &Store, name: &str) -> Result<(forge_core::Snippet, Stri
     Ok((snippet, yaml))
 }
 
+/// `fg edit <owner/name>` (Peak B5): fetch the cloud snippet,
+/// materialise it locally together with its sync baseline, edit
+/// it through the local editor flow, then - after confirmation -
+/// push the result as a new version. Only the owner can edit;
+/// a divergent local copy is never overwritten.
+pub fn cmd_edit_cloud(
+    store: &Store,
+    stdin: &mut impl BufRead,
+    reference: &str,
+    yes: bool,
+    json: bool,
+) -> Result<i32> {
+    let sess = session(store, stdin, None)?;
+    let (owner, name) = parse_reference(reference, &sess.username);
+    if owner != sess.username {
+        return Err(CliError::failure(format!(
+            "forgehub: `{owner}/{name}` is not yours to edit\n  what: only the owner can publish new versions\n  fix: `fg fork {owner}/{name}` to make your own copy, then edit that"
+        ))
+        .into());
+    }
+    let remote = fetch_snippet(&sess, &owner, &name, None)?;
+    let body = remote["body"].as_str().unwrap_or_default().to_string();
+    let remote_hash = remote["hash"].as_str().unwrap_or_default().to_string();
+    let remote_version = remote["version"].as_i64().unwrap_or(0);
+    let snippet = forge_core::Snippet::from_yaml(&body).map_err(|e| {
+        CliError::failure(format!(
+            "forgehub: the fetched snippet is not a valid forge file\n  what: {e}\n  fix: nothing was saved; fix it on the web or report it"
+        ))
+    })?;
+    snippet.validate().map_err(|e| {
+        CliError::failure(format!(
+            "forgehub: the fetched snippet fails validation\n  what: {e}\n  fix: nothing was saved"
+        ))
+    })?;
+    if let Ok(local) = store.load(&name) {
+        if forge_core::hash::content_hash(&local) != remote_hash {
+            return Err(CliError::failure(format!(
+                "forgehub: local `{name}` differs from {owner}/{name} v{remote_version}\n  what: editing the cloud copy would overwrite your local changes\n  fix: `fg pull {owner}/{name} --force` to replace the local copy, or `fg edit {name}` to edit it locally and push afterwards"
+            ))
+            .into());
+        }
+    }
+    store.save(&snippet)?;
+    save_meta(
+        store,
+        &name,
+        &Meta {
+            registry: sess.registry.clone(),
+            owner: owner.clone(),
+            name: name.clone(),
+            version: remote_version,
+            hash: remote_hash.clone(),
+            visibility: Some(
+                remote["visibility"]
+                    .as_str()
+                    .unwrap_or("private")
+                    .to_string(),
+            ),
+        },
+    )?;
+    let code = crate::cmds::cmd_edit(store, &name)?;
+    if code != 0 {
+        return Ok(code);
+    }
+    let edited = store.load(&name).map_err(|_| {
+        CliError::failure(format!(
+            "forgehub: the edit renamed or removed `{name}`\n  what: a cloud edit cannot follow a rename\n  fix: the renamed copy is local only - push it with `fg push` under its new name if you want it published"
+        ))
+    })?;
+    if forge_core::hash::content_hash(&edited) == remote_hash {
+        println!("No changes to {owner}/{name}.");
+        return Ok(0);
+    }
+    if !yes {
+        if !prompt::stdin_is_tty() {
+            return Err(CliError::refused(format!(
+                "forgehub: edits to `{name}` are saved locally but were not pushed\n  what: there is no terminal to confirm the push on\n  fix: run `fg push {name}` to publish them as a new version"
+            ))
+            .into());
+        }
+        if !prompt::ask_yes_no(
+            stdin,
+            &format!(
+                "Push the edits as version {} of {owner}/{name}?",
+                remote_version + 1
+            ),
+        ) {
+            println!("Edits saved locally; not pushed. Run `fg push {name}` when ready.");
+            return Ok(2);
+        }
+    }
+    let outcome = push_one(store, &sess, &name, None, None, Some("Edited via fg edit"))?;
+    print_push_outcome(&sess.registry, &outcome, json);
+    Ok(0)
+}
+
+/// The visibility a push outcome records (Peak B4): the
+/// preferred value, then the fallback, then the private
+/// default. Callers pass whichever value is freshest first
+/// (the requested change for updates, the server's response
+/// for creates).
+fn outcome_visibility(preferred: Option<&str>, fallback: Option<&str>) -> String {
+    preferred
+        .map(ToString::to_string)
+        .or_else(|| fallback.map(ToString::to_string))
+        .unwrap_or_else(|| "private".to_string())
+}
+
+/// The sidecar baseline for a push: the sync record matching
+/// this registry, owner and remote name, if any.
+fn push_baseline(store: &Store, sess: &Session, name: &str, remote_name: &str) -> Option<Meta> {
+    load_meta(store, name).filter(|m| {
+        m.registry == sess.registry && m.owner == sess.username && m.name == remote_name
+    })
+}
+
+/// The no-baseline version-conflict error (see `push_one`).
+fn version_conflict(
+    sess: &Session,
+    name: &str,
+    remote_name: &str,
+    remote_version: i64,
+) -> CliError {
+    CliError::failure(format!(
+        "forgehub: version conflict\n  what: {}/{remote_name} already exists on the server (v{remote_version}) and this local copy has no sync baseline for it - pushing would silently overwrite someone else's version\n  fix: `fg diff {name}` to compare, `fg pull {remote_name} --as {name}` to fetch theirs first, or push under a new name with --as",
+        sess.username
+    ))
+}
+
 /// Push one local snippet. `remote_name` defaults to the local
 /// name; `visibility` of None keeps/uses the defaults (private for
 /// new, unchanged for existing).
@@ -286,12 +415,7 @@ pub fn push_one(
                     name: remote_name.clone(),
                     version: remote_version,
                     hash: remote_hash,
-                    visibility: visibility.map(ToString::to_string).unwrap_or_else(|| {
-                        remote["visibility"]
-                            .as_str()
-                            .unwrap_or("private")
-                            .to_string()
-                    }),
+                    visibility: outcome_visibility(visibility, remote["visibility"].as_str()),
                     status: PushStatus::Unchanged,
                 }
             } else {
@@ -301,15 +425,8 @@ pub fn push_one(
                 // since the sync, the server's 412 is the honest
                 // answer. Without a sidecar baseline there is no
                 // safe If-Match, so refuse and point at pull/diff.
-                let baseline = load_meta(store, name).filter(|m| {
-                    m.registry == sess.registry && m.owner == sess.username && m.name == remote_name
-                });
-                let Some(baseline) = baseline else {
-                    return Err(CliError::failure(format!(
-                        "forgehub: version conflict\n  what: {}/{remote_name} already exists on the server (v{remote_version}) and this local copy has no sync baseline for it - pushing would silently overwrite someone else's version\n  fix: `fg diff {name}` to compare, `fg pull {remote_name} --as {name}` to fetch theirs first, or push under a new name with --as",
-                        sess.username
-                    ))
-                    .into());
+                let Some(baseline) = push_baseline(store, sess, name, &remote_name) else {
+                    return Err(version_conflict(sess, name, &remote_name, remote_version).into());
                 };
                 let body = serde_json::json!({
                     "name": remote_name,
@@ -337,12 +454,7 @@ pub fn push_one(
                     name: remote_name.clone(),
                     version,
                     hash,
-                    visibility: visibility.map(ToString::to_string).unwrap_or_else(|| {
-                        remote["visibility"]
-                            .as_str()
-                            .unwrap_or("private")
-                            .to_string()
-                    }),
+                    visibility: outcome_visibility(visibility, remote["visibility"].as_str()),
                     status: if updated["unchanged"].as_bool() == Some(true) {
                         PushStatus::Unchanged
                     } else {
@@ -418,10 +530,7 @@ fn push_create(
         name: remote_name.to_string(),
         version: created["version"].as_i64().unwrap_or(1),
         hash: created["hash"].as_str().unwrap_or(local_hash).to_string(),
-        visibility: created["visibility"]
-            .as_str()
-            .unwrap_or("private")
-            .to_string(),
+        visibility: outcome_visibility(created["visibility"].as_str(), visibility),
         status: PushStatus::Created,
     })
 }

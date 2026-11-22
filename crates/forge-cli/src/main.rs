@@ -48,6 +48,8 @@ const KNOWN_COMMANDS: &[&str] = &[
     "rename",
     "delete",
     "edit",
+    "new",
+    "lint",
     "login",
     "logout",
     "whoami",
@@ -305,8 +307,30 @@ enum Command {
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
     },
+    /// Create a snippet from a template and open it in $EDITOR;
+    /// validation errors loop back into the editor.
+    #[command(after_help = "Examples:\n  fg new deploy
+  fg new deploy --script")]
+    New {
+        /// Name for the new snippet.
+        name: String,
+        /// Start from the script-mode template (default: steps).
+        #[arg(long)]
+        script: bool,
+    },
+    /// Lint a snippet (danger lints + secret scan) without
+    /// running anything. Exit 0 clean, 1 warnings, 2 blocking.
+    #[command(after_help = "Examples:\n  fg lint ubuntu-setup")]
+    Lint {
+        /// Snippet name.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
+        name: String,
+    },
     /// Edit a snippet in $EDITOR; invalid edits are rolled back.
-    #[command(after_help = "Examples:\n  fg edit ubuntu-setup")]
+    /// An `owner/name` reference edits your cloud snippet and
+    /// pushes the result as a new version after confirmation.
+    #[command(after_help = "Examples:\n  fg edit ubuntu-setup
+  fg edit alice/deploy")]
     Edit {
         /// Snippet name.
         #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
@@ -1116,27 +1140,52 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
     if let Some(result) = dispatch_manage(&cli, &store, stdin) {
         return result;
     }
+    if let Some(result) = dispatch_local(&cli, &store, stdin) {
+        return result;
+    }
+    if let Some(result) = dispatch_author(&cli, &store, stdin) {
+        return result;
+    }
     match cli.command {
-        Command::Init => cmds::cmd_init(&store, cli.json),
+        // Trust is matched here because its subcommand enum is
+        // not Clone, so it cannot ride the &Cli dispatchers.
+        Command::Trust { action, reference } => {
+            dispatch_trust(&store, stdin, action, reference, cli.json)
+        }
+        _ => unreachable!(
+            "handled by dispatch_cloud / dispatch_manage / dispatch_local / dispatch_author"
+        ),
+    }
+}
+
+/// Local read/run commands (split out of `run_cli` in Peak B4
+/// so every function stays inside the workspace line budget).
+fn dispatch_local(
+    cli: &Cli,
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+) -> Option<anyhow::Result<i32>> {
+    match &cli.command {
+        Command::Init => Some(cmds::cmd_init(store, cli.json)),
         Command::Record {
             name,
             description,
             tags,
             force,
             push,
-        } => dispatch_record(
-            &store,
+        } => Some(dispatch_record(
+            store,
             stdin,
             RecordArgs {
-                name,
-                description,
-                tags,
-                force,
-                push,
+                name: name.clone(),
+                description: description.clone(),
+                tags: tags.clone(),
+                force: *force,
+                push: *push,
                 yes: cli.yes,
                 json: cli.json,
             },
-        ),
+        )),
         Command::Run {
             name,
             dry_run,
@@ -1144,40 +1193,37 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
             no_cache,
             offline,
             assignments,
-        } => cmds::cmd_run(
-            &store,
+        } => Some(cmds::cmd_run(
+            store,
             stdin,
             &cmds::RunArgs {
-                name,
-                assignments,
+                name: name.clone(),
+                assignments: assignments.clone(),
                 yes: cli.yes,
-                dry_run,
+                dry_run: *dry_run,
                 json: cli.json,
-                step,
-                no_cache,
-                offline,
+                step: *step,
+                no_cache: *no_cache,
+                offline: *offline,
             },
-        ),
-        Command::Trust { action, reference } => {
-            dispatch_trust(&store, stdin, action, reference, cli.json)
-        }
+        )),
         Command::List {
             tag,
             visibility,
             sort,
             since,
             long,
-        } => {
-            let query = cmds::ListQuery {
-                tag,
-                visibility,
-                sort,
-                since: cmds::parse_since(since.as_deref())?,
-                long,
-            };
-            Ok(cmds::cmd_list(&store, &query, cli.json))
-        }
-        Command::Show { name } => cmds::cmd_show(&store, &name, cli.json),
+        } => Some(
+            cmds::ListQuery::build(
+                tag.clone(),
+                visibility.clone(),
+                *sort,
+                since.as_deref(),
+                *long,
+            )
+            .map(|q| cmds::cmd_list(store, &q, cli.json)),
+        ),
+        Command::Show { name } => Some(cmds::cmd_show(store, name, cli.json)),
         Command::Search {
             query,
             tag,
@@ -1185,58 +1231,60 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
             sort,
             since,
             long,
-        } => {
-            let list_query = cmds::ListQuery {
-                tag,
-                visibility,
-                sort,
-                since: cmds::parse_since(since.as_deref())?,
-                long,
-            };
-            Ok(cmds::cmd_search(&store, &query, &list_query, cli.json))
-        }
+        } => Some(
+            cmds::ListQuery::build(
+                tag.clone(),
+                visibility.clone(),
+                *sort,
+                since.as_deref(),
+                *long,
+            )
+            .map(|q| cmds::cmd_search(store, query, &q, cli.json)),
+        ),
         Command::Find {
             query,
             plain,
             limit,
-        } => Ok(cmds::cmd_find(&store, &query, plain, limit, cli.json)),
+        } => Some(Ok(cmds::cmd_find(store, query, *plain, *limit, cli.json))),
+        _ => None,
+    }
+}
+
+/// Local authoring commands (the other half of the `run_cli`
+/// split).
+fn dispatch_author(
+    cli: &Cli,
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+) -> Option<anyhow::Result<i32>> {
+    match &cli.command {
         Command::Tag { name, action, tags } => {
-            cmds::cmd_tag(&store, &name, &action, &tags, cli.json)
+            Some(cmds::cmd_tag(store, name, action, tags, cli.json))
         }
-        Command::Rename { old, new } => cmds::cmd_rename(&store, &old, &new, cli.json),
-        Command::Delete { name } => cmds::cmd_delete(&store, stdin, &name, cli.yes, cli.json),
-        Command::Edit { name } => cmds::cmd_edit(&store, &name),
+        Command::Rename { old, new } => Some(cmds::cmd_rename(store, old, new, cli.json)),
+        Command::Delete { name } => Some(cmds::cmd_delete(store, stdin, name, cli.yes, cli.json)),
+        Command::New { name, script } => Some(cmds::cmd_new(store, stdin, name, *script)),
+        Command::Lint { name } => Some(cmds::cmd_lint(store, name, cli.json)),
+        Command::Edit { name } => Some(if name.contains('/') {
+            sync::cmd_edit_cloud(store, stdin, name, cli.yes, cli.json)
+        } else {
+            cmds::cmd_edit(store, name)
+        }),
         Command::Parameterize {
             name,
             literals,
             as_names,
-        } => dispatch_parameterize(&store, stdin, &name, literals, as_names, cli.yes, cli.json),
-        Command::Clone { name, new } => parity::cmd_clone(&store, &name, &new, cli.json),
-        // Cloud and management commands never reach this match:
-        // dispatch_cloud / dispatch_manage handled them above.
-        Command::Login { .. }
-        | Command::Logout { .. }
-        | Command::Whoami { .. }
-        | Command::Push { .. }
-        | Command::Pull { .. }
-        | Command::Status { .. }
-        | Command::Diff { .. }
-        | Command::Fork { .. }
-        | Command::Remote { .. }
-        | Command::Import { .. }
-        | Command::Export { .. }
-        | Command::Analyze { .. }
-        | Command::Stats { .. }
-        | Command::Backup { .. }
-        | Command::Restore { .. }
-        | Command::Doctor { .. }
-        | Command::Alias { .. }
-        | Command::Ui
-        | Command::Cache { .. }
-        | Command::Update { .. }
-        | Command::Completions { .. } => {
-            unreachable!("handled by dispatch_cloud / dispatch_manage")
-        }
+        } => Some(dispatch_parameterize(
+            store,
+            stdin,
+            name,
+            literals.clone(),
+            as_names.clone(),
+            cli.yes,
+            cli.json,
+        )),
+        Command::Clone { name, new } => Some(parity::cmd_clone(store, name, new, cli.json)),
+        _ => None,
     }
 }
 
