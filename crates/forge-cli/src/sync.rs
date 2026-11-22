@@ -373,6 +373,39 @@ fn version_conflict(
     ))
 }
 
+/// What a push would do, without doing it (Peak B6 dry-run):
+/// the local validate + secret scan still run, and the remote
+/// check is a read-only GET. Actions: create / update /
+/// visibility / unchanged, with the resulting version.
+fn push_plan(
+    store: &Store,
+    sess: &Session,
+    name: &str,
+    remote_name: Option<&str>,
+    visibility: Option<&str>,
+) -> Result<(String, &'static str, i64)> {
+    let (snippet, _yaml) = checked_local(store, name)?;
+    let remote_name = remote_name.unwrap_or(name);
+    let local_hash = forge_core::hash::content_hash(&snippet);
+    let detail_path = format!("/snippets/{}/{}", sess.username, remote_name);
+    match sess.client.get(&detail_path, Some(&sess.entry.token)) {
+        Ok((_, remote, _)) => {
+            let remote_version = remote["version"].as_i64().unwrap_or(0);
+            if remote["hash"].as_str() == Some(local_hash.as_str()) {
+                if visibility.is_some() && visibility != remote["visibility"].as_str() {
+                    Ok((name.to_string(), "visibility", remote_version))
+                } else {
+                    Ok((name.to_string(), "unchanged", remote_version))
+                }
+            } else {
+                Ok((name.to_string(), "update", remote_version + 1))
+            }
+        }
+        Err(e) if e.status == 404 => Ok((name.to_string(), "create", 1)),
+        Err(e) => Err(api_fail(&e, &sess.entry.token).into()),
+    }
+}
+
 /// Push one local snippet. `remote_name` defaults to the local
 /// name; `visibility` of None keeps/uses the defaults (private for
 /// new, unchanged for existing).
@@ -580,8 +613,54 @@ pub fn cmd_push(
     as_name: Option<&str>,
     registry_flag: Option<&str>,
     json: bool,
+    dry_run: bool,
 ) -> Result<i32> {
     let sess = session(store, stdin, registry_flag)?;
+    if dry_run {
+        let names: Vec<String> = if all {
+            store.list().iter().map(|s| s.name.clone()).collect()
+        } else if let Some(n) = name {
+            vec![n.to_string()]
+        } else {
+            return Err(CliError::failure(
+                "forgehub: push needs a snippet name\n  what: no name was given\n  fix: fg push <name>, or fg push --all",
+            )
+            .into());
+        };
+        if names.is_empty() {
+            println!("No local snippets to push.");
+            return Ok(0);
+        }
+        let mut plan: Vec<(String, &'static str, i64)> = Vec::new();
+        for n in &names {
+            plan.push(push_plan(
+                store,
+                &sess,
+                n,
+                if all { None } else { as_name },
+                visibility,
+            )?);
+        }
+        if json {
+            let arr: Vec<Value> = plan
+                .iter()
+                .map(|(n, a, v)| serde_json::json!({"name": n, "action": a, "version": v}))
+                .collect();
+            println!("{}", serde_json::json!({"dry_run": true, "plan": arr}));
+        } else {
+            for (n, action, version) in &plan {
+                let label = match *action {
+                    "create" => format!("would create v{version}"),
+                    "update" => format!("would update to v{version}"),
+                    "visibility" => format!("would set visibility (stays v{version})"),
+                    _ => "unchanged".to_string(),
+                };
+                println!("{n:<24} {label}");
+            }
+            println!("Dry run: nothing was pushed.");
+        }
+        return Ok(0);
+    }
     if all {
         let names: Vec<String> = store.list().iter().map(|s| s.name.clone()).collect();
         if names.is_empty() {
@@ -676,21 +755,9 @@ pub fn cmd_pull(
 ) -> Result<i32> {
     let sess = session(store, stdin, registry_flag)?;
     let (owner, name) = parse_reference(reference, &sess.username);
-    let remote = fetch_snippet(&sess, &owner, &name, version)?;
-    let body = remote["body"].as_str().unwrap_or_default().to_string();
+    let (remote, snippet) = fetch_validated(&sess, &owner, &name, version)?;
     let remote_hash = remote["hash"].as_str().unwrap_or_default().to_string();
     let remote_version = remote["version"].as_i64().unwrap_or(0);
-    // The fetched text is untrusted until it parses and validates.
-    let snippet = forge_core::Snippet::from_yaml(&body).map_err(|e| {
-        CliError::failure(format!(
-            "forgehub: the fetched snippet is not a valid forge file\n  what: {e}\n  fix: nothing was saved; report the problem to the snippet's owner"
-        ))
-    })?;
-    snippet.validate().map_err(|e| {
-        CliError::failure(format!(
-            "forgehub: the fetched snippet fails validation\n  what: {e}\n  fix: nothing was saved"
-        ))
-    })?;
     let local_name = as_name.unwrap_or(&name).to_string();
     let overwriting = store.exists(&local_name);
     if overwriting && !force && !yes {
@@ -725,26 +792,7 @@ pub fn cmd_pull(
             return Ok(2);
         }
     }
-    let mut to_save = snippet;
-    to_save.name.clone_from(&local_name);
-    store.save(&to_save)?;
-    save_meta(
-        store,
-        &local_name,
-        &Meta {
-            registry: sess.registry.clone(),
-            owner: owner.clone(),
-            name: name.clone(),
-            version: remote_version,
-            hash: remote_hash.clone(),
-            visibility: Some(
-                remote["visibility"]
-                    .as_str()
-                    .unwrap_or("private")
-                    .to_string(),
-            ),
-        },
-    )?;
+    save_pulled(store, &sess, &owner, &name, &local_name, snippet, &remote)?;
     let url = web_url(&sess.registry, &owner, &name);
     if json {
         println!(
@@ -762,6 +810,299 @@ pub fn cmd_pull(
         let short = remote_hash.get(..8).unwrap_or(&remote_hash);
         println!("{owner}/{name} v{remote_version} sha256:{short} → saved as `{local_name}`");
         println!("  {url}");
+    }
+    Ok(0)
+}
+
+/// Fetch a remote snippet and validate it before it touches
+/// the disk: the fetched text is untrusted until it parses and
+/// validates. Shared by pull, pull --all and the cloud edit.
+fn fetch_validated(
+    sess: &Session,
+    owner: &str,
+    name: &str,
+    version: Option<i64>,
+) -> Result<(Value, forge_core::Snippet)> {
+    let remote = fetch_snippet(sess, owner, name, version)?;
+    let body = remote["body"].as_str().unwrap_or_default().to_string();
+    let snippet = forge_core::Snippet::from_yaml(&body).map_err(|e| {
+        CliError::failure(format!(
+            "forgehub: the fetched snippet is not a valid forge file\n  what: {e}\n  fix: nothing was saved; report the problem to the snippet's owner"
+        ))
+    })?;
+    snippet.validate().map_err(|e| {
+        CliError::failure(format!(
+            "forgehub: the fetched snippet fails validation\n  what: {e}\n  fix: nothing was saved"
+        ))
+    })?;
+    Ok((remote, snippet))
+}
+
+/// Save a fetched snippet locally under `local_name`, with its
+/// sync baseline sidecar.
+fn save_pulled(
+    store: &Store,
+    sess: &Session,
+    owner: &str,
+    name: &str,
+    local_name: &str,
+    snippet: forge_core::Snippet,
+    remote: &Value,
+) -> Result<()> {
+    let mut to_save = snippet;
+    to_save.name = local_name.to_string();
+    store.save(&to_save)?;
+    save_meta(
+        store,
+        local_name,
+        &Meta {
+            registry: sess.registry.clone(),
+            owner: owner.to_string(),
+            name: name.to_string(),
+            version: remote["version"].as_i64().unwrap_or(0),
+            hash: remote["hash"].as_str().unwrap_or_default().to_string(),
+            visibility: Some(
+                remote["visibility"]
+                    .as_str()
+                    .unwrap_or("private")
+                    .to_string(),
+            ),
+        },
+    )
+}
+
+/// How a `pull --all` candidate relates to its local copy.
+#[derive(Debug, PartialEq, Eq)]
+enum PullClass {
+    /// No local copy exists.
+    New,
+    /// Local copy is untouched since the last sync.
+    Update,
+    /// Local copy carries unsynced changes: overwriting loses work.
+    Risky,
+    /// Local and remote hashes already agree.
+    Unchanged,
+}
+
+/// Classify one pull candidate against its local copy.
+fn classify_pull(store: &Store, local_name: &str, remote_hash: &str) -> PullClass {
+    if !store.exists(local_name) {
+        return PullClass::New;
+    }
+    let Ok(local) = store.load(local_name) else {
+        return PullClass::Risky;
+    };
+    let local_hash = forge_core::hash::content_hash(&local);
+    if local_hash == remote_hash {
+        return PullClass::Unchanged;
+    }
+    match load_meta(store, local_name) {
+        Some(m) if m.hash == local_hash => PullClass::Update,
+        _ => PullClass::Risky,
+    }
+}
+
+/// One fetched `pull --all` candidate.
+struct PullItem {
+    owner: String,
+    name: String,
+    class: PullClass,
+    remote: Value,
+    snippet: forge_core::Snippet,
+}
+
+/// `fg pull --all [--dry-run]` (Peak B6): pull every tracked
+/// snippet plus remote-only ones of mine. Everything is fetched
+/// and classified before anything changes; local copies with
+/// unsynced changes need one shared confirmation (or --force).
+#[allow(clippy::too_many_arguments)]
+pub fn cmd_pull_all(
+    store: &Store,
+    stdin: &mut impl BufRead,
+    dry_run: bool,
+    force: bool,
+    yes: bool,
+    registry_flag: Option<&str>,
+    json: bool,
+) -> Result<i32> {
+    let sess = session(store, stdin, registry_flag)?;
+    let mut candidates: Vec<(String, String)> = Vec::new();
+    for snippet in store.list() {
+        let meta = load_meta(store, &snippet.name);
+        let (owner, rname) = match &meta {
+            Some(m) => (m.owner.clone(), m.name.clone()),
+            None => (sess.username.clone(), snippet.name.clone()),
+        };
+        candidates.push((owner, rname));
+    }
+    let tracked: Vec<String> = candidates.iter().map(|(_, n)| n.clone()).collect();
+    let mine = get_all_pages(&sess, "/me/snippets?limit=100&sort=name")?;
+    for s in &mine {
+        let rname = s["name"].as_str().unwrap_or_default().to_string();
+        if !tracked.contains(&rname) && !store.exists(&rname) {
+            candidates.push((sess.username.clone(), rname));
+        }
+    }
+    let mut items: Vec<PullItem> = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+    for (owner, name) in &candidates {
+        match fetch_validated(&sess, owner, name, None) {
+            Ok((remote, snippet)) => {
+                let class = classify_pull(store, name, remote["hash"].as_str().unwrap_or_default());
+                items.push(PullItem {
+                    owner: owner.clone(),
+                    name: name.clone(),
+                    class,
+                    remote,
+                    snippet,
+                });
+            }
+            Err(e) => errors.push(format!("{owner}/{name}: {e:#}")),
+        }
+    }
+    let names_of = |class: &PullClass| -> Vec<String> {
+        items
+            .iter()
+            .filter(|i| &i.class == class)
+            .map(|i| i.name.clone())
+            .collect()
+    };
+    if dry_run {
+        if json {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "dry_run": true,
+                    "new": names_of(&PullClass::New),
+                    "update": names_of(&PullClass::Update),
+                    "risky": names_of(&PullClass::Risky),
+                    "unchanged": names_of(&PullClass::Unchanged),
+                    "errors": errors,
+                })
+            );
+        } else {
+            for i in &items {
+                let label = match i.class {
+                    PullClass::New => "would pull (new)",
+                    PullClass::Update => "would pull (update)",
+                    PullClass::Risky => "would OVERWRITE unsynced local changes",
+                    PullClass::Unchanged => "unchanged",
+                };
+                println!("{:<24} {}", i.name, label);
+            }
+            println!(
+                "Dry run: {} to pull, {} risky, {} unchanged, {} error(s). Nothing was changed.",
+                names_of(&PullClass::New).len() + names_of(&PullClass::Update).len(),
+                names_of(&PullClass::Risky).len(),
+                names_of(&PullClass::Unchanged).len(),
+                errors.len()
+            );
+        }
+        return Ok(if errors.is_empty() { 0 } else { 1 });
+    }
+    let risky = names_of(&PullClass::Risky);
+    let mut overwrite_ok = force || yes;
+    if !risky.is_empty() && !overwrite_ok {
+        println!(
+            "These local snippets have changes that were never pushed: {}",
+            risky.join(", ")
+        );
+        if prompt::stdin_is_tty() {
+            overwrite_ok = prompt::ask_yes_no(stdin, "Overwrite them with the cloud versions?");
+        }
+        if !overwrite_ok {
+            println!("Skipping them; everything else still pulls.");
+        }
+    }
+    let unchanged = names_of(&PullClass::Unchanged);
+    let mut pulled: Vec<String> = Vec::new();
+    for item in items {
+        let take = match item.class {
+            PullClass::New | PullClass::Update => true,
+            PullClass::Risky => overwrite_ok,
+            PullClass::Unchanged => false,
+        };
+        if take {
+            save_pulled(
+                store,
+                &sess,
+                &item.owner,
+                &item.name,
+                &item.name,
+                item.snippet,
+                &item.remote,
+            )?;
+            println!(
+                "{}/{} v{} -> saved as `{}`",
+                item.owner,
+                item.name,
+                item.remote["version"].as_i64().unwrap_or(0),
+                item.name
+            );
+            pulled.push(item.name);
+        }
+    }
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "pulled": pulled,
+                "unchanged": unchanged,
+                "skipped_risky": if overwrite_ok { Vec::new() } else { risky },
+                "errors": errors,
+            })
+        );
+    } else {
+        println!(
+            "Pulled {} · unchanged {} · skipped {} · errors {}",
+            pulled.len(),
+            unchanged.len(),
+            if overwrite_ok { 0 } else { risky.len() },
+            errors.len()
+        );
+        for e in &errors {
+            eprintln!("forgehub: {e}");
+        }
+    }
+    Ok(if errors.is_empty() { 0 } else { 1 })
+}
+
+/// `fg pull <ref> --dry-run` (Peak B6): show what a pull would
+/// do and save nothing.
+pub fn cmd_pull_dry_run(
+    store: &Store,
+    stdin: &mut impl BufRead,
+    reference: &str,
+    registry_flag: Option<&str>,
+    json: bool,
+) -> Result<i32> {
+    let sess = session(store, stdin, registry_flag)?;
+    let (owner, name) = parse_reference(reference, &sess.username);
+    let (remote, _snippet) = fetch_validated(&sess, &owner, &name, None)?;
+    let class = classify_pull(store, &name, remote["hash"].as_str().unwrap_or_default());
+    let (machine, label) = match class {
+        PullClass::New => ("new", "would pull (new)"),
+        PullClass::Update => ("update", "would pull (update)"),
+        PullClass::Risky => ("risky", "would OVERWRITE unsynced local changes"),
+        PullClass::Unchanged => ("unchanged", "unchanged"),
+    };
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "dry_run": true,
+                "owner": owner,
+                "name": name,
+                "version": remote["version"],
+                "action": machine,
+            })
+        );
+    } else {
+        println!(
+            "{owner}/{name} v{}: {label}",
+            remote["version"].as_i64().unwrap_or(0)
+        );
+        println!("Dry run: nothing was saved.");
     }
     Ok(0)
 }
@@ -798,6 +1139,19 @@ impl SyncState {
             SyncState::Diverged => "diverged",
             SyncState::LocalOnly => "local-only",
             SyncState::RemoteOnly => "remote-only",
+        }
+    }
+
+    /// The exact next command for this state (Peak B6), or None
+    /// when there is nothing to do. `name` is the local name
+    /// (the remote name for remote-only rows).
+    #[must_use]
+    pub fn next_command(&self, owner: &str, name: &str) -> Option<String> {
+        match self {
+            SyncState::Unchanged => None,
+            SyncState::Ahead | SyncState::LocalOnly => Some(format!("fg push {name}")),
+            SyncState::Behind | SyncState::RemoteOnly => Some(format!("fg pull {owner}/{name}")),
+            SyncState::Diverged => Some(format!("fg diff {name}")),
         }
     }
 }
@@ -939,6 +1293,7 @@ pub fn cmd_status(
                     "state": r.state.label(),
                     "local_version": r.local_version,
                     "remote_version": r.remote_version,
+                    "next": r.state.next_command(&r.owner, &r.name),
                 })
             })
             .collect();
@@ -951,8 +1306,12 @@ pub fn cmd_status(
     }
     let width = rows.iter().map(|r| r.name.len()).max().unwrap_or(0);
     for r in &rows {
+        let next = r
+            .state
+            .next_command(&r.owner, &r.name)
+            .map_or_else(String::new, |n| format!("  next: {n}"));
         println!(
-            "{:<width$}  {:<11} (local v{}, remote v{})",
+            "{:<width$}  {:<11} (local v{}, remote v{}){next}",
             r.name,
             r.state.label(),
             r.local_version
@@ -962,6 +1321,35 @@ pub fn cmd_status(
         );
     }
     Ok(0)
+}
+
+/// Render a unified diff with the web DiffView's gutter
+/// discipline (Peak B6): additions and deletions are told apart
+/// by the gutter symbol AND colour - never colour alone - the
+/// sign moves into the gutter, hunk headers are accented, and
+/// every line is display-escaped first (the diff text is
+/// untrusted; Step 19, T-EXEC-3).
+pub fn render_diff(unified: &str, style: crate::output::Style) -> Vec<String> {
+    unified
+        .lines()
+        .map(|line| {
+            let line = escape_display(line);
+            if line.starts_with('+') && !line.starts_with("+++") {
+                style.success(&format!("+ {}", &line[1..]))
+            } else if line.starts_with('-') && !line.starts_with("---") {
+                let gutter = if style.unicode { "\u{2212}" } else { "-" };
+                style.error(&format!("{gutter} {}", &line[1..]))
+            } else if line.starts_with("@@") {
+                style.accent(&line)
+            } else {
+                // Context: the leading space is the diff's
+                // context marker; strip it like the signs so all
+                // text aligns at the gutter column.
+                let text = line.strip_prefix(' ').unwrap_or(&line);
+                format!("  {text}")
+            }
+        })
+        .collect()
 }
 
 /// `fg diff <name>` - unified diff, local vs remote latest.
@@ -1011,12 +1399,11 @@ pub fn cmd_diff(
     {
         println!("{owner}/{remote_name} and local `{name}` are identical.");
     } else {
-        // Human output escapes every line: the remote body is
-        // untrusted text and a raw diff would let ANSI escapes
-        // hide lines in the terminal (Step 19, T-EXEC-3). The
+        // Human output goes through render_diff, which escapes
+        // every line before painting it (Step 19, T-EXEC-3). The
         // --json form above is safe by JSON encoding.
-        for line in unified.lines() {
-            println!("{}", escape_display(line));
+        for line in render_diff(&unified, crate::output::style()) {
+            println!("{line}");
         }
     }
     Ok(0)
@@ -1489,6 +1876,53 @@ pub fn cmd_star(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn next_command_per_state() {
+        assert_eq!(SyncState::Unchanged.next_command("alice", "tool"), None);
+        assert_eq!(
+            SyncState::Ahead.next_command("alice", "tool"),
+            Some("fg push tool".to_string())
+        );
+        assert_eq!(
+            SyncState::LocalOnly.next_command("alice", "tool"),
+            Some("fg push tool".to_string())
+        );
+        assert_eq!(
+            SyncState::Behind.next_command("alice", "tool"),
+            Some("fg pull alice/tool".to_string())
+        );
+        assert_eq!(
+            SyncState::RemoteOnly.next_command("alice", "tool"),
+            Some("fg pull alice/tool".to_string())
+        );
+        assert_eq!(
+            SyncState::Diverged.next_command("alice", "tool"),
+            Some("fg diff tool".to_string())
+        );
+    }
+
+    #[test]
+    fn render_diff_uses_the_web_gutter_discipline() {
+        let unified = "--- a\n+++ b\n@@ -1,2 +1,2 @@\n-old line\n+new line\n context";
+        let lines = render_diff(unified, crate::output::Style::PLAIN);
+        assert_eq!(lines[0], "  --- a");
+        assert_eq!(lines[1], "  +++ b");
+        assert_eq!(lines[2], "@@ -1,2 +1,2 @@");
+        assert_eq!(lines[3], "- old line");
+        assert_eq!(lines[4], "+ new line");
+        assert_eq!(lines[5], "  context");
+        // Unicode style swaps the deletion gutter to U+2212,
+        // matching the web DiffView exactly.
+        let uni = render_diff(
+            unified,
+            crate::output::Style {
+                color: false,
+                unicode: true,
+            },
+        );
+        assert_eq!(uni[3], "\u{2212} old line");
+    }
 
     #[test]
     fn reference_parsing() {

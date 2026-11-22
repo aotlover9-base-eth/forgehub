@@ -477,6 +477,9 @@ enum Command {
         /// Push every local snippet and print a summary.
         #[arg(long)]
         all: bool,
+        /// Show what would be pushed; change nothing.
+        #[arg(long)]
+        dry_run: bool,
         /// Make the snippet public.
         #[arg(long, conflicts_with_all = ["unlisted", "private"])]
         public: bool,
@@ -501,13 +504,20 @@ enum Command {
   fg pull ubuntu-setup --force")]
     Pull {
         /// `owner/name`, or a bare name for your own snippet.
-        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
-        reference: String,
+        /// Required unless --all is given.
+        #[arg(required_unless_present = "all", add = ArgValueCompleter::new(complete_snippet_name))]
+        reference: Option<String>,
+        /// Pull every tracked snippet plus remote-only ones.
+        #[arg(long)]
+        all: bool,
+        /// Show what would be pulled; change nothing.
+        #[arg(long)]
+        dry_run: bool,
         /// Save under a different local name.
-        #[arg(long = "as")]
+        #[arg(long = "as", conflicts_with = "all")]
         as_name: Option<String>,
         /// Pull a specific version instead of the latest.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "all")]
         version: Option<i64>,
         /// Overwrite an existing local snippet without asking.
         #[arg(long)]
@@ -841,6 +851,7 @@ fn dispatch_cloud(
         Command::Push {
             name,
             all,
+            dry_run,
             public,
             unlisted,
             private,
@@ -867,25 +878,53 @@ fn dispatch_cloud(
                 as_name.as_deref(),
                 registry.as_deref(),
                 json,
+                *dry_run,
             )
         }
         Command::Pull {
             reference,
+            all,
+            dry_run,
             as_name,
             version,
             force,
             registry,
-        } => sync::cmd_pull(
-            store,
-            stdin,
-            reference,
-            as_name.as_deref(),
-            *version,
-            *force,
-            yes,
-            registry.as_deref(),
-            json,
-        ),
+        } => {
+            if *all {
+                sync::cmd_pull_all(
+                    store,
+                    stdin,
+                    *dry_run,
+                    *force,
+                    yes,
+                    registry.as_deref(),
+                    json,
+                )
+            } else if *dry_run {
+                // A single pull already shows the snippet and
+                // asks before overwriting; --dry-run means: show
+                // the plan, save nothing.
+                let Some(reference) = reference else {
+                    unreachable!("clap: reference is required unless --all")
+                };
+                sync::cmd_pull_dry_run(store, stdin, reference, registry.as_deref(), json)
+            } else {
+                let Some(reference) = reference else {
+                    unreachable!("clap: reference is required unless --all")
+                };
+                sync::cmd_pull(
+                    store,
+                    stdin,
+                    reference,
+                    as_name.as_deref(),
+                    *version,
+                    *force,
+                    yes,
+                    registry.as_deref(),
+                    json,
+                )
+            }
+        }
         Command::Status { name, registry } => {
             sync::cmd_status(store, stdin, name.as_deref(), registry.as_deref(), json)
         }
@@ -955,6 +994,7 @@ fn dispatch_ui(
                 None,
                 None,
                 json,
+                false,
             )
         }
         tui::Action::Pull(item) => sync::cmd_pull(

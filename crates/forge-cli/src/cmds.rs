@@ -507,7 +507,7 @@ fn apply_list_query(store: &Store, mut snippets: Vec<Snippet>, query: &ListQuery
     match query.sort {
         Some(SortKey::Name) => snippets.sort_by_key(|s| s.name.clone()),
         Some(SortKey::Recent) => {
-            snippets.sort_by(|a, b| store.modified(&b.name).cmp(&store.modified(&a.name)));
+            snippets.sort_by_key(|s| std::cmp::Reverse(store.modified(&s.name)));
         }
         None => {}
     }
@@ -1039,10 +1039,8 @@ pub fn cmd_lint(store: &Store, name: &str, json: bool) -> Result<i32> {
     let secrets = forge_core::scan::scan_snippet(&snippet);
     let code = if !secrets.is_empty() {
         2
-    } else if !lints.is_empty() {
-        1
     } else {
-        0
+        i32::from(!lints.is_empty())
     };
     if json {
         println!(

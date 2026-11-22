@@ -344,12 +344,12 @@ pub fn render_card(fetched: &Fetched, own: bool, changed: bool, diff: Option<&st
             "  ⚠ This snippet CHANGED since you last ran it. Review the diff below carefully.\n",
         );
         if let Some(diff) = diff {
-            for line in diff.lines() {
-                // The diff is attacker-controlled text at the
-                // most security-critical display in the product:
-                // escape it like every other command line
-                // (Step 19, T-EXEC-3).
-                let _ = writeln!(out, "  {}", escape_display(line));
+            // The diff is attacker-controlled text at the most
+            // security-critical display in the product:
+            // render_diff escapes every line before the gutter
+            // is added (Step 19, T-EXEC-3; gutter parity Peak B6).
+            for line in crate::sync::render_diff(diff, crate::output::Style::PLAIN) {
+                let _ = writeln!(out, "  {line}");
             }
         }
     }

@@ -24,3 +24,7 @@
 ## 4. Next
 
 B6 - sync and status quality.
+
+## Addendum (2026-11-22, after CI run 44970331789)
+
+The B5 head's CI failed the Rust Clippy step with two errors: `sort_by_key` (the `--sort recent` comparator, B4 code) and `bool_to_int_with_if` (`cmd_lint`'s exit code). Both fixed behaviour-preservingly in the B6 commit (disclosed in its report, section 4); the B6 CI run is the verification for both.
