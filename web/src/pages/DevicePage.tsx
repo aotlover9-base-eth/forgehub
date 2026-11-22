@@ -3,6 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, ErrorState, Icon, PageHeader, Skeleton, TextField } from '../design';
 import { ApiError } from '../api/client';
 import { useDeviceDecision, useDeviceLookup, useMe } from '../api/hooks';
+import { m } from '../i18n/messages';
 
 /**
  * The CLI login approval page - security-critical. It never
@@ -48,23 +49,22 @@ export default function DevicePage() {
 
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 'var(--fh-space-4)' }}>
-      <PageHeader title="Sign in a CLI" subtitle="A ForgeHub CLI is asking to sign in as you." />
+      <PageHeader title={m.device.title} subtitle={m.device.subtitle} />
       {outcome === 'approved' ? (
         <Card variant="filled">
           <p style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', margin: 0 }}>
-            <Icon name="check" /> Approved. You can close this tab - the CLI is signed in now.
+            <Icon name="check" /> {m.device.approved}
           </p>
         </Card>
       ) : outcome === 'denied' ? (
         <Card variant="filled">
           <p style={{ margin: 0 }}>
-            Denied. The CLI will not be signed in. If this was not you, your account is still safe -
-            nothing was granted.
+            {m.device.denied}
           </p>
         </Card>
       ) : !submittedCode ? (
         <Card variant="outlined">
-          <p>Enter the code the CLI is showing you:</p>
+          <p>{m.device.enterCode}</p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -72,9 +72,9 @@ export default function DevicePage() {
             }}
             style={{ display: 'grid', gap: 'var(--fh-space-3)' }}
           >
-            <TextField label="Device code" value={code} onChange={(v) => setCode(v.toUpperCase())} required />
+            <TextField label={m.device.codeLabel} value={code} onChange={(v) => setCode(v.toUpperCase())} required />
             <Button variant="filled" type="submit" disabled={code.trim().length < 8}>
-              Continue
+              {m.device.continue}
             </Button>
           </form>
         </Card>
@@ -84,13 +84,13 @@ export default function DevicePage() {
         </Card>
       ) : lookup.isError || !lookup.data ? (
         <ErrorState
-          title="That code does not work"
+          title={m.device.badCodeTitle}
           message={
             lookup.error instanceof ApiError && lookup.error.status === 429
               ? lookup.error.uiMessage
-              : 'The code is wrong, expired, or already used. Check the CLI and try the code it shows now.'
+              : m.device.badCodeMessage
           }
-          retryLabel="Enter a different code"
+          retryLabel={m.device.differentCode}
           onRetry={() => {
             setSubmittedCode(null);
             setCode('');
@@ -99,34 +99,32 @@ export default function DevicePage() {
       ) : (
         <Card variant="outlined">
           <p style={{ marginTop: 0 }}>
-            <strong>{lookup.data.client_name}</strong> is asking to sign in.
+            <strong>{lookup.data.client_name}</strong> {m.device.askingAfter}
           </p>
           <p>
-            Approving creates a CLI token that can <strong>read and write your snippets</strong> -
-            the same access as <code>fg push</code> and <code>fg pull</code>. You can revoke it any
-            time in Settings → Tokens.
+            {m.device.accessBefore} <strong>{m.device.accessStrong}</strong> {m.device.accessMiddle} <code>fg push</code> {m.device.accessAnd} <code>fg pull</code>{m.device.accessAfter}
           </p>
           <p style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-            Code <code>{submittedCode}</code> · expires{' '}
+            {m.device.codeWord} <code>{submittedCode}</code> · {m.device.expiresWord}{' '}
             {new Date(lookup.data.expires_at).toLocaleTimeString()}
           </p>
           {decision.isError ? (
             <p role="alert" style={{ color: 'var(--md-sys-color-error)' }}>
-              {decision.error instanceof ApiError ? decision.error.uiMessage : 'Something went wrong.'}
+              {decision.error instanceof ApiError ? decision.error.uiMessage : m.common.somethingWrongShort}
             </p>
           ) : null}
           <p style={{ display: 'flex', gap: 'var(--fh-space-2)', margin: 0 }}>
             <Button variant="filled" onClick={() => decide(true)} disabled={decision.isPending}>
-              Approve
+              {m.device.approve}
             </Button>
             <Button variant="outlined" onClick={() => decide(false)} disabled={decision.isPending}>
-              Deny
+              {m.device.deny}
             </Button>
           </p>
         </Card>
       )}
       <p style={{ color: 'var(--md-sys-color-on-surface-variant)', display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
-        <Icon name="shield" /> Only approve a code you just requested from your own terminal.
+        <Icon name="shield" /> {m.device.onlyYours}
       </p>
     </div>
   );

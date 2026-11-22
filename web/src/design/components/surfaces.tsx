@@ -1,3 +1,4 @@
+import { m } from '../../i18n/messages';
 import { useState, type ReactNode } from 'react';
 import { Button, Icon, IconButton } from './core';
 
@@ -89,7 +90,7 @@ export function CodeBlock({
     <div className="fh-codeblock">
       <div className="fh-codeblock__bar">
         <span className="fh-codeblock__label">{label}</span>
-        <IconButton icon={copied ? 'check' : 'content_copy'} label="Copy code" onClick={copy} />
+        <IconButton icon={copied ? 'check' : 'content_copy'} label={m.design.copyCode} onClick={copy} />
       </div>
       <pre className="fh-codeblock__pre">
         {lines.map((line, i) => (

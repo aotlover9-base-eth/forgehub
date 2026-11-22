@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, IconButton, PageHeader, TextField, useToast } from '../design';
 import { ApiError } from '../api/client';
+import { m } from '../i18n/messages';
 import { useLogin } from '../api/hooks';
 
 export default function LoginPage() {
@@ -21,7 +22,7 @@ export default function LoginPage() {
       { identifier: identifier.trim(), password },
       {
         onSuccess: () => {
-          toast({ message: 'Welcome back' });
+          toast({ message: m.auth.loginWelcomeToast });
           navigate(params.get('return') || '/home', { replace: true });
         },
         onError: (error) => {
@@ -30,7 +31,7 @@ export default function LoginPage() {
           setFormError(
             error instanceof ApiError && error.status === 429
               ? error.uiMessage
-              : 'Email, username or password did not match. Check them and try again.',
+              : m.auth.loginFailed,
           );
         },
       },
@@ -39,11 +40,11 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 440, margin: '0 auto' }}>
-      <PageHeader title="Log in" subtitle="Welcome back to ForgeHub." />
+      <PageHeader title={m.auth.loginTitle} subtitle={m.auth.loginSubtitle} />
       <Card variant="outlined">
         <form onSubmit={submit} style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
           <TextField
-            label="Email or username"
+            label={m.auth.loginIdentifier}
             value={identifier}
             onChange={setIdentifier}
             autoComplete="username"
@@ -52,7 +53,7 @@ export default function LoginPage() {
           <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Password"
+                label={m.common.password}
                 value={password}
                 onChange={setPassword}
                 type={showPassword ? 'text' : 'password'}
@@ -62,7 +63,7 @@ export default function LoginPage() {
             </div>
             <IconButton
               icon={showPassword ? 'visibility_off' : 'visibility'}
-              label={showPassword ? 'Hide password' : 'Show password'}
+              label={showPassword ? m.common.hidePassword : m.common.showPassword}
               onClick={() => setShowPassword(!showPassword)}
             />
           </div>
@@ -72,15 +73,15 @@ export default function LoginPage() {
             </p>
           ) : null}
           <Button variant="filled" type="submit" disabled={login.isPending || !identifier || !password}>
-            {login.isPending ? 'Logging in…' : 'Log in'}
+            {login.isPending ? m.auth.loginPending : m.auth.loginSubmit}
           </Button>
         </form>
       </Card>
       <p>
-        <Link to="/forgot-password">Forgot your password?</Link>
+        <Link to="/forgot-password">{m.auth.loginForgotLink}</Link>
       </p>
       <p>
-        New to ForgeHub? <Link to="/signup">Create an account</Link>
+        {m.auth.loginNewTo} <Link to="/signup">{m.auth.loginCreateLink}</Link>
       </p>
     </div>
   );

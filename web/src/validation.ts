@@ -5,6 +5,8 @@
  * gets feedback while typing, not after submitting.
  */
 
+import { fmt, m } from './i18n/messages';
+
 // Kept in sync with RESERVED_WORDS in crates/forge-core/src/names.rs.
 export const RESERVED_USERNAMES = new Set(
   'run init record login logout whoami push pull fork status diff list show search tag rename clone delete edit import export analyze parameterize stats backup restore doctor alias completions ui cache update trust remote help version config me api admin settings explore new device signup static assets health tokens users snippets'.split(
@@ -14,27 +16,27 @@ export const RESERVED_USERNAMES = new Set(
 
 export function usernameIssue(username: string): string | null {
   if (username.length === 0) return null; // no nagging before typing
-  if (username.length < 2) return 'At least 2 characters.';
-  if (username.length > 39) return 'At most 39 characters.';
-  if (!/^[a-z0-9-]+$/.test(username)) return 'Lowercase letters, digits and hyphens only.';
-  if (!/^[a-z0-9]/.test(username)) return 'Must start with a letter or digit.';
-  if (username.endsWith('-')) return 'Cannot end with a hyphen.';
-  if (username.includes('--')) return 'No consecutive hyphens.';
-  if (RESERVED_USERNAMES.has(username)) return 'That name is reserved.';
+  if (username.length < 2) return m.validation.atLeast2;
+  if (username.length > 39) return m.validation.atMost39;
+  if (!/^[a-z0-9-]+$/.test(username)) return m.validation.lowercaseDigitsHyphens;
+  if (!/^[a-z0-9]/.test(username)) return m.validation.startLetterOrDigit;
+  if (username.endsWith('-')) return m.validation.noEndHyphen;
+  if (username.includes('--')) return m.validation.noDoubleHyphen;
+  if (RESERVED_USERNAMES.has(username)) return m.validation.nameReserved;
   return null;
 }
 
 export function passwordIssue(password: string, username: string): string | null {
   if (password.length === 0) return null;
-  if (password.length < 10) return 'At least 10 characters.';
-  if (password.length > 256) return 'At most 256 characters.';
-  if (username && password === username) return 'Password cannot be your username.';
+  if (password.length < 10) return m.validation.atLeast10;
+  if (password.length > 256) return m.validation.atMost256;
+  if (username && password === username) return m.validation.passwordNotUsername;
   return null;
 }
 
 export function emailIssue(email: string): string | null {
   if (email.length === 0) return null;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'That does not look like an email address.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return m.validation.emailInvalid;
   return null;
 }
 
@@ -43,9 +45,9 @@ export function emailIssue(email: string): string | null {
  * not a reserved word. */
 export function snippetNameIssue(name: string): string | null {
   if (name.length === 0) return null;
-  if (name.length > 64) return 'At most 64 characters.';
-  if (!/^[a-z0-9]/.test(name)) return 'Must start with a lowercase letter or digit.';
-  if (!/^[a-z0-9._-]+$/.test(name)) return 'Lowercase letters, digits, dots, underscores and hyphens only.';
+  if (name.length > 64) return m.validation.atMost64;
+  if (!/^[a-z0-9]/.test(name)) return m.validation.startLowercaseOrDigit;
+  if (!/^[a-z0-9._-]+$/.test(name)) return m.validation.snippetChars;
   if (RESERVED_USERNAMES.has(name)) return 'That name is reserved.';
   return null;
 }
@@ -54,9 +56,9 @@ export function snippetNameIssue(name: string): string | null {
  * [a-z0-9._-] after the first char, at most 50 chars. */
 export function tagIssue(tag: string): string | null {
   const t = tag.trim().toLowerCase();
-  if (t.length === 0) return 'Tag cannot be empty.';
-  if (t.length > 50) return 'At most 50 characters.';
-  if (!/^[a-z0-9]/.test(t)) return 'Tags start with a lowercase letter or digit.';
+  if (t.length === 0) return m.validation.tagEmpty;
+  if (t.length > 50) return m.validation.atMost50;
+  if (!/^[a-z0-9]/.test(t)) return m.validation.tagStart;
   if (!/^[a-z0-9._-]+$/.test(t)) return 'Lowercase letters, digits, dots, underscores and hyphens only.';
   return null;
 }
@@ -65,12 +67,12 @@ export function tagIssue(tag: string): string | null {
  * in a title attribute at the call site. */
 export function relativeTime(iso: string, now = Date.now()): string {
   const seconds = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000));
-  if (seconds < 60) return 'just now';
+  if (seconds < 60) return m.validation.justNow;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return fmt(m.validation.minutesAgo, { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return fmt(m.validation.hoursAgo, { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return fmt(m.validation.daysAgo, { count: days });
   return new Date(iso).toLocaleDateString();
 }

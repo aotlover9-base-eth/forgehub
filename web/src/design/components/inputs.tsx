@@ -1,3 +1,4 @@
+import { m } from '../../i18n/messages';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { Icon, IconButton } from './core';
 
@@ -66,8 +67,8 @@ export function SearchBar({
   value,
   onChange,
   onSubmit,
-  placeholder = 'Search',
-  ariaLabel = 'Search',
+  placeholder = m.design.search,
+  ariaLabel = m.design.search,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -94,7 +95,7 @@ export function SearchBar({
         type="search"
       />
       {value ? (
-        <IconButton icon="close" label="Clear search" onClick={() => onChange('')} />
+        <IconButton icon="close" label={m.design.clearSearch} onClick={() => onChange('')} />
       ) : null}
     </form>
   );

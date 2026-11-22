@@ -1,3 +1,4 @@
+import { m } from '../../i18n/messages';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Button } from './core';
 import { ToastContext, type ToastRequest } from './toast';
@@ -34,7 +35,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               {toast.actionLabel}
             </button>
           ) : null}
-          <button className="fh-toast__close" aria-label="Dismiss" onClick={() => setToast(null)}>
+          <button className="fh-toast__close" aria-label={m.design.dismiss} onClick={() => setToast(null)}>
             ×
           </button>
         </div>
@@ -47,7 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
  * (optionally danger-styled, optionally disabled). */
 export function DialogActions({
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel = m.common.cancel,
   danger = false,
   confirmDisabled = false,
   onConfirm,
@@ -85,7 +86,7 @@ export function ConfirmDialog({
   headline,
   content,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel = m.common.cancel,
   danger = false,
   onConfirm,
   onCancel,

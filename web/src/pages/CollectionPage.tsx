@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fmt, m } from '../i18n/messages';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
@@ -66,11 +67,11 @@ export default function CollectionPage() {
       collection.error instanceof ApiError && collection.error.status === 404;
     return (
       <ErrorState
-        title={notFound ? 'Collection not found' : 'Could not load this collection'}
+        title={notFound ? m.collection.notFoundTitle : m.collection.loadFailedTitle}
         message={
           notFound
-            ? 'It may be private, renamed, or deleted. Private collections are only visible to their owner.'
-            : 'Please try again in a moment.'
+            ? m.collection.notFoundMessage
+            : m.collection.loadFailedMessage
         }
       />
     );
@@ -101,7 +102,7 @@ export default function CollectionPage() {
     const refr = addRef.trim();
     const slash = refr.indexOf('/');
     if (slash <= 0 || slash === refr.length - 1) {
-      toast({ message: 'Enter the snippet as owner/name' });
+      toast({ message: m.collection.addRefInvalid });
       return;
     }
     addItem.mutate(
@@ -114,7 +115,7 @@ export default function CollectionPage() {
       {
         onSuccess: () => {
           setAddRef('');
-          toast({ message: `Added ${refr}` });
+          toast({ message: fmt(m.collection.addedToast, { ref: refr }) });
         },
         onError: (error) => toast({ message: error.uiMessage }),
       },
@@ -125,24 +126,23 @@ export default function CollectionPage() {
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
       <PageHeader
         title={data.name}
-        subtitle={`Collection by ${data.owner} - ${data.item_count} snippet${data.item_count === 1 ? '' : 's'}${data.description ? ` - ${data.description}` : ''}`}
+        subtitle={fmt(m.collection.subtitle, { owner: data.owner, count: data.item_count, word: data.item_count === 1 ? m.library.savedOne : m.library.savedMany, descriptionPart: data.description ? fmt(m.collection.descriptionPart, { description: data.description }) : '' })}
         actions={<StatusChip visibility={data.visibility} />}
       />
 
       <Card>
         <div style={{ display: 'grid', gap: 'var(--fh-space-2)', padding: 'var(--fh-space-4)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--fh-space-2)' }}>
-            <h2 style={{ margin: 0, flex: 1 }}>Run it from your terminal</h2>
+            <h2 style={{ margin: 0, flex: 1 }}>{m.collection.runFromTerminal}</h2>
             <CopyIconButton
               text={runCommand}
-              label="Copy run command"
-              onCopied={() => toast({ message: `Copied: ${runCommand}` })}
+              label={m.collection.copyRun}
+              onCopied={() => toast({ message: fmt(m.collection.copiedCommand, { command: runCommand }) })}
             />
           </div>
-          <CodeBlock code={runCommand} label="Run this collection" />
+          <CodeBlock code={runCommand} label={m.collection.runCodeLabel} />
           <p style={{ margin: 0 }}>
-            Every snippet is confirmed before it runs, in order - the same trust prompts as
-            running each one directly.
+            {m.collection.trustNote}
           </p>
         </div>
       </Card>
@@ -162,19 +162,19 @@ export default function CollectionPage() {
           >
             <div style={{ flex: 1, minWidth: 220 }}>
               <TextField
-                label="Add a snippet (owner/name)"
+                label={m.collection.addLabel}
                 value={addRef}
                 onChange={setAddRef}
-                supportingText="Any snippet you can open, e.g. anna/restart-api"
+                supportingText={m.collection.addHint}
               />
             </div>
             <Button variant="tonal" icon="add" onClick={submitAdd} disabled={addItem.isPending}>
-              Add
+              {m.collection.add}
             </Button>
             <span style={{ flexBasis: '100%', height: 0 }} />
             <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span>Visibility:</span>
-              <md-chip-set aria-label="Collection visibility">
+              <span>{m.collection.visibilityLabel}</span>
+              <md-chip-set aria-label={m.collection.visibilityAria}>
                 {VISIBILITIES.map((v) => (
                   <md-filter-chip
                     key={v}
@@ -184,7 +184,7 @@ export default function CollectionPage() {
                       patch.mutate(
                         { owner: data.owner, name: data.name, visibility: v },
                         {
-                          onSuccess: () => toast({ message: `${data.name} is now ${v}` }),
+                          onSuccess: () => toast({ message: fmt(m.collection.nowVisibility, { name: data.name, visibility: v }) }),
                           onError: (error) => toast({ message: error.uiMessage }),
                         },
                       )
@@ -194,7 +194,7 @@ export default function CollectionPage() {
               </md-chip-set>
               <span style={{ flex: 1 }} />
               <Button variant="text" icon="delete" onClick={() => setDeleteOpen(true)}>
-                Delete collection
+                {m.collection.deleteCollection}
               </Button>
             </div>
           </div>
@@ -205,13 +205,13 @@ export default function CollectionPage() {
         {data.items.length === 0 ? (
           <EmptyState
             icon="playlist_add"
-            title="No snippets to show"
+            title={m.collection.emptyTitle}
             message={
               hiddenCount > 0
-                ? 'Every item in this collection is private to its owner.'
+                ? m.collection.emptyAllPrivate
                 : isOwner
-                  ? 'Add your first snippet above - use any owner/name you can open.'
-                  : 'This collection is empty.'
+                  ? m.collection.emptyOwner
+                  : m.collection.emptyOther
             }
           />
         ) : (
@@ -239,19 +239,19 @@ export default function CollectionPage() {
                   <>
                     <IconButton
                       icon="arrow_upward"
-                      label={`Move ${item.name} up`}
+                      label={fmt(m.collection.moveUp, { name: item.name })}
                       onClick={() => move(index, -1)}
                       disabled={index === 0 || reorder.isPending}
                     />
                     <IconButton
                       icon="arrow_downward"
-                      label={`Move ${item.name} down`}
+                      label={fmt(m.collection.moveDown, { name: item.name })}
                       onClick={() => move(index, 1)}
                       disabled={index === data.items.length - 1 || reorder.isPending}
                     />
                     <IconButton
                       icon="close"
-                      label={`Remove ${item.name} from the collection`}
+                      label={fmt(m.collection.removeLabel, { name: item.name })}
                       onClick={() =>
                         removeItem.mutate(
                           {
@@ -261,7 +261,7 @@ export default function CollectionPage() {
                             snippetName: item.name,
                           },
                           {
-                            onSuccess: () => toast({ message: `Removed ${item.name}` }),
+                            onSuccess: () => toast({ message: fmt(m.collection.removedToast, { name: item.name }) }),
                             onError: (error) => toast({ message: error.uiMessage }),
                           },
                         )
@@ -275,17 +275,16 @@ export default function CollectionPage() {
         )}
         {hiddenCount > 0 ? (
           <p style={{ padding: '0 var(--fh-space-4) var(--fh-space-3)', margin: 0 }}>
-            {hiddenCount} more item{hiddenCount === 1 ? ' is' : 's are'} not readable by you
-            and hidden.
+            {fmt(m.collection.hiddenMore, { count: hiddenCount, verb: hiddenCount === 1 ? m.collection.hiddenIs : m.collection.hiddenAre })}
           </p>
         ) : null}
       </Card>
 
       <ConfirmDialog
         open={deleteOpen}
-        headline={`Delete ${data.name}?`}
-        content="The collection is removed. The snippets in it are not deleted."
-        confirmLabel="Delete"
+        headline={fmt(m.collection.deleteHeadline, { name: data.name })}
+        content={m.collection.deleteContent}
+        confirmLabel={m.collection.deleteConfirm}
         danger
         onCancel={() => setDeleteOpen(false)}
         onConfirm={() =>
@@ -293,7 +292,7 @@ export default function CollectionPage() {
             { owner: data.owner, name: data.name },
             {
               onSuccess: () => {
-                toast({ message: `${data.name} deleted` });
+                toast({ message: fmt(m.collection.deletedToast, { name: data.name }) });
                 navigate('/dashboard');
               },
               onError: (error) => toast({ message: error.uiMessage }),
@@ -328,7 +327,7 @@ function ShareLinksCard({ owner, name }: { owner: string; name: string }) {
       {
         onSuccess: (link) => {
           setFreshUrl(`${window.location.origin}${link.url}`);
-          toast({ message: 'Share link created - copy it now, it is shown only once' });
+          toast({ message: m.collection.shareCreatedToast });
         },
         onError: (error) => toast({ message: error.uiMessage }),
       },
@@ -338,27 +337,24 @@ function ShareLinksCard({ owner, name }: { owner: string; name: string }) {
   return (
     <Card>
       <div style={{ display: 'grid', gap: 'var(--fh-space-3)', padding: 'var(--fh-space-4)' }}>
-        <h2 style={{ margin: 0 }}>Share links</h2>
+        <h2 style={{ margin: 0 }}>{m.collection.shareTitle}</h2>
         <p style={{ margin: 0 }}>
-          Anyone with a share link can read every snippet currently in this collection -
-          including private ones - without an account. Links only grant reading: running
-          still needs an account and access. Removing a snippet removes it from every
-          link, and you can revoke a link at any time.
+          {m.collection.shareBody}
         </p>
         <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span>Expires after:</span>
-          <md-chip-set aria-label="Share link expiry">
+          <span>{m.collection.expiresAfter}</span>
+          <md-chip-set aria-label={m.collection.expiryAria}>
             {EXPIRY_CHOICES.map((d) => (
               <md-filter-chip
                 key={d}
-                label={d === 1 ? '1 day' : `${d} days`}
+                label={d === 1 ? m.collection.dayOne : fmt(m.collection.daysMany, { days: d })}
                 selected={days === d || undefined}
                 onClick={() => setDays(d)}
               />
             ))}
           </md-chip-set>
           <Button variant="tonal" icon="link" onClick={mint} disabled={create.isPending}>
-            Create share link
+            {m.collection.createShareLink}
           </Button>
         </div>
         {freshUrl ? (
@@ -366,8 +362,8 @@ function ShareLinksCard({ owner, name }: { owner: string; name: string }) {
             <code style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{freshUrl}</code>
             <CopyIconButton
               text={freshUrl}
-              label="Copy share link"
-              onCopied={() => toast({ message: 'Share link copied' })}
+              label={m.collection.copyShareLink}
+              onCopied={() => toast({ message: m.collection.shareCopied })}
             />
           </div>
         ) : null}
@@ -381,10 +377,10 @@ function ShareLinksCard({ owner, name }: { owner: string; name: string }) {
                 <code>fgl_{link.prefix}...</code>
                 <span>
                   {link.active
-                    ? `active - expires ${link.expires_at.slice(0, 10)}`
+                    ? fmt(m.collection.linkActive, { date: link.expires_at.slice(0, 10) })
                     : link.revoked_at
-                      ? 'revoked'
-                      : `expired ${link.expires_at.slice(0, 10)}`}
+                      ? m.collection.linkRevoked
+                      : fmt(m.collection.linkExpired, { date: link.expires_at.slice(0, 10) })}
                 </span>
                 <span style={{ flex: 1 }} />
                 {link.active ? (
@@ -393,13 +389,13 @@ function ShareLinksCard({ owner, name }: { owner: string; name: string }) {
                     icon="link_off"
                     onClick={() =>
                       revoke.mutate(link.id, {
-                        onSuccess: () => toast({ message: 'Share link revoked' }),
+                        onSuccess: () => toast({ message: m.collection.shareRevokedToast }),
                         onError: (error) => toast({ message: error.uiMessage }),
                       })
                     }
                     disabled={revoke.isPending}
                   >
-                    Revoke
+                    {m.collection.revoke}
                   </Button>
                 ) : null}
               </div>

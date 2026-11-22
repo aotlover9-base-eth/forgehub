@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { fmt, m } from '../i18n/messages';
 import { useBlocker, useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
@@ -32,9 +33,9 @@ import { snippetNameIssue, tagIssue } from '../validation';
 
 const MAX_BODY_BYTES = 65536;
 const VISIBILITY_HELP: { id: Visibility; label: string; help: string }[] = [
-  { id: 'private', label: 'Private', help: 'Only you can see and run it.' },
-  { id: 'unlisted', label: 'Unlisted', help: 'Anyone with the link can see it; it is not listed or searchable.' },
-  { id: 'public', label: 'Public', help: 'Anyone can find, read and run it. Review it for secrets first.' },
+  { id: 'private', label: m.design.visibilityPrivate, help: m.editor.helpPrivate },
+  { id: 'unlisted', label: m.design.visibilityUnlisted, help: m.editor.helpUnlisted },
+  { id: 'public', label: m.design.visibilityPublic, help: m.editor.helpPublic },
 ];
 
 type Mode = 'script' | 'steps';
@@ -74,8 +75,8 @@ export default function EditorPage() {
   if (existing.isError || !existing.data) {
     return (
       <ErrorState
-        title="Snippet not found"
-        message="This snippet does not exist, or it is private."
+        title={m.editor.notFoundTitle}
+        message={m.editor.notFoundMessage}
         retryLabel="Back to dashboard"
         onRetry={() => navigate('/dashboard')}
       />
@@ -207,9 +208,9 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
     if (error.status === 412) {
       setConflict(true);
     } else if (error.status === 422) {
-      toast({ message: 'The server found secrets in this snippet. Remove them before saving.' });
+      toast({ message: m.editor.secretsToast });
     } else if (error.code === 'name_taken') {
-      toast({ message: 'You already have a snippet with that name.' });
+      toast({ message: m.editor.nameTakenToast });
     } else {
       toast({ message: error.uiMessage });
     }
@@ -228,7 +229,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
     if (!editing) {
       create.mutate(input, {
         onSuccess: (snippet) => {
-          toast({ message: `${snippet.name} saved` });
+          toast({ message: fmt(m.editor.savedToast, { name: snippet.name }) });
           succeedSave(`/${snippet.owner}/${snippet.name}`);
         },
         onError: onSaveError,
@@ -241,7 +242,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
     const bodyChanged = body !== s.body;
     const afterMeta = () => {
       if (!bodyChanged) {
-        toast({ message: 'Saved' });
+        toast({ message: m.editor.savedPlain });
         succeedSave(`/${s.owner}/${s.name}`);
         return;
       }
@@ -249,7 +250,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         { owner: s.owner, name: s.name, ifMatch: s.version, input },
         {
           onSuccess: (saved) => {
-            toast({ message: `Saved as version ${saved.version}` });
+            toast({ message: fmt(m.editor.savedVersion, { version: saved.version }) });
             succeedSave(`/${saved.owner}/${saved.name}`);
           },
           onError: onSaveError,
@@ -282,7 +283,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         },
         {
           onSuccess: (saved) => {
-            toast({ message: `Saved as version ${saved.version}` });
+            toast({ message: fmt(m.editor.savedVersion, { version: saved.version }) });
             succeedSave(`/${saved.owner}/${saved.name}`);
           },
           onError: onSaveError,
@@ -297,7 +298,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
     if (!existing) return;
     void fetchLatest(existing).then((fresh) => {
       if (!fresh) {
-        toast({ message: 'Could not load the latest version - check your connection' });
+        toast({ message: m.editor.loadLatestFailed });
         return;
       }
       const freshInitial = {
@@ -316,7 +317,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
       setMode(freshInitial.mode);
       setMessage('');
       setConflict(false);
-      toast({ message: `Loaded version ${fresh.version}` });
+      toast({ message: fmt(m.editor.loadedVersion, { version: fresh.version }) });
     });
   };
 
@@ -353,7 +354,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
       return;
     }
     if (tags.length >= 20) {
-      toast({ message: 'At most 20 tags.' });
+      toast({ message: m.editor.tooManyTags });
       return;
     }
     setTags([...tags, t]);
@@ -383,17 +384,17 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
 
   const panel = (
     <Card variant="outlined">
-      <h2 style={{ marginTop: 0 }}>Checks</h2>
-      {validating && !validation ? <p>Checking…</p> : null}
+      <h2 style={{ marginTop: 0 }}>{m.editor.checks}</h2>
+      {validating && !validation ? <p>{m.editor.checking}</p> : null}
       {secrets.length > 0 ? (
         <div role="alert">
           <p style={{ color: 'var(--md-sys-color-error)', fontWeight: 500 }}>
-            Secrets found - saving is blocked. The values are never shown or sent anywhere else.
+            {m.editor.secretsFound}
           </p>
           <ul>
             {secrets.map((f, i) => (
               <li key={i}>
-                Line {f.line}: possible {f.kind.replace(/_/g, ' ')}
+                {fmt(m.editor.secretLine, { line: f.line, kind: f.kind.replace(/_/g, ' ') })}
               </li>
             ))}
           </ul>
@@ -401,33 +402,32 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
       ) : null}
       {validation && !validation.valid && secrets.length === 0 ? (
         <div role="alert">
-          <p style={{ fontWeight: 500 }}>This snippet has problems:</p>
+          <p style={{ fontWeight: 500 }}>{m.editor.problemsTitle}</p>
           <ul>
             {validation.errors.map((err, i) => (
               <li key={i}>
-                {err.line ? `Line ${err.line}: ` : ''}
+                {err.line ? fmt(m.editor.errorLine, { line: err.line }) : ''}
                 {err.message}
               </li>
             ))}
           </ul>
         </div>
       ) : null}
-      {validation?.valid ? <p>✓ Valid - ready to save.</p> : null}
+      {validation?.valid ? <p>{m.editor.validReady}</p> : null}
       {validation?.summary ? (
         <ul style={{ paddingLeft: 'var(--fh-space-4)' }}>
           <li>
             {validation.summary.mode === 'steps'
-              ? `${validation.summary.steps_count} steps`
-              : `${body.split('\n').length} lines`}
+              ? fmt(m.editor.stepsCount, { count: validation.summary.steps_count })
+              : fmt(m.editor.linesCount, { count: body.split('\n').length })}
           </li>
           <li>
-            Size: {bodyBytes.toLocaleString()} / {MAX_BODY_BYTES.toLocaleString()} bytes
-            {overSize ? ' - too large' : ''}
+            {fmt(m.editor.sizeLine, { size: bodyBytes.toLocaleString(), max: MAX_BODY_BYTES.toLocaleString() })}{overSize ? m.editor.tooLargeSuffix : ''}
           </li>
-          {validation.summary.uses_sudo ? <li>Uses sudo</li> : null}
+          {validation.summary.uses_sudo ? <li>{m.editor.usesSudo}</li> : null}
           {validation.summary.variables.length > 0 ? (
             <li>
-              Variables:{' '}
+              {m.editor.variablesLabel}{' '}
               {validation.summary.variables.map((v) => (
                 <Chip key={v} label={v} />
               ))}
@@ -437,40 +437,38 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
       ) : null}
       {validation?.summary?.parameters && validation.summary.parameters.length > 0 ? (
         <div>
-          <p style={{ fontWeight: 500 }}>Parameters:</p>
+          <p style={{ fontWeight: 500 }}>{m.editor.parametersTitle}</p>
           <ul style={{ paddingLeft: 'var(--fh-space-4)' }}>
             {validation.summary.parameters.map((p) => (
               <li key={p.name}>
                 <code>{p.name}</code> <Chip label={p.type} />
-                {p.required ? ' required' : ''}
-                {p.choices ? ` - one of: ${p.choices.join(', ')}` : ''}
-                {p.default !== undefined ? ` - default: ${p.default}` : ''}
-                {p.type === 'secret' ? ' - prompted with a hidden prompt, never stored' : ''}
-                {p.description ? ` - ${p.description}` : ''}
+                {p.required ? m.editor.paramRequired : ''}
+                {p.choices ? fmt(m.editor.paramOneOf, { choices: p.choices.join(', ') }) : ''}
+                {p.default !== undefined ? fmt(m.editor.paramDefault, { value: p.default }) : ''}
+                {p.type === 'secret' ? m.editor.paramSecretNote : ''}
+                {p.description ? fmt(m.editor.paramDescription, { description: p.description }) : ''}
               </li>
             ))}
           </ul>
           <p>
-            Types are declared in the YAML under <code>variables:</code> with a{' '}
-            <code>type:</code> of text, choice, number, path, yesno or secret. Values are
-            checked when the snippet runs.
+            {m.editor.typesNoteBefore} <code>variables:</code> {m.editor.typesNoteMiddle}{' '}<code>type:</code> {m.editor.typesNoteAfter}
           </p>
         </div>
       ) : null}
       {validation?.summary && validation.summary.lint_warnings.length > 0 ? (
         <div>
-          <p style={{ fontWeight: 500 }}>Warnings (not blocking):</p>
+          <p style={{ fontWeight: 500 }}>{m.editor.warningsTitle}</p>
           <ul>
             {validation.summary.lint_warnings.map((w, i) => (
               <li key={i}>
-                <Icon name="warning" /> Line {w.line}: {w.message}
+                <Icon name="warning" /> {fmt(m.editor.lintLine, { line: w.line, message: w.message })}
               </li>
             ))}
           </ul>
         </div>
       ) : null}
       <p style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-        Tab inserts spaces. Press Esc, then Tab, to leave the editor with the keyboard.
+        {m.editor.tabHint}
       </p>
     </Card>
   );
@@ -478,27 +476,27 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
   const form = (
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
       <TextField
-        label="Name"
+        label={m.editor.nameLabel}
         value={name}
         onChange={setName}
         readOnly={editing}
         errorText={
           nameIssue ??
-          (!editing && availability.data === 'taken' ? 'You already have a snippet with this name.' : undefined)
+          (!editing && availability.data === 'taken' ? m.editor.nameTaken : undefined)
         }
         supportingText={
           editing
-            ? 'Names cannot change here; rename from the CLI for now.'
+            ? m.editor.nameLockedHint
             : !editing && availability.data === 'free'
-              ? 'Available.'
-              : 'The name for fg commands, e.g. ubuntu-setup.'
+              ? m.editor.nameAvailable
+              : m.editor.nameHint
         }
       />
-      <TextField label="Description" value={description} onChange={setDescription} maxLength={280} supportingText="At most 280 characters." />
+      <TextField label={m.editor.descriptionLabel} value={description} onChange={setDescription} maxLength={280} supportingText={m.editor.descriptionHint} />
       <div>
-        <p style={{ fontWeight: 500, margin: '0 0 var(--fh-space-2)' }}>Visibility</p>
+        <p style={{ fontWeight: 500, margin: '0 0 var(--fh-space-2)' }}>{m.editor.visibility}</p>
         <SegmentedControl
-          ariaLabel="Visibility"
+          ariaLabel={m.editor.visibilityAria}
           options={VISIBILITY_HELP.map((v) => ({ id: v.id, label: v.label }))}
           value={visibility}
           onChange={setVisibility}
@@ -510,10 +508,10 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
       <div>
         <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
-            <TextField label="Add a tag" value={tagDraft} onChange={setTagDraft} supportingText={`${tags.length} / 20 tags`} />
+            <TextField label={m.editor.addTagLabel} value={tagDraft} onChange={setTagDraft} supportingText={fmt(m.editor.tagsCount, { count: tags.length })} />
           </div>
           <Button variant="tonal" onClick={addTag}>
-            Add
+            {m.editor.add}
           </Button>
         </div>
         {tags.length > 0 ? (
@@ -521,24 +519,24 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
             {tags.map((tag) => (
               <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--fh-space-1)' }}>
                 <Chip label={tag} />
-                <IconButton icon="close" label={`Remove tag ${tag}`} onClick={() => setTags(tags.filter((t) => t !== tag))} />
+                <IconButton icon="close" label={fmt(m.editor.removeTag, { tag })} onClick={() => setTags(tags.filter((t) => t !== tag))} />
               </span>
             ))}
           </p>
         ) : null}
       </div>
       <Tabs
-        ariaLabel="Body mode"
+        ariaLabel={m.editor.bodyModeAria}
         tabs={[
-          { id: 'script', label: 'Script' },
-          { id: 'steps', label: 'Steps (YAML)' },
+          { id: 'script', label: m.editor.tabScript },
+          { id: 'steps', label: m.editor.tabSteps },
         ]}
         activeIndex={mode === 'script' ? 0 : 1}
         onChange={(i) => setMode(i === 0 ? 'script' : 'steps')}
       />
       <div style={{ display: 'flex', gap: 'var(--fh-space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
-        <Switch checked={wrap} onChange={setWrap} label="Soft wrap" />
-        <Switch checked={showLines} onChange={setShowLines} label="Line numbers" />
+        <Switch checked={wrap} onChange={setWrap} label={m.editor.softWrap} />
+        <Switch checked={showLines} onChange={setShowLines} label={m.editor.lineNumbers} />
       </div>
       <div style={{ display: 'flex', background: 'var(--fh-code-bg)', borderRadius: 'var(--md-sys-shape-corner-medium)', overflow: 'hidden' }}>
         {showLines ? (
@@ -562,7 +560,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
           </div>
         ) : null}
         <textarea
-          aria-label={mode === 'script' ? 'Script body' : 'YAML body'}
+          aria-label={mode === 'script' ? m.editor.scriptBodyAria : m.editor.yamlBodyAria}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={onBodyKeyDown}
@@ -587,7 +585,7 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
         />
       </div>
       {editing ? (
-        <TextField label="Version message (optional)" value={message} onChange={setMessage} maxLength={200} />
+        <TextField label={m.editor.versionMessageLabel} value={message} onChange={setMessage} maxLength={200} />
       ) : null}
       <p style={{ display: 'flex', gap: 'var(--fh-space-2)', margin: 0 }}>
         <Button
@@ -596,10 +594,10 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
           onClick={save}
           disabled={justSaved || saveBlocked || create.isPending || update.isPending || patch.isPending}
         >
-          {justSaved ? 'Saved' : editing ? 'Save new version' : 'Save snippet'}
+          {justSaved ? m.editor.savedButton : editing ? m.editor.saveNewVersion : m.editor.saveSnippet}
         </Button>
         <Button variant="text" onClick={() => navigate(-1)}>
-          Cancel
+          {m.editor.cancel}
         </Button>
       </p>
     </div>
@@ -608,8 +606,8 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
   return (
     <div>
       <PageHeader
-        title={editing ? `Edit ${initial.name}` : 'New snippet'}
-        subtitle={editing ? 'Saving creates a new version.' : 'Private by default. Share only when you are ready.'}
+        title={editing ? fmt(m.editor.editTitle, { name: initial.name }) : m.editor.newTitle}
+        subtitle={editing ? m.editor.editSubtitle : m.editor.newSubtitle}
       />
       {widthClass === 'expanded' ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 'var(--fh-space-4)', alignItems: 'start' }}>
@@ -625,30 +623,28 @@ function EditorForm({ initial, existing }: { initial: InitialValues; existing?: 
 
       <ConfirmDialog
         open={blocker.state === 'blocked'}
-        headline="Discard unsaved changes?"
-        content="You have edits that are not saved yet."
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
+        headline={m.editor.discardHeadline}
+        content={m.editor.discardContent}
+        confirmLabel={m.editor.discardConfirm}
+        cancelLabel={m.editor.keepEditing}
         danger
         onConfirm={() => blocker.proceed?.()}
         onCancel={() => blocker.reset?.()}
       />
       <md-dialog open={conflict || undefined} onClose={() => setConflict(false)}>
-        <div slot="headline">Someone saved a newer version</div>
+        <div slot="headline">{m.editor.conflictHeadline}</div>
         <div slot="content">
-          This snippet changed since you opened it - probably from the CLI. Reload their version
-          into this form, keep editing yours, or save yours as the next version on top of theirs.
-          Nothing is overwritten silently.
+          {m.editor.conflictBody}
         </div>
         <div slot="actions" style={{ display: 'flex', gap: 'var(--fh-space-2)', flexWrap: 'wrap' }}>
           <Button variant="text" onClick={reloadTheirs}>
-            Reload theirs
+            {m.editor.reloadTheirs}
           </Button>
           <Button variant="text" onClick={() => setConflict(false)}>
-            Keep editing
+            {m.editor.keepEditing}
           </Button>
           <Button variant="filled" onClick={overwriteConflict}>
-            Save mine as new version
+            {m.editor.saveMine}
           </Button>
         </div>
       </md-dialog>

@@ -16,6 +16,7 @@ import { ApiError } from '../api/client';
 import { useExplore, usePopularTags, useSearch, type SearchSort } from '../api/hooks';
 import type { SearchResult, Snippet } from '../api/types';
 import { relativeTime } from '../validation';
+import { fmt, m } from '../i18n/messages';
 
 /**
  * Render text with the API's byte-range highlights wrapped
@@ -84,9 +85,9 @@ function SnippetCard({ snippet, nameNode, descNode }: { snippet: Snippet; nameNo
 }
 
 const SORTS: { id: SearchSort; label: string }[] = [
-  { id: 'relevance', label: 'Relevance' },
-  { id: 'stars', label: 'Most stars' },
-  { id: 'updated', label: 'Recent' },
+  { id: 'relevance', label: m.explore.sortRelevance },
+  { id: 'stars', label: m.explore.sortStars },
+  { id: 'updated', label: m.explore.sortRecent },
 ];
 
 export default function ExplorePage() {
@@ -131,20 +132,20 @@ export default function ExplorePage() {
 
   return (
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
-      <PageHeader title="Explore" subtitle="Public snippets from everyone on ForgeHub." />
-      <SearchBar value={query} onChange={setQuery} placeholder="Search public snippets" ariaLabel="Search public snippets" />
+      <PageHeader title={m.explore.title} subtitle={m.explore.subtitle} />
+      <SearchBar value={query} onChange={setQuery} placeholder={m.explore.searchPlaceholder} ariaLabel={m.explore.searchPlaceholder} />
 
       {popularTags.data && popularTags.data.tags.length > 0 ? (
         <div style={{ display: 'flex', gap: 'var(--fh-space-1)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>Popular:</span>
+          <span style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>{m.explore.popular}</span>
           {popularTags.data.tags.slice(0, 10).map(({ tag: t, count }) => (
             <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--fh-space-1)' }}>
-              <Chip label={`${t} (${count})`} onClick={() => setTag(tag === t ? null : t)} />
+              <Chip label={fmt(m.explore.tagWithCount, { tag: t, count })} onClick={() => setTag(tag === t ? null : t)} />
             </span>
           ))}
           {tag ? (
             <Button variant="text" onClick={() => setTag(null)}>
-              Clear tag filter: {tag}
+              {fmt(m.explore.clearTagFilter, { tag })}
             </Button>
           ) : null}
         </div>
@@ -154,19 +155,19 @@ export default function ExplorePage() {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--fh-space-2)' }}>
             <span style={{ flex: 1 }} />
-            <SegmentedControl ariaLabel="Sort results" options={SORTS} value={sort} onChange={setSort} />
+            <SegmentedControl ariaLabel={m.explore.sortResults} options={SORTS} value={sort} onChange={setSort} />
           </div>
           {search.isPending ? (
             <Skeleton lines={4} />
           ) : search.isError ? (
             <ErrorState
-              title="Search failed"
-              message={search.error instanceof ApiError ? search.error.uiMessage : 'Something went wrong.'}
-              retryLabel="Retry"
+              title={m.explore.searchFailed}
+              message={search.error instanceof ApiError ? search.error.uiMessage : m.common.somethingWrongShort}
+              retryLabel={m.common.retry}
               onRetry={() => void search.refetch()}
             />
           ) : results.length === 0 ? (
-            <EmptyState icon="search" title="No results" message="Nothing public matches that yet. Try fewer words, or a different tag." />
+            <EmptyState icon="search" title={m.explore.noResultsTitle} message={m.explore.noResultsMessage} />
           ) : (
             <>
               <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
@@ -186,7 +187,7 @@ export default function ExplorePage() {
               {search.hasNextPage ? (
                 <p>
                   <Button variant="tonal" onClick={() => void search.fetchNextPage()} disabled={search.isFetchingNextPage}>
-                    {search.isFetchingNextPage ? 'Loading…' : 'Load more'}
+                    {search.isFetchingNextPage ? m.explore.loadingMore : m.explore.loadMore}
                   </Button>
                 </p>
               ) : null}
@@ -196,22 +197,22 @@ export default function ExplorePage() {
       ) : (
         <>
           <div style={{ display: 'flex', gap: 'var(--fh-space-2)' }}>
-            <md-chip-set aria-label="Feed">
-              <md-filter-chip label="Recent" selected={feed === 'recent' || undefined} onClick={() => setFeed('recent')} />
-              <md-filter-chip label="Popular this week" selected={feed === 'popular' || undefined} onClick={() => setFeed('popular')} />
+            <md-chip-set aria-label={m.explore.feedLabel}>
+              <md-filter-chip label={m.explore.feedRecent} selected={feed === 'recent' || undefined} onClick={() => setFeed('recent')} />
+              <md-filter-chip label={m.explore.feedPopular} selected={feed === 'popular' || undefined} onClick={() => setFeed('popular')} />
             </md-chip-set>
           </div>
           {explore.isPending ? (
             <Skeleton lines={4} />
           ) : explore.isError ? (
             <ErrorState
-              title="Could not load Explore"
-              message={explore.error instanceof ApiError ? explore.error.uiMessage : 'Something went wrong.'}
-              retryLabel="Retry"
+              title={m.explore.loadFailed}
+              message={explore.error instanceof ApiError ? explore.error.uiMessage : m.common.somethingWrongShort}
+              retryLabel={m.common.retry}
               onRetry={() => void explore.refetch()}
             />
           ) : feedItems.length === 0 ? (
-            <EmptyState icon="explore" title="Nothing public yet" message="When people share snippets publicly, they will show up here." />
+            <EmptyState icon="explore" title={m.explore.emptyTitle} message={m.explore.emptyMessage} />
           ) : (
             <>
               <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
@@ -222,7 +223,7 @@ export default function ExplorePage() {
               {explore.hasNextPage ? (
                 <p>
                   <Button variant="tonal" onClick={() => void explore.fetchNextPage()} disabled={explore.isFetchingNextPage}>
-                    {explore.isFetchingNextPage ? 'Loading…' : 'Load more'}
+                    {explore.isFetchingNextPage ? m.explore.loadingMore : m.explore.loadMore}
                   </Button>
                 </p>
               ) : null}

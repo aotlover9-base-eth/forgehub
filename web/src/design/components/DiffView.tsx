@@ -4,10 +4,11 @@
  * (design-spec §1) - never by colour alone, and never
  * red/green. All diff text renders as text.
  */
+import { m } from '../../i18n/messages';
 export function DiffView({ diff }: { diff: string }) {
   const lines = diff.replace(/\n$/, '').split('\n');
   return (
-    <div className="fh-diff" role="table" aria-label="Diff">
+    <div className="fh-diff" role="table" aria-label={m.design.diff}>
       {lines.map((line, i) => {
         const kind = line.startsWith('+') && !line.startsWith('+++')
           ? 'add'

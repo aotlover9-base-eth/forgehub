@@ -39,16 +39,17 @@ import {
 } from '../api/hooks';
 import type { CreatedToken } from '../api/types';
 import { passwordIssue, relativeTime } from '../validation';
+import { fmt, m } from '../i18n/messages';
 
 const TAB_IDS = ['appearance', 'profile', 'security', 'tokens', 'cli', 'danger'] as const;
 
 const SECTION_LABELS: Record<string, string> = {
-  appearance: 'Appearance',
-  profile: 'Profile',
-  security: 'Security',
-  tokens: 'Tokens',
-  cli: 'CLI',
-  danger: 'Danger zone',
+  appearance: m.settings.sectionAppearance,
+  profile: m.settings.sectionProfile,
+  security: m.settings.sectionSecurity,
+  tokens: m.settings.sectionTokens,
+  cli: m.settings.sectionCli,
+  danger: m.settings.sectionDanger,
 };
 
 function sectionElement(id: string) {
@@ -77,7 +78,7 @@ export default function SettingsPage() {
   const activeId = TAB_IDS[tab];
   return (
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
-      <PageHeader title="Settings" subtitle={`Signed in as ${user.username}`} />
+      <PageHeader title={m.settings.title} subtitle={fmt(m.settings.signedInAs, { username: user.username })} />
       {widthClass === 'compact' ? (
         // Compact: every section stacked with its own head.
         <div style={{ display: 'grid', gap: 'var(--fh-space-5)' }}>
@@ -91,7 +92,7 @@ export default function SettingsPage() {
       ) : widthClass === 'expanded' ? (
         // Expanded: vertical tab rail on the left.
         <div style={{ display: 'flex', gap: 'var(--fh-space-5)', alignItems: 'flex-start' }}>
-          <nav className="fh-settings-nav" aria-label="Settings sections">
+          <nav className="fh-settings-nav" aria-label={m.settings.sectionsAria}>
             {TAB_IDS.map((id, index) => (
               <button
                 key={id}
@@ -109,7 +110,7 @@ export default function SettingsPage() {
       ) : (
         <>
           <Tabs
-            ariaLabel="Settings sections"
+            ariaLabel={m.settings.sectionsAria}
             tabs={TAB_IDS.map((id) => ({ id, label: SECTION_LABELS[id] }))}
             activeIndex={tab}
             onChange={setTab}
@@ -122,9 +123,9 @@ export default function SettingsPage() {
 }
 
 const THEME_OPTIONS: { id: ThemePreference; label: string; help: string }[] = [
-  { id: 'system', label: 'System', help: 'Follow your device setting.' },
-  { id: 'light', label: 'Light', help: 'Always use the light scheme.' },
-  { id: 'dark', label: 'Dark', help: 'Always use the dark scheme.' },
+  { id: 'system', label: m.settings.themeSystem, help: m.settings.themeSystemHelp },
+  { id: 'light', label: m.settings.themeLight, help: m.settings.themeLightHelp },
+  { id: 'dark', label: m.settings.themeDark, help: m.settings.themeDarkHelp },
 ];
 
 function AppearanceTab() {
@@ -133,7 +134,7 @@ function AppearanceTab() {
   return (
     <Card>
       <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
-        <legend style={{ fontWeight: 500, marginBottom: 'var(--fh-space-2)' }}>Theme</legend>
+        <legend style={{ fontWeight: 500, marginBottom: 'var(--fh-space-2)' }}>{m.settings.theme}</legend>
         <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
           {THEME_OPTIONS.map((option) => (
             <Radio
@@ -151,17 +152,16 @@ function AppearanceTab() {
           ))}
         </div>
       </fieldset>
-      <p>Currently showing the {resolveTheme(pref)} scheme. The same choice lives in the app bar account menu.</p>
+      <p>{fmt(m.settings.currentlyShowing, { scheme: resolveTheme(pref) })}</p>
       <div>
-        <p style={{ fontWeight: 500, margin: '0 0 var(--fh-space-2)' }}>Density</p>
+        <p style={{ fontWeight: 500, margin: '0 0 var(--fh-space-2)' }}>{m.settings.density}</p>
         <Switch
           checked={density === 'compact'}
           onChange={(compact) => setDensity(compact ? 'compact' : 'comfortable')}
-          label="Compact list density"
+          label={m.settings.densityLabel}
         />
         <p style={{ color: 'var(--md-sys-color-on-surface-variant)', margin: 'var(--fh-space-1) 0 0' }}>
-          Compact tightens the rows in Library and other snippet lists. The Library toolbar has the
-          same switch.
+          {m.settings.densityHelp}
         </p>
       </div>
     </Card>
@@ -178,8 +178,8 @@ function ProfileTab() {
   const bioText = bio ?? me.data?.bio ?? '';
   return (
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)', maxWidth: 560 }}>
-      <TextField label="Display name" value={name} onChange={setDisplayName} maxLength={80} supportingText="Shown on your profile. At most 80 characters." />
-      <TextField label="Bio" value={bioText} onChange={setBio} multiline rows={3} maxLength={280} supportingText="At most 280 characters." />
+      <TextField label={m.settings.displayName} value={name} onChange={setDisplayName} maxLength={80} supportingText={m.settings.displayNameHint} />
+      <TextField label={m.settings.bio} value={bioText} onChange={setBio} multiline rows={3} maxLength={280} supportingText={m.settings.bioHint} />
       <p style={{ margin: 0 }}>
         <Button
           variant="filled"
@@ -188,13 +188,13 @@ function ProfileTab() {
             patchMe.mutate(
               { display_name: name || null, bio: bioText || null },
               {
-                onSuccess: () => toast({ message: 'Profile saved' }),
+                onSuccess: () => toast({ message: m.settings.profileSaved }),
                 onError: (e) => toast({ message: e.uiMessage }),
               },
             )
           }
         >
-          Save profile
+          {m.settings.saveProfile}
         </Button>
       </p>
     </div>
@@ -216,7 +216,7 @@ function SecurityTab() {
   return (
     <div style={{ display: 'grid', gap: 'var(--fh-space-5)', maxWidth: 640 }}>
       <Card variant="outlined">
-        <h2 style={{ marginTop: 0 }}>Change password</h2>
+        <h2 style={{ marginTop: 0 }}>{m.settings.changePassword}</h2>
         <form
           style={{ display: 'grid', gap: 'var(--fh-space-3)' }}
           onSubmit={(e) => {
@@ -228,28 +228,28 @@ function SecurityTab() {
                 onSuccess: () => {
                   setCurrent('');
                   setNext('');
-                  toast({ message: 'Password changed. Other sessions were signed out.' });
+                  toast({ message: m.settings.passwordChanged });
                 },
                 onError: (error) =>
                   setFormError(
                     error instanceof ApiError && error.status === 401
-                      ? 'Current password did not match.'
+                      ? m.settings.currentMismatch
                       : error.uiMessage,
                   ),
               },
             );
           }}
         >
-          <TextField label="Current password" value={current} onChange={setCurrent} type="password" autoComplete="current-password" required />
+          <TextField label={m.settings.currentPassword} value={current} onChange={setCurrent} type="password" autoComplete="current-password" required />
           <TextField
-            label="New password"
+            label={m.settings.newPassword}
             value={next}
             onChange={setNext}
             type="password"
             autoComplete="new-password"
             required
             errorText={nextIssue ?? undefined}
-            supportingText="At least 10 characters. Changing it signs out every other session."
+            supportingText={m.settings.newPasswordHint}
           />
           {formError ? (
             <p role="alert" style={{ color: 'var(--md-sys-color-error)', margin: 0 }}>
@@ -258,30 +258,29 @@ function SecurityTab() {
           ) : null}
           <p style={{ margin: 0 }}>
             <Button variant="filled" type="submit" disabled={changePassword.isPending || !current || next.length < 10 || !!nextIssue}>
-              Change password
+              {m.settings.changePassword}
             </Button>
           </p>
         </form>
       </Card>
 
       <Card variant="outlined">
-        <h2 style={{ marginTop: 0 }}>Active sessions</h2>
+        <h2 style={{ marginTop: 0 }}>{m.settings.activeSessions}</h2>
         {sessions.isPending ? (
           <Skeleton lines={2} />
         ) : sessions.isError ? (
-          <ErrorState title="Could not load sessions" message="Try again." retryLabel="Retry" onRetry={() => void sessions.refetch()} />
+          <ErrorState title={m.settings.sessionsFailed} message={m.settings.tryAgain} retryLabel={m.common.retry} onRetry={() => void sessions.refetch()} />
         ) : (
           <>
             <md-list>
               {(sessions.data?.sessions ?? []).map((s) => (
                 <md-list-item key={s.ref}>
                   <span slot="headline">
-                    {s.current ? 'This browser' : 'Another session'} · last used{' '}
+                    {s.current ? m.settings.thisBrowser : m.settings.anotherSession} · {m.settings.lastUsedWord}{' '}
                     <span title={new Date(s.last_used_at).toLocaleString()}>{relativeTime(s.last_used_at)}</span>
                   </span>
                   <span slot="supporting-text">
-                    Started {new Date(s.created_at).toLocaleDateString()} · expires{' '}
-                    {new Date(s.expires_at).toLocaleDateString()}
+                    {fmt(m.settings.sessionLine, { started: new Date(s.created_at).toLocaleDateString(), expires: new Date(s.expires_at).toLocaleDateString() })}
                   </span>
                   <span slot="end">
                     <Button
@@ -290,13 +289,13 @@ function SecurityTab() {
                         revokeSession.mutate(s.ref, {
                           onSuccess: () => {
                             if (s.current) navigate('/login');
-                            else toast({ message: 'Session revoked' });
+                            else toast({ message: m.settings.sessionRevoked });
                           },
                           onError: (e) => toast({ message: e.uiMessage }),
                         })
                       }
                     >
-                      Revoke
+                      {m.settings.revoke}
                     </Button>
                   </span>
                 </md-list-item>
@@ -312,7 +311,7 @@ function SecurityTab() {
                   })
                 }
               >
-                Sign out everywhere
+                {m.settings.signOutEverywhere}
               </Button>
             </p>
           </>
@@ -328,19 +327,19 @@ function describeEvent(kind: string, detail: Record<string, unknown>): string {
   const s = (key: string) => (typeof detail[key] === 'string' ? (detail[key] as string) : '');
   switch (kind) {
     case 'login':
-      return `Signed in via ${s('via') || 'login'}${detail.new_device === true ? ' from a new device' : ''}${s('ip') ? ` (${s('ip')})` : ''}`;
+      return `${fmt(m.settings.actLogin, { via: s('via') || 'login' })}${detail.new_device === true ? m.settings.actLoginNewDevice : ''}${s('ip') ? fmt(m.settings.actLoginIp, { ip: s('ip') }) : ''}`;
     case 'snippet_created':
-      return `Created snippet ${s('name')}`;
+      return fmt(m.settings.actCreated, { name: s('name') });
     case 'snippet_pushed':
-      return `Pushed ${s('name')} - version ${String(detail.version ?? '')}`;
+      return fmt(m.settings.actPushed, { name: s('name'), version: String(detail.version ?? '') });
     case 'snippet_forked':
-      return `Forked ${s('from')} as ${s('name')}`;
+      return fmt(m.settings.actForked, { from: s('from'), name: s('name') });
     case 'token_created':
-      return `Created API token "${s('name')}"`;
+      return fmt(m.settings.actTokenCreated, { name: s('name') });
     case 'token_revoked':
-      return `Revoked API token ${s('prefix')}...`;
+      return fmt(m.settings.actTokenRevoked, { prefix: s('prefix') });
     case 'snippet_trusted':
-      return `Trusted ${s('ref')} (version ${String(detail.version ?? '')})`;
+      return fmt(m.settings.actTrusted, { ref: s('ref'), version: String(detail.version ?? '') });
     default:
       return kind;
   }
@@ -356,21 +355,20 @@ function ActivityCard() {
   const activity = useActivity(50);
   return (
     <Card variant="outlined">
-      <h2 style={{ marginTop: 0 }}>Activity</h2>
+      <h2 style={{ marginTop: 0 }}>{m.settings.activityTitle}</h2>
       <p style={{ marginTop: 0 }}>
-        Sign-ins, snippet changes, token changes and trust grants on your account, newest
-        first. Sign-ins from a device you have not used before are flagged.
+        {m.settings.activityIntro}
       </p>
       {activity.isPending ? (
         <Skeleton />
       ) : activity.isError ? (
         <ErrorState
-          title="Could not load your activity"
-          message="Please try again in a moment."
+          title={m.settings.activityFailed}
+          message={m.settings.activityFailedMessage}
           onRetry={() => void activity.refetch()}
         />
       ) : activity.data.events.length === 0 ? (
-        <p style={{ margin: 0 }}>No activity yet.</p>
+        <p style={{ margin: 0 }}>{m.settings.activityEmpty}</p>
       ) : (
         <md-list>
           {activity.data.events.map((event) => (
@@ -389,7 +387,7 @@ function ActivityCard() {
             window.location.href = '/api/v1/me/activity/export';
           }}
         >
-          Export as JSON
+          {m.settings.exportJson}
         </Button>
       </p>
     </Card>
@@ -413,21 +411,19 @@ function TokensTab() {
   return (
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)', maxWidth: 720 }}>
       <p style={{ margin: 0 }}>
-        Tokens let the CLI and scripts act as you. A token is shown <strong>once</strong>, when it is
-        created - after that, only its first characters are visible.
+        {m.settings.tokensIntroBefore} <strong>{m.settings.tokensIntroStrong}</strong>{m.settings.tokensIntroAfter}
       </p>
       <p style={{ margin: 0 }}>
         <Button variant="filled" icon="add" onClick={() => setCreateOpen(true)}>
-          New token
+          {m.settings.newToken}
         </Button>
       </p>
 
       {fresh ? (
         <Card variant="filled">
-          <h2 style={{ marginTop: 0 }}>Your new token - copy it now</h2>
+          <h2 style={{ marginTop: 0 }}>{m.settings.freshTitle}</h2>
           <p>
-            This is the only time the full token is shown. Store it somewhere safe; anyone with it
-            can act as you within its scopes.
+            {m.settings.freshBody}
           </p>
           <CodeBlock code={fresh.token} label={fresh.name} />
           <p style={{ display: 'flex', gap: 'var(--fh-space-2)', margin: 0 }}>
@@ -438,11 +434,11 @@ function TokensTab() {
                   await navigator.clipboard.writeText(fresh.token);
                   setCopied(true);
                 } catch {
-                  toast({ message: 'Copy failed - select the token text and copy it manually' });
+                  toast({ message: m.settings.copyFailedManual });
                 }
               }}
             >
-              Copy token
+              {m.settings.copyToken}
             </Button>
             <Button
               variant="filled"
@@ -452,19 +448,19 @@ function TokensTab() {
                 setCopied(false);
               }}
             >
-              I've copied it
+              {m.settings.copiedIt}
             </Button>
           </p>
-          {!copied ? <p style={{ margin: 0 }}>The button unlocks after you copy the token.</p> : null}
+          {!copied ? <p style={{ margin: 0 }}>{m.settings.unlockNote}</p> : null}
         </Card>
       ) : null}
 
       {tokens.isPending ? (
         <Skeleton lines={3} />
       ) : tokens.isError ? (
-        <ErrorState title="Could not load tokens" message="Try again." retryLabel="Retry" onRetry={() => void tokens.refetch()} />
+        <ErrorState title={m.settings.tokensFailed} message={m.settings.tryAgain} retryLabel={m.common.retry} onRetry={() => void tokens.refetch()} />
       ) : (tokens.data?.tokens ?? []).length === 0 ? (
-        <EmptyState icon="key" title="No tokens yet" message="Create one for the CLI, or use fg login, which creates one for you." />
+        <EmptyState icon="key" title={m.settings.noTokensTitle} message={m.settings.noTokensMessage} />
       ) : (
         <Card variant="outlined">
           <md-list>
@@ -474,13 +470,18 @@ function TokensTab() {
                   {t.name} · fgh_{t.prefix}…
                 </span>
                 <span slot="supporting-text">
-                  {t.scopes.join(' + ')} · created {new Date(t.created_at).toLocaleDateString()} ·{' '}
-                  {t.revoked_at
-                    ? `revoked ${new Date(t.revoked_at).toLocaleDateString()}`
-                    : t.last_used_at
-                      ? `last used ${relativeTime(t.last_used_at)}`
-                      : 'never used'}{' '}
-                  · {t.expires_at ? `expires ${new Date(t.expires_at).toLocaleDateString()}` : 'no expiry'}
+                  {fmt(m.settings.tokenLine, {
+                    scopes: t.scopes.join(' + '),
+                    created: new Date(t.created_at).toLocaleDateString(),
+                    usage: t.revoked_at
+                      ? fmt(m.settings.tokenRevokedAt, { date: new Date(t.revoked_at).toLocaleDateString() })
+                      : t.last_used_at
+                        ? fmt(m.settings.tokenLastUsed, { when: relativeTime(t.last_used_at) })
+                        : m.settings.tokenNeverUsed,
+                    expiry: t.expires_at
+                      ? fmt(m.settings.tokenExpires, { date: new Date(t.expires_at).toLocaleDateString() })
+                      : m.settings.tokenNoExpiry,
+                  })}
                 </span>
                 {!t.revoked_at ? (
                   <span slot="end">
@@ -496,33 +497,33 @@ function TokensTab() {
       )}
 
       <md-dialog open={createOpen || undefined} onClose={() => setCreateOpen(false)}>
-        <div slot="headline">New token</div>
+<div slot="headline">{m.settings.newToken}</div>
         <div slot="content" style={{ display: 'grid', gap: 'var(--fh-space-3)', minWidth: 320 }}>
-          <TextField label="Name" value={tokenName} onChange={setTokenName} supportingText="What is this token for? e.g. Laptop CLI" />
-          <Checkbox checked={readScope} onChange={setReadScope} label="Read - view and run snippets" />
+          <TextField label={m.settings.tokenNameLabel} value={tokenName} onChange={setTokenName} supportingText={m.settings.tokenNameHint} />
+          <Checkbox checked={readScope} onChange={setReadScope} label={m.settings.scopeRead} />
           <Checkbox
             checked={writeScope}
             onChange={setWriteScope}
-            label="Write - create and change snippets (includes read)"
+            label={m.settings.scopeWrite}
           />
           <span style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
             <SelectField
-              label="Expires"
-              ariaLabel="Expiry"
+              label={m.settings.expiresLabel}
+              ariaLabel={m.settings.expiryAria}
               value={expiry}
               onChange={setExpiry}
               options={[
-                { value: 'never', label: 'Never' },
-                { value: '30', label: 'In 30 days' },
-                { value: '90', label: 'In 90 days' },
-                { value: '365', label: 'In 365 days' },
+                { value: 'never', label: m.settings.expiryNever },
+                { value: '30', label: m.settings.expiry30 },
+                { value: '90', label: m.settings.expiry90 },
+                { value: '365', label: m.settings.expiry365 },
               ]}
             />
           </span>
         </div>
         <div slot="actions">
           <DialogActions
-            confirmLabel="Create token"
+            confirmLabel={m.settings.createToken}
             confirmDisabled={tokenName.trim() === '' || (!readScope && !writeScope)}
             onCancel={() => setCreateOpen(false)}
             onConfirm={() =>
@@ -548,15 +549,15 @@ function TokensTab() {
 
       <ConfirmDialog
         open={revoking !== null}
-        headline="Revoke this token?"
-        content="Anything using it will stop working immediately. This cannot be undone."
-        confirmLabel="Revoke"
+        headline={m.settings.revokeTokenHeadline}
+        content={m.settings.revokeTokenContent}
+        confirmLabel={m.settings.revokeConfirm}
         danger
         onCancel={() => setRevoking(null)}
         onConfirm={() => {
           if (revoking === null) return;
           revokeToken.mutate(revoking, {
-            onSuccess: () => toast({ message: 'Token revoked' }),
+            onSuccess: () => toast({ message: m.settings.tokenRevokedToast }),
             onError: (e) => toast({ message: e.uiMessage }),
             onSettled: () => setRevoking(null),
           });
@@ -570,16 +571,14 @@ function CliTab() {
   return (
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)', maxWidth: 640 }}>
       <Card variant="outlined">
-        <h2 style={{ marginTop: 0 }}>The fg CLI</h2>
+        <h2 style={{ marginTop: 0 }}>{m.settings.cliTitle}</h2>
         <p>
-          The CLI runs your snippets from any terminal. Install instructions are in the ForgeHub
-          README (installer packages arrive with the first release).
+          {m.settings.cliBody}
         </p>
-        <p>Sign in once - your browser approves it on the device page:</p>
-        <CodeBlock label="Terminal" code={'fg login\nfg ubuntu-setup'} />
+        <p>{m.settings.cliSignIn}</p>
+        <CodeBlock label={m.home.terminal} code={'fg login\nfg ubuntu-setup'} />
         <p style={{ margin: 0 }}>
-          <code>fg login</code> shows a short code and opens <code>/device</code>. Nothing is granted
-          until you approve it there.
+          <code>fg login</code> {m.settings.cliGrantBefore} <code>/device</code>{m.settings.cliGrantAfter}
         </p>
       </Card>
     </div>
@@ -599,23 +598,22 @@ function DangerTab() {
   return (
     <div style={{ display: 'grid', gap: 'var(--fh-space-4)', maxWidth: 560 }}>
       <Card variant="outlined">
-        <h2 style={{ marginTop: 0 }}>Delete account</h2>
+        <h2 style={{ marginTop: 0 }}>{m.settings.deleteTitle}</h2>
         <p>
-          Your account is disabled immediately and your snippets, tokens and sessions are revoked.
-          After 30 days everything is purged for good. This cannot be undone after the purge.
+          {m.settings.deleteBody}
         </p>
         <Button variant="outlined" onClick={() => setOpen(true)}>
-          Delete my account
+          {m.settings.deleteMyAccount}
         </Button>
       </Card>
       <md-dialog open={open || undefined} onClose={() => setOpen(false)}>
-        <div slot="headline">Delete account?</div>
+        <div slot="headline">{m.settings.deleteHeadline}</div>
         <div slot="content" style={{ display: 'grid', gap: 'var(--fh-space-3)', minWidth: 320 }}>
           <p style={{ margin: 0 }}>
-            Type your username <strong>{myName}</strong> and your password to confirm.
+            {m.settings.deleteConfirmIntroBefore} <strong>{myName}</strong> {m.settings.deleteConfirmIntroAfter}
           </p>
-          <TextField label={`Type "${myName}"`} value={username} onChange={setUsername} />
-          <TextField label="Password" value={password} onChange={setPassword} type="password" autoComplete="current-password" />
+          <TextField label={fmt(m.settings.typeUsername, { name: myName })} value={username} onChange={setUsername} />
+          <TextField label={m.settings.passwordLabel} value={password} onChange={setPassword} type="password" autoComplete="current-password" />
           {error ? (
             <p role="alert" style={{ color: 'var(--md-sys-color-error)', margin: 0 }}>
               {error}
@@ -624,7 +622,7 @@ function DangerTab() {
         </div>
         <div slot="actions">
           <DialogActions
-            confirmLabel="Delete account"
+            confirmLabel={m.settings.deleteConfirm}
             danger
             confirmDisabled={username !== myName || password === ''}
             onCancel={() => setOpen(false)}
@@ -634,13 +632,13 @@ function DangerTab() {
                 { username, password },
                 {
                   onSuccess: () => {
-                    toast({ message: 'Account scheduled for deletion. You are signed out.' });
+                    toast({ message: m.settings.deletedToast });
                     navigate('/');
                   },
                   onError: (e) =>
                     setError(
                       e instanceof ApiError && e.status === 401
-                        ? 'Password did not match.'
+                        ? m.settings.passwordMismatch
                         : e.uiMessage,
                     ),
                 },

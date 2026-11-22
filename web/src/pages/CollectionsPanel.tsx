@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Card, StatusChip, TextField, useToast } from '../design';
 import { useCreateCollection, useMe, useMyCollections } from '../api/hooks';
 import type { Visibility } from '../api/types';
+import { fmt, m } from '../i18n/messages';
 
 const VISIBILITIES: Visibility[] = ['private', 'unlisted', 'public'];
 
@@ -28,7 +29,7 @@ export default function CollectionsPanel() {
   const submit = () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      toast({ message: 'Give the collection a name' });
+      toast({ message: m.collectionsPanel.nameRequired });
       return;
     }
     create.mutate(
@@ -37,7 +38,7 @@ export default function CollectionsPanel() {
         onSuccess: (created) => {
           setName('');
           setDescription('');
-          toast({ message: `Created ${created.name}` });
+          toast({ message: fmt(m.collectionsPanel.created, { name: created.name }) });
           navigate(`/collections/${created.owner}/${created.name}`);
         },
         onError: (error) => toast({ message: error.uiMessage }),
@@ -48,13 +49,12 @@ export default function CollectionsPanel() {
   return (
     <Card>
       <div style={{ display: 'grid', gap: 'var(--fh-space-3)', padding: 'var(--fh-space-4)' }}>
-        <h2 style={{ margin: 0 }}>Collections</h2>
+        <h2 style={{ margin: 0 }}>{m.collectionsPanel.title}</h2>
         {collections.isPending ? (
-          <p style={{ margin: 0 }}>Loading collections…</p>
+          <p style={{ margin: 0 }}>{m.collectionsPanel.loading}</p>
         ) : rows.length === 0 ? (
           <p style={{ margin: 0 }}>
-            No collections yet. Group related snippets into an ordered runbook, then run it
-            end to end with one command.
+            {m.collectionsPanel.empty}
           </p>
         ) : (
           <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
@@ -68,7 +68,7 @@ export default function CollectionsPanel() {
                   {c.description ? ` - ${c.description}` : ''}
                 </Link>
                 <span>
-                  {c.item_count} item{c.item_count === 1 ? '' : 's'}
+                  {fmt(c.item_count === 1 ? m.collectionsPanel.items : m.collectionsPanel.itemsPlural, { count: c.item_count })}
                 </span>
                 <StatusChip visibility={c.visibility} />
               </div>
@@ -84,12 +84,12 @@ export default function CollectionsPanel() {
           }}
         >
           <div style={{ flex: 1, minWidth: 160 }}>
-            <TextField label="New collection name" value={name} onChange={setName} supportingText="e.g. deploy-runbook" />
+            <TextField label={m.collectionsPanel.newName} value={name} onChange={setName} supportingText={m.collectionsPanel.newNameHint} />
           </div>
           <div style={{ flex: 2, minWidth: 200 }}>
-            <TextField label="Description (optional)" value={description} onChange={setDescription} />
+            <TextField label={m.collectionsPanel.descriptionOptional} value={description} onChange={setDescription} />
           </div>
-          <md-chip-set aria-label="New collection visibility">
+          <md-chip-set aria-label={m.collectionsPanel.visibilityLabel}>
             {VISIBILITIES.map((v) => (
               <md-filter-chip
                 key={v}
@@ -100,7 +100,7 @@ export default function CollectionsPanel() {
             ))}
           </md-chip-set>
           <Button variant="tonal" icon="add" onClick={submit} disabled={create.isPending}>
-            Create
+            {m.collectionsPanel.create}
           </Button>
         </div>
       </div>

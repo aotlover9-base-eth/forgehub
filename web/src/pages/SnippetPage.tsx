@@ -38,6 +38,7 @@ import {
 } from '../api/hooks';
 import type { Visibility } from '../api/types';
 import { relativeTime } from '../validation';
+import { fmt, m } from '../i18n/messages';
 
 const VISIBILITIES: Visibility[] = ['private', 'unlisted', 'public'];
 
@@ -90,8 +91,8 @@ export default function SnippetPage() {
     return (
       <EmptyState
         icon="search"
-        title="Not found"
-        message="This snippet does not exist, or it is private."
+        title={m.snippet.notFoundTitle}
+        message={m.snippet.notFoundMessage}
         actionLabel="Go to Explore"
         onAction={() => navigate('/explore')}
       />
@@ -135,7 +136,7 @@ export default function SnippetPage() {
             {name}
           </h1>
           <p style={{ margin: 'var(--fh-space-1) 0', color: 'var(--md-sys-color-on-surface-variant)' }}>
-            {s.description || 'No description.'}
+            {s.description || m.snippet.noDescription}
           </p>
           <p style={{ display: 'flex', gap: 'var(--fh-space-3)', alignItems: 'center', flexWrap: 'wrap', margin: 0 }}>
             <StatusChip visibility={s.visibility} />
@@ -143,16 +144,16 @@ export default function SnippetPage() {
               <Icon name="star" filled={s.starred_by_me} /> {s.star_count}
             </span>
             <span>
-              <Icon name="call_split" /> {s.fork_count} forks
+              <Icon name="call_split" /> {fmt(m.snippet.forksCount, { count: s.fork_count })}
             </span>
             <span>
-              <Icon name="download" /> {s.pull_count} pulls
+              <Icon name="download" /> {fmt(m.snippet.pullsCount, { count: s.pull_count })}
             </span>
-            <span title={new Date(s.updated_at).toLocaleString()}>v{s.version} · updated {relativeTime(s.updated_at)}</span>
+            <span title={new Date(s.updated_at).toLocaleString()}>{fmt(m.snippet.versionUpdated, { version: s.version, when: relativeTime(s.updated_at) })}</span>
           </p>
           {s.forked_from ? (
             <p style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-              Forked from{' '}
+              {m.snippet.forkedFrom}{' '}
               <Link to={`/${s.forked_from.owner}/${s.forked_from.name}`}>
                 {s.forked_from.owner}/{s.forked_from.name}
               </Link>{' '}
@@ -171,17 +172,17 @@ export default function SnippetPage() {
           {own ? (
             <>
               <Button variant="tonal" icon="edit" onClick={() => navigate(`/${owner}/${name}/edit`)}>
-                Edit
+                {m.snippet.edit}
               </Button>
               <Menu
-                buttonLabel="Snippet actions"
+                buttonLabel={m.snippet.actions}
                 items={[
                   ...VISIBILITIES.filter((v) => v !== s.visibility).map((v) => ({
                     id: `visibility:${v}`,
-                    label: `Make ${v}`,
+                    label: fmt(m.library.makeVisibility, { visibility: v }),
                     icon: v === 'public' ? 'public' : v === 'unlisted' ? 'link' : 'lock',
                   })),
-                  { id: 'delete', label: 'Delete', icon: 'delete' },
+                  { id: 'delete', label: m.snippet.delete, icon: 'delete' },
                 ]}
                 onSelect={(id) => {
                   if (id === 'delete') {
@@ -192,7 +193,7 @@ export default function SnippetPage() {
                     setVisibility.mutate(
                       { owner, name, visibility },
                       {
-                        onSuccess: () => toast({ message: `${name} is now ${visibility}` }),
+                        onSuccess: () => toast({ message: fmt(m.snippet.nowVisibility, { name, visibility }) }),
                         onError: (e) => toast({ message: e.uiMessage }),
                       },
                     );
@@ -212,7 +213,7 @@ export default function SnippetPage() {
                   )
                 }
               >
-                {s.starred_by_me ? 'Starred' : 'Star'}
+                {s.starred_by_me ? m.snippet.starred : m.snippet.star}
               </Button>
               <Button
                 variant="outlined"
@@ -222,13 +223,13 @@ export default function SnippetPage() {
                   setForkOpen(true);
                 }}
               >
-                Fork
+                {m.snippet.fork}
               </Button>
-              <IconButton icon="report" label="Report this snippet" onClick={() => setReportOpen(true)} />
+              <IconButton icon="report" label={m.snippet.reportLabel} onClick={() => setReportOpen(true)} />
             </>
           ) : null}
-          <a href={apiUrl(`/snippets/${owner}/${name}/raw`)} target="_blank" rel="noreferrer" aria-label="Open the raw snippet in a new tab">
-            <Button variant="text">Raw</Button>
+          <a href={apiUrl(`/snippets/${owner}/${name}/raw`)} target="_blank" rel="noreferrer" aria-label={m.snippet.rawAria}>
+            <Button variant="text">{m.snippet.raw}</Button>
           </a>
         </div>
       </div>
@@ -237,37 +238,36 @@ export default function SnippetPage() {
         <Card variant="filled">
           <p style={{ margin: 0, display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
             <Icon name="shield" />
-            Review commands before you run them. <code>fg</code> will show you exactly what will run
-            and ask you to confirm.
+            {m.snippet.reviewBefore} <code>fg</code> {m.snippet.reviewAfter}
           </p>
         </Card>
       ) : null}
 
       <Card variant="outlined">
-        <h2 style={{ marginTop: 0 }}>Run it</h2>
+        <h2 style={{ marginTop: 0 }}>{m.snippet.runIt}</h2>
         <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
           <code style={{ flex: 1, fontSize: 'var(--md-sys-typescale-body-large-size)' }}>{runCommand}</code>
-          <CopyIconButton text={runCommand} label="Copy run command" onCopied={() => toast({ message: `Copied: ${runCommand}` })} />
+          <CopyIconButton text={runCommand} label={m.snippet.copyRun} onCopied={() => toast({ message: fmt(m.snippet.copiedCommand, { command: runCommand }) })} />
         </div>
         <p style={{ color: 'var(--md-sys-color-on-surface-variant)', marginBottom: 0 }}>
-          New to <code>fg</code>? Install instructions are in the ForgeHub README.
+          {m.snippet.newToFgBefore} <code>fg</code>{m.snippet.newToFgAfter}
         </p>
         {s.visibility === 'public' ? (
           <p style={{ marginBottom: 0 }}>
             <a href={`/s/${owner}/${name}`} target="_blank" rel="noreferrer">
-              Public page
+              {m.snippet.publicPage}
             </a>{' '}
-            - a shareable, read-only page for this snippet (works without JavaScript).
+            {m.snippet.publicPageNote}
           </p>
         ) : null}
       </Card>
 
       <Tabs
-        ariaLabel="Snippet sections"
+        ariaLabel={m.snippet.sectionsAria}
         tabs={[
-          { id: 'code', label: 'Code' },
-          { id: 'versions', label: 'Versions' },
-          { id: 'forks', label: 'Forks' },
+          { id: 'code', label: m.snippet.tabCode },
+          { id: 'versions', label: m.snippet.tabVersions },
+          { id: 'forks', label: m.snippet.tabForks },
         ]}
         activeIndex={tab}
         onChange={setTab}
@@ -277,54 +277,54 @@ export default function SnippetPage() {
         <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
           {viewVersion !== null ? (
             <p>
-              Viewing version {viewVersion}.{' '}
+              {fmt(m.snippet.viewingVersion, { version: viewVersion })}{' '}
               <Button variant="text" onClick={() => setViewVersion(null)}>
-                Back to latest (v{s.version})
+                {fmt(m.snippet.backToLatest, { version: s.version })}
               </Button>
             </p>
           ) : null}
           {shown?.summary && shown.summary.lint_warnings.length > 0 ? (
             <Card variant="filled">
-              <p style={{ margin: 0, fontWeight: 500 }}>Warnings</p>
+              <p style={{ margin: 0, fontWeight: 500 }}>{m.snippet.warnings}</p>
               <ul>
                 {shown.summary.lint_warnings.map((w, i) => (
                   <li key={i}>
-                    Line {w.line}: {w.message}
+                    {fmt(m.snippet.lintLine, { line: w.line, message: w.message })}
                   </li>
                 ))}
               </ul>
-              {shown.summary.uses_sudo ? <p style={{ margin: 0 }}>This snippet uses sudo.</p> : null}
+              {shown.summary.uses_sudo ? <p style={{ margin: 0 }}>{m.snippet.usesSudo}</p> : null}
             </Card>
           ) : shown?.summary?.uses_sudo ? (
             <p>
-              <Icon name="warning" /> This snippet uses sudo.
+              <Icon name="warning" /> {m.snippet.usesSudo}
             </p>
           ) : null}
-          <CodeBlock code={shown?.body ?? ''} lineNumbers label={`${name} · v${shown?.version ?? s.version}`} />
+          <CodeBlock code={shown?.body ?? ''} lineNumbers label={fmt(m.snippet.codeLabel, { name, version: shown?.version ?? s.version })} />
         </div>
       ) : tab === 1 ? (
         <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
           {versions.isPending ? (
             <Skeleton lines={3} />
           ) : versions.isError ? (
-            <ErrorState title="Could not load versions" message="Try again." retryLabel="Retry" onRetry={() => void versions.refetch()} />
+            <ErrorState title={m.snippet.versionsFailed} message={m.snippet.tryAgain} retryLabel={m.common.retry} onRetry={() => void versions.refetch()} />
           ) : (
             <Card variant="outlined">
               <md-list>
                 {(versions.data?.versions ?? []).map((v) => (
                   <div key={v.version} style={{ display: 'flex', alignItems: 'center', gap: 'var(--fh-space-2)' }}>
                     <Checkbox
-                      ariaLabel={`Select version ${v.version} for diff`}
+                      ariaLabel={fmt(m.snippet.selectVersionAria, { version: v.version })}
                       checked={selected.includes(v.version)}
                       onChange={() => toggleVersion(v.version)}
                     />
                     <div style={{ flex: 1 }}>
                       <md-list-item>
                         <span slot="headline">
-                          v{v.version} · {v.short_hash}
+                          {fmt(m.snippet.versionLine, { version: v.version, hash: v.short_hash })}
                         </span>
                         <span slot="supporting-text">
-                          {v.message || 'No message'} ·{' '}
+                          {v.message || m.snippet.noMessage} ·{' '}
                           <span title={new Date(v.created_at).toLocaleString()}>{relativeTime(v.created_at)}</span>
                         </span>
                       </md-list-item>
@@ -336,11 +336,11 @@ export default function SnippetPage() {
                         setTab(0);
                       }}
                     >
-                      View code
+                      {m.snippet.viewCode}
                     </Button>
                     {own && v.version !== s.version ? (
                       <Button variant="text" onClick={() => setRollbackTarget(v.version)}>
-                        Roll back
+                        {m.snippet.rollBack}
                       </Button>
                     ) : null}
                   </div>
@@ -357,15 +357,15 @@ export default function SnippetPage() {
                 setDiffPair({ from: a, to: b });
               }}
             >
-              Compare selected
+              {m.snippet.compareSelected}
             </Button>
-            {selected.length !== 2 ? <span>Select two versions to compare.</span> : null}
+            {selected.length !== 2 ? <span>{m.snippet.selectTwo}</span> : null}
           </p>
           {diffPair ? (
             diff.isPending ? (
               <Skeleton lines={4} />
             ) : diff.isError ? (
-              <ErrorState title="Could not load the diff" message="The diff may be too large, or a version is missing." />
+              <ErrorState title={m.snippet.diffFailed} message={m.snippet.diffFailedMessage} />
             ) : diff.data ? (
               <DiffView diff={diff.data.diff} />
             ) : null
@@ -376,15 +376,15 @@ export default function SnippetPage() {
           {forks.isPending ? (
             <Skeleton lines={3} />
           ) : forks.isError ? (
-            <ErrorState title="Could not load forks" message="Try again." retryLabel="Retry" onRetry={() => void forks.refetch()} />
+            <ErrorState title={m.snippet.forksFailed} message={m.snippet.tryAgain} retryLabel={m.common.retry} onRetry={() => void forks.refetch()} />
           ) : (forks.data?.forks ?? []).length === 0 ? (
             <EmptyState
               icon="call_split"
-              title="No forks yet"
+              title={m.snippet.noForksTitle}
               message={
                 s.fork_count > 0
-                  ? 'This snippet has forks, but none of them are visible to you (forks start private).'
-                  : 'Nobody has forked this snippet yet. Forks are copies other people keep in their own libraries.'
+                  ? m.snippet.noForksHidden
+                  : m.snippet.noForksNone
               }
             />
           ) : (
@@ -394,7 +394,7 @@ export default function SnippetPage() {
                   <ListItem
                     key={`${f.owner}/${f.name}`}
                     headline={`${f.owner}/${f.name}`}
-                    supportingText={`v${f.version} - ${relativeTime(f.updated_at)}`}
+                    supportingText={fmt(m.snippet.forkLine, { version: f.version, when: relativeTime(f.updated_at) })}
                     trailing={<StatusChip visibility={f.visibility} />}
                     onClick={() => navigate(`/${f.owner}/${f.name}`)}
                   />
@@ -407,17 +407,16 @@ export default function SnippetPage() {
 
       {/* Delete: requires typing the name (owner only). */}
       <md-dialog open={deleteOpen || undefined} onClose={() => setDeleteOpen(false)}>
-        <div slot="headline">Delete {name}?</div>
+        <div slot="headline">{fmt(m.snippet.deleteHeadline, { name })}</div>
         <div slot="content">
           <p>
-            Type the snippet name to confirm. It stays recoverable for 30 days, then it is deleted
-            for good.
+            {m.snippet.deleteBody}
           </p>
-          <TextField label={`Type "${name}"`} value={deleteName} onChange={setDeleteName} />
+          <TextField label={fmt(m.snippet.typeName, { name })} value={deleteName} onChange={setDeleteName} />
         </div>
         <div slot="actions">
           <DialogActions
-            confirmLabel="Delete"
+            confirmLabel={m.snippet.delete}
             danger
             confirmDisabled={deleteName !== name}
             onCancel={() => setDeleteOpen(false)}
@@ -426,7 +425,7 @@ export default function SnippetPage() {
                 { owner, name },
                 {
                   onSuccess: () => {
-                    toast({ message: `${name} deleted` });
+                    toast({ message: fmt(m.snippet.deletedToast, { name }) });
                     navigate('/dashboard');
                   },
                   onError: (e) => toast({ message: e.uiMessage }),
@@ -440,17 +439,15 @@ export default function SnippetPage() {
 
       {/* Rollback: publishes the old content as a new version (Peak C3). */}
       <md-dialog open={rollbackTarget !== null || undefined} onClose={() => setRollbackTarget(null)}>
-        <div slot="headline">Roll back to v{rollbackTarget}?</div>
+        <div slot="headline">{fmt(m.snippet.rollbackHeadline, { version: rollbackTarget ?? '' })}</div>
         <div slot="content">
           <p>
-            This publishes a NEW version (v{s.version + 1}) with v{rollbackTarget}&apos;s
-            content. The current v{s.version} stays in the history - nothing is rewritten or
-            deleted.
+            {fmt(m.snippet.rollbackBodyBefore, { next: s.version + 1, target: rollbackTarget ?? '' })}&apos;s{fmt(m.snippet.rollbackBodyAfter, { current: s.version })}
           </p>
         </div>
         <div slot="actions">
           <DialogActions
-            confirmLabel="Roll back"
+            confirmLabel={m.snippet.rollBack}
             onCancel={() => setRollbackTarget(null)}
             onConfirm={() => {
               if (rollbackTarget === null) return;
@@ -458,7 +455,7 @@ export default function SnippetPage() {
                 { owner, name, ifMatch: s.version, version: rollbackTarget },
                 {
                   onSuccess: (data) =>
-                    toast({ message: `Rolled back - v${data.version} published` }),
+                    toast({ message: fmt(m.snippet.rolledBackToast, { version: data.version }) }),
                   onError: (e) => toast({ message: e.uiMessage }),
                   onSettled: () => setRollbackTarget(null),
                 },
@@ -470,14 +467,14 @@ export default function SnippetPage() {
 
       {/* Fork dialog (handles the name-taken retry). */}
       <md-dialog open={forkOpen || undefined} onClose={() => setForkOpen(false)}>
-        <div slot="headline">Fork {owner}/{name}</div>
+        <div slot="headline">{fmt(m.snippet.forkHeadline, { owner, name })}</div>
         <div slot="content">
-          <p>The fork lands in your account as a private snippet with its history noted.</p>
-          <TextField label="Name in your account" value={forkName} onChange={setForkName} />
+          <p>{m.snippet.forkBody}</p>
+          <TextField label={m.snippet.forkNameLabel} value={forkName} onChange={setForkName} />
         </div>
         <div slot="actions">
           <DialogActions
-            confirmLabel="Fork"
+            confirmLabel={m.snippet.fork}
             confirmDisabled={forkName.trim() === ''}
             onCancel={() => setForkOpen(false)}
             onConfirm={() =>
@@ -485,7 +482,7 @@ export default function SnippetPage() {
                 { owner, name, newName: forkName },
                 {
                   onSuccess: (created) => {
-                    toast({ message: `Forked as ${created.owner}/${created.name}` });
+                    toast({ message: fmt(m.snippet.forkedToast, { owner: created.owner, name: created.name }) });
                     setForkOpen(false);
                     navigate(`/${created.owner}/${created.name}`);
                   },
@@ -493,7 +490,7 @@ export default function SnippetPage() {
                     toast({
                       message:
                         e.code === 'name_taken'
-                          ? 'You already have a snippet with that name. Pick another.'
+                          ? m.snippet.forkNameTaken
                           : e.uiMessage,
                     }),
                 },
@@ -505,14 +502,14 @@ export default function SnippetPage() {
 
       {/* Report dialog. */}
       <md-dialog open={reportOpen || undefined} onClose={() => setReportOpen(false)}>
-        <div slot="headline">Report this snippet</div>
+        <div slot="headline">{m.snippet.reportHeadline}</div>
         <div slot="content">
-          <p>Tell the moderators what is wrong. Reports are not shown to the snippet's owner.</p>
-          <TextField label="Reason" value={reportReason} onChange={setReportReason} multiline rows={3} maxLength={500} />
+          <p>{m.snippet.reportBody}</p>
+          <TextField label={m.snippet.reportReason} value={reportReason} onChange={setReportReason} multiline rows={3} maxLength={500} />
         </div>
         <div slot="actions">
           <DialogActions
-            confirmLabel="Send report"
+            confirmLabel={m.snippet.reportConfirm}
             confirmDisabled={reportReason.trim() === ''}
             onCancel={() => setReportOpen(false)}
             onConfirm={() =>
@@ -520,7 +517,7 @@ export default function SnippetPage() {
                 { owner, name, reason: reportReason.trim() },
                 {
                   onSuccess: () => {
-                    toast({ message: 'Report sent. Thank you.' });
+                    toast({ message: m.snippet.reportSent });
                     setReportOpen(false);
                     setReportReason('');
                   },

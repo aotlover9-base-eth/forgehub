@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, IconButton, PageHeader, TextField, useToast } from '../design';
 import { ApiError } from '../api/client';
+import { m } from '../i18n/messages';
 import { usePasswordResetConfirm } from '../api/hooks';
 
 /**
@@ -24,11 +25,11 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <div style={{ maxWidth: 440, margin: '0 auto' }}>
-        <PageHeader title="Reset your password" />
+        <PageHeader title={m.auth.resetMissingTitle} />
         <Card variant="outlined">
           <p style={{ margin: 0 }}>
-            This link is missing its token. Open the link from your email again, or{' '}
-            <Link to="/forgot-password">request a new one</Link>.
+            {m.auth.resetMissingBefore}{' '}
+            <Link to="/forgot-password">{m.auth.resetMissingLink}</Link>.
           </p>
         </Card>
       </div>
@@ -39,21 +40,21 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setFormError(null);
     if (password !== confirm) {
-      setFormError('The two passwords do not match.');
+      setFormError(m.auth.resetMismatch);
       return;
     }
     reset.mutate(
       { token, new_password: password },
       {
         onSuccess: () => {
-          toast({ message: 'Password updated - log in with your new password' });
+          toast({ message: m.auth.resetUpdatedToast });
           navigate('/login', { replace: true });
         },
         onError: (error) => {
           setFormError(
             error instanceof ApiError
               ? error.uiMessage
-              : 'Something went wrong. Request a new link and try again.',
+              : m.auth.resetFailed,
           );
         },
       },
@@ -63,15 +64,15 @@ export default function ResetPasswordPage() {
   return (
     <div style={{ maxWidth: 440, margin: '0 auto' }}>
       <PageHeader
-        title="Set a new password"
-        subtitle="Pick a new password. Everywhere you are signed in will be signed out."
+        title={m.auth.resetTitle}
+        subtitle={m.auth.resetSubtitle}
       />
       <Card variant="outlined">
         <form onSubmit={submit} style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
           <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <TextField
-                label="New password"
+                label={m.auth.resetNewPassword}
                 value={password}
                 onChange={setPassword}
                 type={showPassword ? 'text' : 'password'}
@@ -81,12 +82,12 @@ export default function ResetPasswordPage() {
             </div>
             <IconButton
               icon={showPassword ? 'visibility_off' : 'visibility'}
-              label={showPassword ? 'Hide password' : 'Show password'}
+              label={showPassword ? m.common.hidePassword : m.common.showPassword}
               onClick={() => setShowPassword(!showPassword)}
             />
           </div>
           <TextField
-            label="Confirm new password"
+            label={m.auth.resetConfirmPassword}
             value={confirm}
             onChange={setConfirm}
             type={showPassword ? 'text' : 'password'}
@@ -103,12 +104,12 @@ export default function ResetPasswordPage() {
             type="submit"
             disabled={reset.isPending || !password || !confirm}
           >
-            {reset.isPending ? 'Updating…' : 'Update password'}
+            {reset.isPending ? m.auth.resetPending : m.auth.resetSubmit}
           </Button>
         </form>
       </Card>
       <p>
-        Link expired? <Link to="/forgot-password">Request a new one</Link>
+        {m.auth.resetExpiredBefore} <Link to="/forgot-password">{m.auth.resetRequestNew}</Link>
       </p>
     </div>
   );

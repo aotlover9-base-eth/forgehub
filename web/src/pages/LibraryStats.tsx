@@ -1,16 +1,17 @@
 import { Card, Skeleton } from '../design';
 import { useMyStats } from '../api/hooks';
+import { fmt, m } from '../i18n/messages';
 
 /** Humanize a millisecond duration the way `fg stats` does. */
 function humanMs(ms: number): string {
-  if (ms < 1000) return `${ms} ms`;
+  if (ms < 1000) return fmt(m.libraryStats.unitMs, { value: ms });
   const secs = ms / 1000;
-  if (secs < 60) return `${secs.toFixed(1)} s`;
+  if (secs < 60) return fmt(m.libraryStats.unitSeconds, { value: secs.toFixed(1) });
   const mins = secs / 60;
-  if (mins < 60) return `${mins.toFixed(1)} min`;
+  if (mins < 60) return fmt(m.libraryStats.unitMinutes, { value: mins.toFixed(1) });
   const hours = mins / 60;
-  if (hours < 48) return `${hours.toFixed(1)} h`;
-  return `${(hours / 24).toFixed(1)} days`;
+  if (hours < 48) return fmt(m.libraryStats.unitHours, { value: hours.toFixed(1) });
+  return fmt(m.libraryStats.unitDays, { value: (hours / 24).toFixed(1) });
 }
 
 /**
@@ -37,11 +38,10 @@ export default function LibraryStats() {
   return (
     <Card>
       <div style={{ display: 'grid', gap: 'var(--fh-space-3)', padding: 'var(--fh-space-4)' }}>
-        <h2 style={{ margin: 0 }}>Your library</h2>
+        <h2 style={{ margin: 0 }}>{m.libraryStats.title}</h2>
         {data.runs === 0 ? (
           <p style={{ margin: 0 }}>
-            No cloud runs yet. When you run a cloud snippet with the CLI, it is counted here.
-            Local runs never leave your machine - <code>fg stats</code> covers those.
+            {m.libraryStats.emptyBefore} <code>fg stats</code> {m.libraryStats.emptyAfter}
           </p>
         ) : (
           <>
@@ -54,24 +54,24 @@ export default function LibraryStats() {
             >
               <div>
                 <div style={{ fontSize: 'var(--md-sys-typescale-headline-medium-size)' }}>{data.runs}</div>
-                <div>cloud runs</div>
+                <div>{m.libraryStats.cloudRuns}</div>
               </div>
               <div>
                 <div style={{ fontSize: 'var(--md-sys-typescale-headline-medium-size)' }}>{data.commands}</div>
-                <div>commands automated</div>
+                <div>{m.libraryStats.commandsAutomated}</div>
               </div>
               <div>
                 <div style={{ fontSize: 'var(--md-sys-typescale-headline-medium-size)' }}>{humanMs(data.estimated_saved_ms)}</div>
-                <div>estimated time saved</div>
+                <div>{m.libraryStats.estimatedSaved}</div>
               </div>
               <div>
                 <div style={{ fontSize: 'var(--md-sys-typescale-headline-medium-size)' }}>{humanMs(data.total_ms)}</div>
-                <div>spent running</div>
+                <div>{m.libraryStats.spentRunning}</div>
               </div>
               {data.failures > 0 ? (
                 <div>
                   <div style={{ fontSize: 'var(--md-sys-typescale-headline-medium-size)' }}>{data.failures}</div>
-                  <div>failed runs</div>
+                  <div>{m.libraryStats.failedRuns}</div>
                 </div>
               ) : null}
             </div>
@@ -83,17 +83,19 @@ export default function LibraryStats() {
                 >
                   <code style={{ flex: 1, minWidth: 160 }}>{w.ref}</code>
                   <span>
-                    {w.runs} run{w.runs === 1 ? '' : 's'}
-                    {w.failures > 0 ? ` - ${w.failures} failed` : ''} - last run{' '}
-                    {w.last_run.slice(0, 10)}
+                    {fmt(m.libraryStats.runsLine, {
+                      runs: w.runs,
+                      runWord: w.runs === 1 ? m.libraryStats.runOne : m.libraryStats.runMany,
+                      failedPart:
+                        w.failures > 0 ? fmt(m.libraryStats.failedPart, { count: w.failures }) : '',
+                      date: w.last_run.slice(0, 10),
+                    })}
                   </span>
                 </div>
               ))}
             </div>
             <p style={{ margin: 0 }}>
-              Counts only your own runs, reported by your CLI. Time saved uses the same
-              estimate as <code>fg stats</code>: commands times your recall-and-typing
-              allowance, minus the time actually spent running.
+              {m.libraryStats.footnoteBefore} <code>fg stats</code>{m.libraryStats.footnoteAfter}
             </p>
           </>
         )}

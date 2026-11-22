@@ -13,6 +13,7 @@ import {
 } from '../design';
 import { useExplore, useMe, useMySnippets } from '../api/hooks';
 import { relativeTime } from '../validation';
+import { fmt, m } from '../i18n/messages';
 
 /**
  * The signed-in Home: a command centre, deliberately NOT
@@ -41,37 +42,35 @@ export default function HomePage() {
   return (
     <div>
       <PageHeader
-        title={`Welcome back, ${name}`}
-        subtitle="Jump back into your commands, or find something new worth saving."
+        title={fmt(m.home.welcome, { name })}
+        subtitle={m.home.subtitle}
         actions={
           <Button variant="filled" icon="add" onClick={() => navigate('/new')}>
-            New snippet
+            {m.home.newSnippet}
           </Button>
         }
       />
 
       {isNewUser ? (
         <Card variant="filled">
-          <h2 style={{ marginTop: 0 }}>Two steps to your first saved command</h2>
+          <h2 style={{ marginTop: 0 }}>{m.home.firstStepsTitle}</h2>
           <ol style={{ display: 'grid', gap: 'var(--fh-space-4)', paddingInlineStart: 'var(--fh-space-5)' }}>
             <li>
-              <strong>Get the CLI.</strong> Install ForgeHub on your machine (the README has the
-              one-command install), then sign in from your terminal:
+              <strong>{m.home.step1Strong}</strong> {m.home.step1Rest}
               <div style={{ marginTop: 'var(--fh-space-2)' }}>
-                <CodeBlock label="Terminal" code="fg login" />
+                <CodeBlock label={m.home.terminal} code="fg login" />
               </div>
             </li>
             <li>
-              <strong>Record a command you keep re-typing.</strong> Everything you run is captured
-              until you type <code>end</code>:
+              <strong>{m.home.step2Strong}</strong> {m.home.step2RestBefore} <code>end</code>:
               <div style={{ marginTop: 'var(--fh-space-2)' }}>
-                <CodeBlock label="Terminal" code={'fg record\n# your commands...\nend'} />
+                <CodeBlock label={m.home.terminal} code={'fg record\n# your commands...\nend'} />
               </div>
             </li>
           </ol>
           <p style={{ marginBottom: 0 }}>
             <Button variant="filled" onClick={() => navigate('/new')}>
-              Or create a snippet on the web
+              {m.home.createOnWeb}
             </Button>
           </p>
         </Card>
@@ -86,7 +85,7 @@ export default function HomePage() {
             }}
           >
             <Card variant="outlined">
-              <h2 style={{ marginTop: 0 }}>Your recent snippets</h2>
+              <h2 style={{ marginTop: 0 }}>{m.home.recentTitle}</h2>
               {mine.isPending ? (
                 <Skeleton lines={3} />
               ) : (
@@ -96,7 +95,7 @@ export default function HomePage() {
                       <ListItem
                         key={s.name}
                         headline={s.name}
-                        supportingText={`${s.description || 'No description.'} - v${s.version} - ${relativeTime(s.updated_at)}`}
+                        supportingText={fmt(m.home.recentLine, { description: s.description || m.home.noDescription, version: s.version, when: relativeTime(s.updated_at) })}
                         leading={<Icon name={s.summary?.mode === 'steps' ? 'library_books' : 'terminal'} />}
                         trailing={<StatusChip visibility={s.visibility} />}
                         onClick={() => navigate(`/${s.owner}/${s.name}`)}
@@ -104,18 +103,18 @@ export default function HomePage() {
                     ))}
                   </md-list>
                   <p style={{ marginBottom: 0 }}>
-                    <Link to="/dashboard">View all in your Library</Link>
+                    <Link to="/dashboard">{m.home.viewAllLibrary}</Link>
                   </p>
                 </>
               )}
             </Card>
 
             <Card variant="outlined">
-              <h2 style={{ marginTop: 0 }}>Popular this week</h2>
+              <h2 style={{ marginTop: 0 }}>{m.home.popularTitle}</h2>
               {popular.isPending ? (
                 <Skeleton lines={3} />
               ) : trending.length === 0 ? (
-                <p>No public snippets yet - yours could be the first everyone reaches for.</p>
+                <p>{m.home.popularEmpty}</p>
               ) : (
                 <>
                   <md-list class="fh-list-enter">
@@ -123,7 +122,7 @@ export default function HomePage() {
                       <ListItem
                         key={`${s.owner}/${s.name}`}
                         headline={s.name}
-                        supportingText={`by ${s.owner} - ${relativeTime(s.updated_at)}`}
+                        supportingText={fmt(m.home.byLine, { owner: s.owner, when: relativeTime(s.updated_at) })}
                         leading={<Icon name="terminal" />}
                         trailing={
                           <span style={{ display: 'inline-flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
@@ -140,7 +139,7 @@ export default function HomePage() {
                     ))}
                   </md-list>
                   <p style={{ marginBottom: 0 }}>
-                    <Link to="/explore">More on Explore</Link>
+                    <Link to="/explore">{m.home.moreExplore}</Link>
                   </p>
                 </>
               )}
@@ -155,12 +154,12 @@ export default function HomePage() {
             }}
           >
             <Card variant="outlined">
-              <h2 style={{ marginTop: 0 }}>Recent activity</h2>
+              <h2 style={{ marginTop: 0 }}>{m.home.activityTitle}</h2>
               <md-list class="fh-list-enter">
                 {recent.map((s) => (
                   <ListItem
                     key={s.name}
-                    headline={`${s.name} reached v${s.version}`}
+                    headline={fmt(m.home.reachedVersion, { name: s.name, version: s.version })}
                     supportingText={relativeTime(s.updated_at)}
                     leading={<Icon name="history" />}
                     onClick={() => navigate(`/${s.owner}/${s.name}`)}
@@ -170,14 +169,13 @@ export default function HomePage() {
             </Card>
 
             <Card variant="filled">
-              <h2 style={{ marginTop: 0 }}>Run from the CLI</h2>
+              <h2 style={{ marginTop: 0 }}>{m.home.runFromCliTitle}</h2>
               <p>
-                Every snippet you save is one short command away, on any machine signed in to
-                ForgeHub - shown in full first, and run only when you say yes.
+                {m.home.runFromCliBody}
               </p>
               <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
                 <code style={{ flex: 1, fontSize: 'var(--md-sys-typescale-body-large-size)' }}>fg ubuntu-setup</code>
-                <CopyIconButton text="fg ubuntu-setup" label="Copy run command" onCopied={() => toast({ message: 'Copied: fg ubuntu-setup' })} />
+                <CopyIconButton text="fg ubuntu-setup" label={m.home.copyRunCommand} onCopied={() => toast({ message: m.home.copiedRunCommand })} />
               </div>
             </Card>
           </div>

@@ -1,3 +1,4 @@
+import { fmt, m } from '../i18n/messages';
 import type { ApiErrorBody } from './types';
 
 /**
@@ -33,11 +34,11 @@ export class ApiError extends Error {
   get uiMessage(): string {
     if (this.status === 429) {
       return this.retryAfterSeconds
-        ? `Too many attempts. Wait ${this.retryAfterSeconds} seconds and try again.`
-        : 'Too many attempts. Wait a moment and try again.';
+        ? fmt(m.api.rateLimited, { seconds: this.retryAfterSeconds })
+        : m.api.rateLimitedShort;
     }
     if (this.status === 0) {
-      return 'Could not reach the server. Check your connection and try again.';
+      return m.api.unreachable;
     }
     return this.message;
   }

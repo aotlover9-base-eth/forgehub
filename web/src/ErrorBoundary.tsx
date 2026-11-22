@@ -1,3 +1,4 @@
+import { fmt, m } from './i18n/messages';
 import { Component, type ReactNode } from 'react';
 import { ErrorState } from './design';
 
@@ -20,9 +21,9 @@ export class ErrorBoundary extends Component<
     if (this.state.failed) {
       return (
         <ErrorState
-          title="Something went wrong"
-          message={`The page hit an unexpected problem. Reloading usually fixes it; your snippets are safe on the server. Reference: ${this.state.refId}`}
-          retryLabel="Reload"
+          title={m.design.errorTitle}
+          message={fmt(m.design.errorMessage, { ref: this.state.refId })}
+          retryLabel={m.design.reload}
           onRetry={() => window.location.reload()}
         />
       );

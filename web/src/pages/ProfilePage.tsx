@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { fmt, m } from '../i18n/messages';
 import { Card, EmptyState, Icon, ListItem, Skeleton, StatusChip } from '../design';
 import { useProfile, useProfileSnippets } from '../api/hooks';
 import { relativeTime } from '../validation';
@@ -26,8 +27,8 @@ export default function ProfilePage() {
       <EmptyState
         icon="person"
         titleLevel={1}
-        title="No such user"
-        message="That profile does not exist."
+        title={m.profile.noSuchUser}
+        message={m.profile.noSuchUserMessage}
         actionLabel="Go to Explore"
         onAction={() => navigate('/explore')}
       />
@@ -67,7 +68,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <h2 style={{ margin: 0 }}>Public snippets</h2>
+      <h2 style={{ margin: 0 }}>{m.profile.publicSnippets}</h2>
       {snippets.isPending ? (
         <Skeleton lines={3} />
       ) : snippets.data && snippets.data.snippets.length > 0 ? (
@@ -77,7 +78,7 @@ export default function ProfilePage() {
               <ListItem
                 key={s.name}
                 headline={s.name}
-                supportingText={`${s.description || 'No description.'} - v${s.version} - ${relativeTime(s.updated_at)}`}
+                supportingText={fmt(m.home.recentLine, { description: s.description || m.home.noDescription, version: s.version, when: relativeTime(s.updated_at) })}
                 leading={<Icon name="terminal" />}
                 trailing={<StatusChip visibility={s.visibility} />}
                 onClick={() => navigate(`/${p.username}/${s.name}`)}
@@ -86,7 +87,7 @@ export default function ProfilePage() {
           </md-list>
         </Card>
       ) : (
-        <EmptyState icon="library_books" title="Nothing public yet" message="This user has not shared any public snippets." />
+        <EmptyState icon="library_books" title={m.profile.emptyTitle} message={m.profile.emptyMessage} />
       )}
     </div>
   );

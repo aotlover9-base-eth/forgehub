@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Card, IconButton, PageHeader, TextField, useToast } from '../design';
 import { ApiError } from '../api/client';
+import { m } from '../i18n/messages';
 import { useSignup } from '../api/hooks';
 import { emailIssue, passwordIssue, usernameIssue } from '../validation';
 
@@ -35,22 +36,22 @@ export default function SignupPage() {
       { username: username.trim(), email: email.trim(), password },
       {
         onSuccess: () => {
-          toast({ message: 'Account created. Welcome to ForgeHub.' });
+          toast({ message: m.auth.signupCreatedToast });
           navigate('/home', { replace: true });
         },
         onError: (error) => {
           if (error instanceof ApiError && error.code === 'username_taken') {
-            setServerUsernameError('That username is taken. Try another.');
+            setServerUsernameError(m.auth.signupUsernameTaken);
           } else if (error instanceof ApiError && error.status === 429) {
             setFormError(error.uiMessage);
           } else if (error instanceof ApiError && error.status === 409) {
             // Generic by design: the server does not confirm
             // whether the email already has an account.
-            setFormError('We could not create the account with those details. If you already have an account, log in instead.');
+            setFormError(m.auth.signupCouldNotCreate);
           } else if (error instanceof ApiError) {
             setFormError(error.uiMessage);
           } else {
-            setFormError('Something went wrong. Try again.');
+            setFormError(m.common.somethingWrong);
           }
         },
       },
@@ -59,11 +60,11 @@ export default function SignupPage() {
 
   return (
     <div style={{ maxWidth: 440, margin: '0 auto' }}>
-      <PageHeader title="Create account" subtitle="Save a command once. Run it anywhere with fg." />
+      <PageHeader title={m.auth.signupTitle} subtitle={m.auth.signupSubtitle} />
       <Card variant="outlined">
         <form onSubmit={submit} style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
           <TextField
-            label="Username"
+            label={m.auth.signupUsername}
             value={username}
             onChange={(v) => {
               setUsername(v);
@@ -72,10 +73,10 @@ export default function SignupPage() {
             autoComplete="username"
             required
             errorText={usernameHint ?? undefined}
-            supportingText="Lowercase letters, digits and hyphens. This is your public name in URLs."
+            supportingText={m.auth.signupUsernameHint}
           />
           <TextField
-            label="Email"
+            label={m.auth.signupEmail}
             value={email}
             onChange={setEmail}
             type="email"
@@ -86,19 +87,19 @@ export default function SignupPage() {
           <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Password"
+                label={m.common.password}
                 value={password}
                 onChange={setPassword}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 required
                 errorText={passwordHint ?? undefined}
-                supportingText="At least 10 characters. A longer phrase you remember beats a short clever one."
+                supportingText={m.auth.signupPasswordHint}
               />
             </div>
             <IconButton
               icon={showPassword ? 'visibility_off' : 'visibility'}
-              label={showPassword ? 'Hide password' : 'Show password'}
+              label={showPassword ? m.common.hidePassword : m.common.showPassword}
               onClick={() => setShowPassword(!showPassword)}
             />
           </div>
@@ -108,12 +109,12 @@ export default function SignupPage() {
             </p>
           ) : null}
           <Button variant="filled" type="submit" disabled={signup.isPending || !valid}>
-            {signup.isPending ? 'Creating account…' : 'Create account'}
+            {signup.isPending ? m.auth.signupPending : m.auth.signupSubmit}
           </Button>
         </form>
       </Card>
       <p>
-        Already have an account? <Link to="/login">Log in</Link>
+        {m.auth.signupHaveAccount} <Link to="/login">{m.auth.signupLoginLink}</Link>
       </p>
     </div>
   );

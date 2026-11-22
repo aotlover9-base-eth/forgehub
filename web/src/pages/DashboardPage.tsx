@@ -40,17 +40,18 @@ import ImportPanel from './ImportPanel';
 import LibraryStats from './LibraryStats';
 import type { Snippet, Visibility } from '../api/types';
 import { relativeTime } from '../validation';
+import { fmt, m } from '../i18n/messages';
 
 const FILTERS: { id: VisibilityFilter; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'private', label: 'Private' },
-  { id: 'unlisted', label: 'Unlisted' },
-  { id: 'public', label: 'Public' },
+  { id: 'all', label: m.library.filterAll },
+  { id: 'private', label: m.design.visibilityPrivate },
+  { id: 'unlisted', label: m.design.visibilityUnlisted },
+  { id: 'public', label: m.design.visibilityPublic },
 ];
 const SORTS: { id: SnippetSort; label: string }[] = [
-  { id: 'updated', label: 'Recently updated' },
-  { id: 'created', label: 'Recently created' },
-  { id: 'name', label: 'Name' },
+  { id: 'updated', label: m.library.sortUpdated },
+  { id: 'created', label: m.library.sortCreated },
+  { id: 'name', label: m.library.sortName },
 ];
 const VISIBILITIES: Visibility[] = ['private', 'unlisted', 'public'];
 
@@ -130,7 +131,7 @@ export default function DashboardPage() {
       await navigator.clipboard.writeText(text);
       toast({ message });
     } catch {
-      toast({ message: 'Copy failed - your browser blocked clipboard access' });
+      toast({ message: m.library.copyFailed });
     }
   };
 
@@ -187,11 +188,11 @@ export default function DashboardPage() {
 
   const onMenu = (snippet: Snippet, action: string) => {
     if (action === 'copy-run') {
-      void copy(`fg ${snippet.name}`, `Copied: fg ${snippet.name}`);
+      void copy(`fg ${snippet.name}`, fmt(m.library.copiedFg, { name: snippet.name }));
     } else if (action === 'copy-raw') {
       void copy(
         `${window.location.origin}${apiUrl(`/snippets/${snippet.owner}/${snippet.name}/raw`)}`,
-        'Raw URL copied',
+        m.library.rawUrlCopied,
       );
     } else if (action === 'open') {
       navigate(`/${snippet.owner}/${snippet.name}`);
@@ -207,7 +208,7 @@ export default function DashboardPage() {
           snippetName: snippet.name,
         },
         {
-          onSuccess: () => toast({ message: `${snippet.name} added to ${collectionName}` }),
+          onSuccess: () => toast({ message: fmt(m.library.addedTo, { name: snippet.name, collection: collectionName }) }),
           onError: (error) => toast({ message: error.uiMessage }),
         },
       );
@@ -216,7 +217,7 @@ export default function DashboardPage() {
       setVisibility.mutate(
         { owner: snippet.owner, name: snippet.name, visibility },
         {
-          onSuccess: () => toast({ message: `${snippet.name} is now ${visibility}` }),
+          onSuccess: () => toast({ message: fmt(m.library.nowVisibility, { name: snippet.name, visibility }) }),
           onError: (error) => toast({ message: error.uiMessage }),
         },
       );
@@ -238,8 +239,8 @@ export default function DashboardPage() {
     toast({
       message:
         failed === 0
-          ? `${label}: ${done} snippet${done === 1 ? '' : 's'} done`
-          : `${label}: ${done} done, ${failed} failed - the list has been refreshed`,
+          ? fmt(m.library.bulkDone, { label, done, word: done === 1 ? m.library.savedOne : m.library.savedMany })
+          : fmt(m.library.bulkPartial, { label, done, failed }),
     });
     setSelected(new Set());
     setBulkMode(false);
@@ -251,23 +252,23 @@ export default function DashboardPage() {
     <div style={{ display: 'flex', gap: 'var(--fh-space-4)', alignItems: 'flex-start' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <PageHeader
-          title="Your snippets"
+          title={m.library.title}
           subtitle={
             snippets.data
-              ? `${total} snippet${total === 1 ? '' : 's'} saved - private by default.`
-              : 'Everything you have saved, private by default.'
+              ? fmt(m.library.countLine, { count: total, word: total === 1 ? m.library.savedOne : m.library.savedMany })
+              : m.library.subtitleFallback
           }
           actions={
             <Button variant="filled" icon="add" onClick={() => navigate('/new')}>
-              New snippet
+              {m.library.newSnippet}
             </Button>
           }
         />
 
         <div style={{ display: 'grid', gap: 'var(--fh-space-3)', marginBottom: 'var(--fh-space-4)' }}>
-          <SearchBar value={query} onChange={setQuery} placeholder="Search your snippets" ariaLabel="Search your snippets" />
+          <SearchBar value={query} onChange={setQuery} placeholder={m.library.searchPlaceholder} ariaLabel={m.library.searchPlaceholder} />
           <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <md-chip-set aria-label="Filter by visibility">
+            <md-chip-set aria-label={m.library.filterAria}>
               {FILTERS.map((f) => (
                 <md-filter-chip
                   key={f.id}
@@ -286,16 +287,16 @@ export default function DashboardPage() {
                 setSelected(new Set());
               }}
             >
-              Select
+              {m.library.select}
             </Button>
             <Button
               variant="text"
               onClick={() => setDensity(density === 'compact' ? 'comfortable' : 'compact')}
             >
-              {density === 'compact' ? 'Density: Compact' : 'Density: Comfortable'}
+              {density === 'compact' ? m.library.densityCompact : m.library.densityComfortable}
             </Button>
             <Menu
-              buttonLabel="Sort snippets"
+              buttonLabel={m.library.sortLabel}
               buttonIcon="sort"
               items={SORTS.map((s) => ({ id: s.id, label: s.label }))}
               onSelect={(id) => setSort(id as SnippetSort)}
@@ -307,15 +308,15 @@ export default function DashboardPage() {
           <Card variant="filled">
             <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
               <strong>
-                {selected.size} selected
+                {fmt(m.library.selectedCount, { count: selected.size })}
               </strong>
               <span style={{ flex: 1 }} />
               <Menu
-                buttonLabel="Set visibility for selected"
+                buttonLabel={m.library.setVisibilitySelected}
                 buttonIcon="visibility"
-                items={VISIBILITIES.map((v) => ({ id: v, label: `Make ${v}` }))}
+                items={VISIBILITIES.map((v) => ({ id: v, label: fmt(m.library.makeVisibility, { visibility: v }) }))}
                 onSelect={(id) =>
-                  void runBulk('Visibility set', (s) =>
+                  void runBulk(m.library.bulkVisibilityLabel, (s) =>
                     setVisibility.mutateAsync({
                       owner: s.owner,
                       name: s.name,
@@ -325,7 +326,7 @@ export default function DashboardPage() {
                 }
               />
               <Button variant="text" icon="sell" disabled={selected.size === 0} onClick={() => setTagOpen(true)}>
-                Add tag
+                {m.library.addTag}
               </Button>
               <Button
                 variant="text"
@@ -333,11 +334,11 @@ export default function DashboardPage() {
                 disabled={selected.size === 0}
                 onClick={() => setBulkDeleteOpen(true)}
               >
-                Delete
+                {m.library.delete}
               </Button>
               <IconButton
                 icon="close"
-                label="Leave bulk select"
+                label={m.library.leaveBulk}
                 onClick={() => {
                   setBulkMode(false);
                   setSelected(new Set());
@@ -353,35 +354,33 @@ export default function DashboardPage() {
           </Card>
         ) : snippets.isError ? (
           <ErrorState
-            title="Could not load your snippets"
-            message={snippets.error instanceof ApiError ? snippets.error.uiMessage : 'Something went wrong.'}
-            retryLabel="Retry"
+            title={m.library.loadFailed}
+            message={snippets.error instanceof ApiError ? snippets.error.uiMessage : m.common.somethingWrongShort}
+            retryLabel={m.common.retry}
             onRetry={() => void snippets.refetch()}
           />
         ) : visible.length === 0 && !query && filter === 'all' ? (
           <div style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
             <EmptyState
               icon="library_books"
-              title="No snippets yet"
-              message="Save the commands you keep re-typing. They stay private until you choose to share them."
-              actionLabel="New snippet"
+              title={m.library.emptyTitle}
+              message={m.library.emptyMessage}
+              actionLabel={m.library.newSnippet}
               onAction={() => navigate('/new')}
             />
             <Card variant="filled">
-              <h2 style={{ marginTop: 0 }}>Run them from your terminal</h2>
+              <h2 style={{ marginTop: 0 }}>{m.library.runFromTerminalTitle}</h2>
               <p>
-                With the <code>fg</code> CLI, a saved snippet runs anywhere after you confirm exactly
-                what it will do:
+                {m.library.runFromTerminalBodyBefore} <code>fg</code> {m.library.runFromTerminalBodyAfter}
               </p>
-              <CodeBlock label="Terminal" code={'fg login\nfg ubuntu-setup'} />
+              <CodeBlock label={m.home.terminal} code={'fg login\nfg ubuntu-setup'} />
               <p style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-                Install instructions live in the ForgeHub README (installer packages arrive with the
-                first release).
+                {m.library.installNote}
               </p>
             </Card>
           </div>
         ) : visible.length === 0 ? (
-          <EmptyState icon="search" title="Nothing matches" message="No snippets match this filter and search. Try clearing one of them." />
+          <EmptyState icon="search" title={m.library.nothingTitle} message={m.library.nothingMessage} />
         ) : (
           <Card variant="outlined">
             <div ref={listRef} className="fh-list-enter">
@@ -395,7 +394,7 @@ export default function DashboardPage() {
                   >
                     {bulkMode ? (
                       <Checkbox
-                        ariaLabel={`Select ${snippet.name}`}
+                        ariaLabel={fmt(m.library.selectAria, { name: snippet.name })}
                         checked={selected.has(snippet.name)}
                         onChange={() => openSnippet(snippet)}
                       />
@@ -403,7 +402,7 @@ export default function DashboardPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <ListItem
                         headline={snippet.name}
-                        supportingText={`${snippet.description || 'No description'} - v${snippet.version} - ${relativeTime(snippet.updated_at)}`}
+                        supportingText={fmt(m.library.listLine, { description: snippet.description || m.library.noDescription, version: snippet.version, when: relativeTime(snippet.updated_at) })}
                         leading={
                           <Icon name={snippet.summary?.mode === 'steps' ? 'library_books' : 'terminal'} />
                         }
@@ -422,22 +421,22 @@ export default function DashboardPage() {
                     </div>
                     <StatusChip visibility={snippet.visibility} />
                     <Menu
-                      buttonLabel={`Actions for ${snippet.name}`}
+                      buttonLabel={fmt(m.library.actionsFor, { name: snippet.name })}
                       items={[
-                        { id: 'open', label: 'Open', icon: 'chevron_right' },
-                        { id: 'copy-run', label: 'Copy run command', icon: 'content_copy' },
-                        { id: 'copy-raw', label: 'Copy raw URL', icon: 'link' },
+                        { id: 'open', label: m.library.menuOpen, icon: 'chevron_right' },
+                        { id: 'copy-run', label: m.library.menuCopyRun, icon: 'content_copy' },
+                        { id: 'copy-raw', label: m.library.menuCopyRaw, icon: 'link' },
                         ...VISIBILITIES.filter((v) => v !== snippet.visibility).map((v) => ({
                           id: `visibility:${v}`,
-                          label: `Make ${v}`,
+                          label: fmt(m.library.makeVisibility, { visibility: v }),
                           icon: v === 'public' ? 'public' : v === 'unlisted' ? 'link' : 'lock',
                         })),
                         ...(myCollections.data?.collections ?? []).map((c) => ({
                           id: `collection:${c.name}`,
-                          label: `Add to ${c.name}`,
+                          label: fmt(m.library.menuAddTo, { name: c.name }),
                           icon: 'playlist_add',
                         })),
-                        { id: 'delete', label: 'Delete', icon: 'delete' },
+                        { id: 'delete', label: m.library.menuDelete, icon: 'delete' },
                       ]}
                       onSelect={(id) => onMenu(snippet, id)}
                     />
@@ -462,39 +461,39 @@ export default function DashboardPage() {
       {sheetSnippet ? (
         <aside
           className="fh-sheet-enter"
-          aria-label={`Preview of ${sheetSnippet.name}`}
+          aria-label={fmt(m.library.previewOf, { name: sheetSnippet.name })}
           style={{ width: 360, flexShrink: 0, position: 'sticky', top: 0 }}
         >
           <Card variant="outlined">
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--fh-space-2)' }}>
               <h2 style={{ margin: 0, flex: 1 }}>{sheetSnippet.name}</h2>
-              <IconButton icon="close" label="Close preview" onClick={() => setSheetName(null)} />
+              <IconButton icon="close" label={m.library.closePreview} onClick={() => setSheetName(null)} />
             </div>
             <p style={{ color: 'var(--md-sys-color-on-surface-variant)' }}>
-              {sheetSnippet.description || 'No description'} - v{sheetSnippet.version}
+              {fmt(m.library.previewLine, { description: sheetSnippet.description || m.library.noDescription, version: sheetSnippet.version })}
             </p>
             {sheetDetail.isPending ? (
               <Skeleton lines={4} />
             ) : sheetDetail.data ? (
               <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
-                <CodeBlock code={sheetDetail.data.body} label={`${sheetSnippet.name} - v${sheetDetail.data.version}`} />
+                <CodeBlock code={sheetDetail.data.body} label={fmt(m.library.previewCodeLabel, { name: sheetSnippet.name, version: sheetDetail.data.version })} />
                 <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
                   <code style={{ flex: 1 }}>fg {sheetSnippet.name}</code>
                   <CopyIconButton
                     text={`fg ${sheetSnippet.name}`}
-                    label="Copy run command"
-                    onCopied={() => toast({ message: `Copied: fg ${sheetSnippet.name}` })}
+                    label={m.library.menuCopyRun}
+                    onCopied={() => toast({ message: fmt(m.library.copiedFg, { name: sheetSnippet.name }) })}
                   />
                 </div>
                 <Button
                   variant="filled"
                   onClick={() => navigate(`/${sheetSnippet.owner}/${sheetSnippet.name}`)}
                 >
-                  Open full page
+                  {m.library.openFullPage}
                 </Button>
               </div>
             ) : (
-              <ErrorState title="Could not load the preview" message="Open the full page instead." />
+              <ErrorState title={m.library.previewFailedTitle} message={m.library.previewFailedMessage} />
             )}
           </Card>
         </aside>
@@ -502,9 +501,9 @@ export default function DashboardPage() {
 
       <ConfirmDialog
         open={toDelete !== null}
-        headline={`Delete ${toDelete?.name ?? ''}?`}
-        content="The snippet is removed from your library. Its name stays reserved for 30 days, then it is deleted for good."
-        confirmLabel="Delete"
+        headline={fmt(m.library.deleteOneHeadline, { name: toDelete?.name ?? '' })}
+        content={m.library.deleteOneContent}
+        confirmLabel={m.library.delete}
         danger
         onCancel={() => setToDelete(null)}
         onConfirm={() => {
@@ -512,7 +511,7 @@ export default function DashboardPage() {
           deleteSnippet.mutate(
             { owner: toDelete.owner, name: toDelete.name },
             {
-              onSuccess: () => toast({ message: `${toDelete.name} deleted` }),
+              onSuccess: () => toast({ message: fmt(m.library.deletedToast, { name: toDelete.name }) }),
               onError: (error) => toast({ message: error.uiMessage }),
               onSettled: () => setToDelete(null),
             },
@@ -522,37 +521,37 @@ export default function DashboardPage() {
 
       <ConfirmDialog
         open={bulkDeleteOpen}
-        headline={`Delete ${selected.size} snippet${selected.size === 1 ? '' : 's'}?`}
-        content="They are removed from your library. Names stay reserved for 30 days, then they are deleted for good."
+        headline={fmt(m.library.deleteManyHeadline, { count: selected.size, word: selected.size === 1 ? m.library.savedOne : m.library.savedMany })}
+        content={m.library.deleteManyContent}
         confirmLabel="Delete"
         danger
         onCancel={() => setBulkDeleteOpen(false)}
         onConfirm={() => {
           setBulkDeleteOpen(false);
-          void runBulk('Deleted', (s) => deleteSnippet.mutateAsync({ owner: s.owner, name: s.name }));
+          void runBulk(m.library.bulkDeletedLabel, (s) => deleteSnippet.mutateAsync({ owner: s.owner, name: s.name }));
         }}
       />
 
       <md-dialog open={tagOpen || undefined} onClose={() => setTagOpen(false)}>
-        <div slot="headline">Add a tag to {selected.size} snippets</div>
+        <div slot="headline">{fmt(m.library.tagDialogHeadline, { count: selected.size })}</div>
         <div slot="content">
           <TextField
-            label="Tag"
+            label={m.library.tagLabel}
             value={tagDraft}
             onChange={setTagDraft}
-            supportingText="Lowercase letters, digits and hyphens. Snippets that already have it are skipped."
+            supportingText={m.library.tagHint}
           />
         </div>
         <div slot="actions">
           <DialogActions
-            confirmLabel="Add tag"
+            confirmLabel={m.library.tagConfirm}
             confirmDisabled={tagDraft.trim() === ''}
             onCancel={() => setTagOpen(false)}
             onConfirm={() => {
               const tag = tagDraft.trim().toLowerCase();
               setTagOpen(false);
               setTagDraft('');
-              void runBulk('Tag added', (s) =>
+              void runBulk(m.library.bulkTagLabel, (s) =>
                 s.tags.includes(tag)
                   ? Promise.resolve(s)
                   : patchSnippet.mutateAsync({

@@ -1,3 +1,4 @@
+import { m } from '../../i18n/messages';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useWidthClass } from '../hooks';
 import { Icon } from './core';
@@ -69,11 +70,11 @@ export function AppShell({
         <span className="fh-topbar__actions">{actions}</span>
       </header>
       {widthClass === 'expanded' ? (
-        <nav className="fh-nav fh-nav--extended" aria-label="Main">
+        <nav className="fh-nav fh-nav--extended" aria-label={m.design.mainNav}>
           {navItems.map((item) => navButton(item, true))}
         </nav>
       ) : widthClass === 'medium' ? (
-        <nav className="fh-nav fh-nav--rail" aria-label="Main">
+        <nav className="fh-nav fh-nav--rail" aria-label={m.design.mainNav}>
           {navItems.map((item) => navButton(item))}
         </nav>
       ) : null}
@@ -82,7 +83,7 @@ export function AppShell({
         {fab}
       </main>
       {widthClass === 'compact' ? (
-        <nav className="fh-nav fh-nav--bar" aria-label="Main">
+        <nav className="fh-nav fh-nav--bar" aria-label={m.design.mainNav}>
           {navItems.map((item) => navButton(item))}
         </nav>
       ) : null}

@@ -1,3 +1,4 @@
+import { m } from '../../i18n/messages';
 import { useState, type ReactNode } from 'react';
 
 /** A Material Symbols icon (self-hosted subset font). */
@@ -173,7 +174,7 @@ export type Visibility = 'public' | 'unlisted' | 'private';
  */
 export function StatusChip({ visibility }: { visibility: Visibility }) {
   const label =
-    visibility === 'public' ? 'Public' : visibility === 'unlisted' ? 'Unlisted' : 'Private';
+    visibility === 'public' ? m.design.visibilityPublic : visibility === 'unlisted' ? m.design.visibilityUnlisted : m.design.visibilityPrivate;
   const icon = visibility === 'public' ? 'public' : visibility === 'unlisted' ? 'link' : 'lock';
   return (
     <span className={`fh-status-chip fh-status-chip--${visibility}`}>

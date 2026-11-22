@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fmt, m } from '../i18n/messages';
 import {
   Button,
   Card,
@@ -44,36 +45,36 @@ export default function DesignPage() {
   return (
     <div>
       <PageHeader
-        title="Design system"
-        subtitle="Material You 3 · one seed colour · tokens only"
+        title={m.designPage.title}
+        subtitle={m.designPage.subtitle}
         actions={
           <>
             <Button variant="outlined" onClick={() => setDialog(true)}>
-              Dialog
+              {m.designPage.dialog}
             </Button>
-            <Button variant="filled" onClick={() => toast({ message: 'Saved to your library' })}>
-              Toast
+            <Button variant="filled" onClick={() => toast({ message: m.designPage.toastSaved })}>
+              {m.designPage.toast}
             </Button>
           </>
         }
       />
 
-      <h2>Buttons</h2>
+      <h2>{m.designPage.buttons}</h2>
       <p style={{ display: 'flex', gap: 'var(--fh-space-2)', flexWrap: 'wrap' }}>
         <Button variant="filled" icon="add">
-          Filled
+          {m.designPage.filled}
         </Button>
-        <Button variant="tonal">Tonal</Button>
-        <Button variant="outlined">Outlined</Button>
-        <Button variant="text">Text</Button>
+        <Button variant="tonal">{m.designPage.tonal}</Button>
+        <Button variant="outlined">{m.designPage.outlined}</Button>
+        <Button variant="text">{m.designPage.text}</Button>
         <Button variant="filled" disabled>
-          Disabled
+          {m.designPage.disabled}
         </Button>
-        <IconButton icon="star" label="Star" />
-        <Fab icon="add" label="Create snippet" />
+        <IconButton icon="star" label={m.designPage.star} />
+        <Fab icon="add" label={m.designPage.createSnippet} />
       </p>
 
-      <h2>Chips and status</h2>
+      <h2>{m.designPage.chipsTitle}</h2>
       <p style={{ display: 'flex', gap: 'var(--fh-space-2)', flexWrap: 'wrap', alignItems: 'center' }}>
         <Chip label="docker" />
         <Chip label="ubuntu" icon="tag" />
@@ -82,19 +83,19 @@ export default function DesignPage() {
         <StatusChip visibility="private" />
       </p>
 
-      <h2>Inputs</h2>
-      <SearchBar value={query} onChange={setQuery} placeholder="Search snippets" />
+      <h2>{m.designPage.inputs}</h2>
+      <SearchBar value={query} onChange={setQuery} placeholder={m.designPage.searchPlaceholder} />
       <div style={{ height: 'var(--fh-space-4)' }} />
-      <TextField label="Snippet name" value={field} onChange={setField} supportingText="Lowercase, digits and hyphens" />
+      <TextField label={m.designPage.nameLabel} value={field} onChange={setField} supportingText={m.designPage.nameHint} />
       <div style={{ height: 'var(--fh-space-3)' }} />
-      <TextField label="With an error" value={field} onChange={setField} errorText="That name is taken" />
+      <TextField label={m.designPage.errorLabel} value={field} onChange={setField} errorText={m.designPage.errorText} />
       <div style={{ height: 'var(--fh-space-3)' }} />
-      <TextField label="Description" value={field} onChange={setField} multiline rows={3} />
+      <TextField label={m.designPage.description} value={field} onChange={setField} multiline rows={3} />
 
-      <h2>Selection controls</h2>
+      <h2>{m.designPage.selectionTitle}</h2>
       <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
-        <Switch checked={wrap} onChange={setWrap} label="Soft wrap (switch)" />
-        <Checkbox checked={scope} onChange={setScope} label="Write - create and change snippets (checkbox)" />
+        <Switch checked={wrap} onChange={setWrap} label={m.designPage.switchLabel} />
+        <Checkbox checked={scope} onChange={setScope} label={m.designPage.checkboxLabel} />
         <Radio
           name="gallery-choice"
           value="system"
@@ -102,7 +103,7 @@ export default function DesignPage() {
           onChange={setChoice}
           label={
             <>
-              <strong>System</strong> - follow the device (radio)
+              <strong>{m.designPage.radioSystemStrong}</strong> {m.designPage.radioSystemRest}
             </>
           }
         />
@@ -113,105 +114,105 @@ export default function DesignPage() {
           onChange={setChoice}
           label={
             <>
-              <strong>Dark</strong> - always dark (radio)
+              <strong>{m.designPage.radioDarkStrong}</strong> {m.designPage.radioDarkRest}
             </>
           }
         />
         <SelectField
-          label="Expires"
+          label={m.designPage.expires}
           value={expiry}
           onChange={setExpiry}
           options={[
-            { value: 'never', label: 'Never' },
-            { value: '30', label: 'In 30 days' },
-            { value: '90', label: 'In 90 days' },
+            { value: 'never', label: m.designPage.expiryNever },
+            { value: '30', label: m.designPage.expiry30 },
+            { value: '90', label: m.designPage.expiry90 },
           ]}
         />
       </div>
 
-      <h2>Diff</h2>
+      <h2>{m.designPage.diff}</h2>
       <DiffView diff={'--- a/sys-info\n+++ b/sys-info\n@@ -1,2 +1,2 @@\n-echo old\n+echo new'} />
 
-      <h2>Tabs and menu</h2>
+      <h2>{m.designPage.tabsTitle}</h2>
       <Tabs
-        ariaLabel="Example tabs"
+        ariaLabel={m.designPage.tabsAria}
         tabs={[
-          { id: 'one', label: 'Overview' },
-          { id: 'two', label: 'Versions' },
-          { id: 'three', label: 'Settings' },
+          { id: 'one', label: m.designPage.tabOverview },
+          { id: 'two', label: m.designPage.tabVersions },
+          { id: 'three', label: m.designPage.tabSettings },
         ]}
         activeIndex={tab}
         onChange={setTab}
       />
       <p>
-        Active tab: {tab}{' '}
+        {m.designPage.activeTab} {tab}{' '}
         <Menu
-          buttonLabel="More actions"
+          buttonLabel={m.designPage.moreActions}
           items={[
-            { id: 'edit', label: 'Edit', icon: 'edit' },
-            { id: 'fork', label: 'Fork', icon: 'call_split' },
-            { id: 'delete', label: 'Delete', icon: 'delete' },
+            { id: 'edit', label: m.designPage.menuEdit, icon: 'edit' },
+            { id: 'fork', label: m.designPage.menuFork, icon: 'call_split' },
+            { id: 'delete', label: m.designPage.menuDelete, icon: 'delete' },
           ]}
-          onSelect={(id) => toast({ message: `Menu: ${id}` })}
+          onSelect={(id) => toast({ message: fmt(m.designPage.menuToast, { id }) })}
         />
       </p>
 
-      <h2>Cards and list</h2>
+      <h2>{m.designPage.cardsTitle}</h2>
       <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
         <Card variant="filled">
-          <strong>Filled card</strong>
+          <strong>{m.designPage.filledCard}</strong>
           <md-list>
             <ListItem headline="ubuntu-setup" supportingText="Update packages and install basics" trailing={<StatusChip visibility="public" />} />
             <ListItem headline="docker-clean" supportingText="Remove stopped containers" trailing={<StatusChip visibility="private" />} />
           </md-list>
         </Card>
         <Card variant="outlined">
-          <strong>Outlined card</strong>
-          <p>Neutral surfaces, one accent for actions.</p>
+          <strong>{m.designPage.outlinedCard}</strong>
+          <p>{m.designPage.outlinedCardBody}</p>
         </Card>
         <Card variant="elevated">
-          <strong>Elevated card</strong>
-          <p>Elevation 1 shadow from the token set.</p>
+          <strong>{m.designPage.elevatedCard}</strong>
+          <p>{m.designPage.elevatedCardBody}</p>
         </Card>
       </div>
 
-      <h2>Code</h2>
+      <h2>{m.designPage.code}</h2>
       <CodeBlock
-        label="ubuntu-setup · v3"
+        label={m.designPage.codeLabel}
         lineNumbers
         code={'sudo apt-get update\nsudo apt-get install -y curl git\necho "a very long line that must wrap instead of being truncated so nothing can hide beyond the edge of the screen ever"'}
       />
 
-      <h2>States</h2>
+      <h2>{m.designPage.states}</h2>
       <Card variant="outlined">
         <Skeleton lines={3} />
       </Card>
-      <EmptyState icon="library_books" title="No snippets yet" message="Record or write your first snippet and it will show up here." actionLabel="Create snippet" onAction={() => toast({ message: 'Create (demo)' })} />
-      <ErrorState title="Could not load" message="The server did not respond. Check your connection and try again." retryLabel="Retry" onRetry={() => toast({ message: 'Retrying (demo)' })} />
+      <EmptyState icon="library_books" title={m.designPage.emptyTitle} message={m.designPage.emptyMessage} actionLabel={m.designPage.createSnippet} onAction={() => toast({ message: m.designPage.createDemo })} />
+      <ErrorState title={m.designPage.errorTitle} message={m.designPage.errorMessage} retryLabel={m.designPage.retry} onRetry={() => toast({ message: m.designPage.retryingDemo })} />
 
       <ConfirmDialog
         open={dialog}
-        headline="Make public?"
-        content="Anyone will be able to read and run this snippet. Review it for secrets first."
-        confirmLabel="Make public"
+        headline={m.designPage.makePublicHeadline}
+        content={m.designPage.makePublicContent}
+        confirmLabel={m.designPage.makePublicConfirm}
         onConfirm={() => {
           setDialog(false);
-          toast({ message: 'Visibility updated (demo)' });
+          toast({ message: m.designPage.visibilityUpdatedDemo });
         }}
         onCancel={() => setDialog(false)}
       />
       <ConfirmDialog
         open={dangerDialog}
-        headline="Delete this snippet?"
-        content="It will be removed from your library. This cannot be undone after 30 days."
-        confirmLabel="Delete"
+        headline={m.designPage.deleteHeadline}
+        content={m.designPage.deleteContent}
+        confirmLabel={m.designPage.deleteConfirm}
         danger
         onConfirm={() => setDangerDialog(false)}
         onCancel={() => setDangerDialog(false)}
       />
       <p>
         <Button variant="text" onClick={() => setDangerDialog(true)}>
-          Open the danger dialog
+          {m.designPage.openDanger}
         </Button>
       </p>
     </div>

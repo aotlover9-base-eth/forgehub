@@ -24,6 +24,7 @@ import {
   type ThemePreference,
 } from './design';
 import { useLogout, useMe } from './api/hooks';
+import { fmt, m } from './i18n/messages';
 import { ErrorBoundary } from './ErrorBoundary';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -44,12 +45,13 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const DevicePage = lazy(() => import('./pages/DevicePage'));
 const DesignPage = lazy(() => import('./pages/DesignPage'));
+const RtlTestPage = lazy(() => import('./pages/RtlTestPage'));
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'home', label: 'Home', icon: 'home', href: '/home' },
-  { id: 'explore', label: 'Explore', icon: 'explore', href: '/explore' },
-  { id: 'library', label: 'Library', icon: 'library_books', href: '/dashboard' },
-  { id: 'profile', label: 'Profile', icon: 'person', href: '/profile' },
+  { id: 'home', label: m.nav.home, icon: 'home', href: '/home' },
+  { id: 'explore', label: m.nav.explore, icon: 'explore', href: '/explore' },
+  { id: 'library', label: m.nav.library, icon: 'library_books', href: '/dashboard' },
+  { id: 'profile', label: m.nav.profile, icon: 'person', href: '/profile' },
 ];
 
 /** Gate for signed-in screens: waits for /me, then either
@@ -88,15 +90,15 @@ function OfflineBanner() {
   if (!offline) return null;
   return (
     <div className="fh-offline" role="status">
-      <Icon name="info" /> You are offline. Changes will fail until the connection is back.
+      <Icon name="info" /> {m.nav.offline}
     </div>
   );
 }
 
 const THEME_LABEL: Record<ThemePreference, string> = {
-  system: 'System',
-  light: 'Light',
-  dark: 'Dark',
+  system: m.nav.themeSystem,
+  light: m.nav.themeLight,
+  dark: m.nav.themeDark,
 };
 const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
   system: 'light',
@@ -111,39 +113,39 @@ function ThemeButton() {
   return (
     <Button
       variant="text"
-      aria-label={`Theme: ${THEME_LABEL[pref]}. Activate to switch to ${THEME_LABEL[NEXT_THEME[pref]]}.`}
+      aria-label={fmt(m.nav.themeAria, { current: THEME_LABEL[pref], next: THEME_LABEL[NEXT_THEME[pref]] })}
       onClick={() => setPref(NEXT_THEME[pref])}
     >
-      Theme: {THEME_LABEL[pref]}
+      {fmt(m.nav.themeWithLabel, { label: THEME_LABEL[pref] })}
     </Button>
   );
 }
 
 const STATIC_TITLES: Record<string, string> = {
-  '/login': 'Log in - ForgeHub',
-  '/signup': 'Create account - ForgeHub',
-  '/forgot-password': 'Reset your password - ForgeHub',
-  '/reset-password': 'Set a new password - ForgeHub',
-  '/home': 'Home - ForgeHub',
-  '/dashboard': 'Library - ForgeHub',
-  '/explore': 'Explore - ForgeHub',
-  '/new': 'New snippet - ForgeHub',
-  '/settings': 'Settings - ForgeHub',
-  '/device': 'Approve a device - ForgeHub',
-  '/profile': 'Your profile - ForgeHub',
+  '/login': m.titles.login,
+  '/signup': m.titles.signup,
+  '/forgot-password': m.titles.forgot,
+  '/reset-password': m.titles.reset,
+  '/home': m.titles.home,
+  '/dashboard': m.titles.library,
+  '/explore': m.titles.explore,
+  '/new': m.titles.newSnippet,
+  '/settings': m.titles.settings,
+  '/device': m.titles.device,
+  '/profile': m.titles.profile,
 };
 
 function titleForPath(pathname: string): string {
   if (STATIC_TITLES[pathname]) return STATIC_TITLES[pathname];
   const edit = /^\/([^/]+)\/([^/]+)\/edit$/.exec(pathname);
-  if (edit) return `Edit ${edit[2]} - ForgeHub`;
+  if (edit) return fmt(m.titles.edit, { name: edit[2] });
   const collection = /^\/collections\/([^/]+)\/([^/]+)$/.exec(pathname);
-  if (collection) return `${collection[2]} - Collection by ${collection[1]} - ForgeHub`;
+  if (collection) return fmt(m.titles.collection, { name: collection[2], owner: collection[1] });
   const snippet = /^\/([^/]+)\/([^/]+)$/.exec(pathname);
-  if (snippet) return `${snippet[2]} by ${snippet[1]} - ForgeHub`;
+  if (snippet) return fmt(m.titles.snippet, { name: snippet[2], owner: snippet[1] });
   const profile = /^\/([^/]+)$/.exec(pathname);
-  if (profile) return `${profile[1]} - ForgeHub`;
-  return 'Not found - ForgeHub';
+  if (profile) return fmt(m.titles.userProfile, { username: profile[1] });
+  return m.titles.notFound;
 }
 
 /** Per-route document titles (Peak A7). */
@@ -230,18 +232,18 @@ function Shell() {
         <>
           <IconButton
             icon="search"
-            label="Search public snippets"
+            label={m.nav.searchPublicSnippets}
             onClick={() => navigate('/explore')}
           />
           {me.data ? (
             <Menu
-              buttonLabel={`Account menu for ${me.data.username}`}
+              buttonLabel={fmt(m.nav.accountMenuFor, { username: me.data.username })}
               buttonIcon="account_circle"
               items={[
-                { id: 'profile', label: `Profile (${me.data.username})`, icon: 'person' },
-                { id: 'settings', label: 'Settings', icon: 'settings' },
-                { id: 'theme', label: `Theme: ${THEME_LABEL[themePref]}`, icon: 'contrast' },
-                { id: 'logout', label: 'Log out', icon: 'logout' },
+                { id: 'profile', label: fmt(m.nav.profileWithName, { username: me.data.username }), icon: 'person' },
+                { id: 'settings', label: m.nav.settings, icon: 'settings' },
+                { id: 'theme', label: fmt(m.nav.themeWithLabel, { label: THEME_LABEL[themePref] }), icon: 'contrast' },
+                { id: 'logout', label: m.nav.logOut, icon: 'logout' },
               ]}
               onSelect={(id) => {
                 if (!me.data) return;
@@ -256,7 +258,7 @@ function Shell() {
             <>
               <ThemeButton />
               <Button variant="text" onClick={() => navigate('/login')}>
-                Log in
+                {m.nav.logIn}
               </Button>
             </>
           )}
@@ -267,8 +269,8 @@ function Shell() {
           <span className="fh-fab">
             <Fab
               icon="add"
-              label="New snippet"
-              text={widthClass === 'expanded' ? 'New snippet' : undefined}
+              label={m.nav.newSnippet}
+              text={widthClass === 'expanded' ? m.nav.newSnippet : undefined}
               onClick={() => navigate('/new')}
             />
           </span>
@@ -287,30 +289,30 @@ function Shell() {
         </Suspense>
       </ErrorBoundary>
       <footer className="fh-footer">
-        <span>ForgeHub - save a command once, run it anywhere.</span>
+        <span>{m.nav.footerTagline}</span>
         <a href="https://github.com/aotlover9-base-eth/forgehub" target="_blank" rel="noreferrer">
-          Source
+          {m.nav.footerSource}
         </a>
-        <span>No tracking. No third-party scripts.</span>
+        <span>{m.nav.footerPrivacy}</span>
       </footer>
       <ConfirmDialog
         open={helpOpen}
-        headline="Keyboard shortcuts"
+        headline={m.nav.helpTitle}
         content={
           <ul>
             <li>
-              <strong>n</strong> - new snippet
+              <strong>n</strong> - {m.nav.helpNew}
             </li>
             <li>
-              <strong>/</strong> - focus search (on the dashboard)
+              <strong>/</strong> - {m.nav.helpSearch}
             </li>
             <li>
-              <strong>?</strong> - this help
+              <strong>?</strong> - {m.nav.helpThis}
             </li>
           </ul>
         }
-        confirmLabel="Done"
-        cancelLabel="Close"
+        confirmLabel={m.nav.helpDone}
+        cancelLabel={m.nav.helpClose}
         onConfirm={() => setHelpOpen(false)}
         onCancel={() => setHelpOpen(false)}
       />
@@ -375,7 +377,12 @@ const router = createBrowserRouter([
           </RequireAuth>
         ),
       },
-      ...(import.meta.env.DEV ? [{ path: '__design', element: <DesignPage /> }] : []),
+      ...(import.meta.env.DEV
+        ? [
+            { path: '__design', element: <DesignPage /> },
+            { path: '__rtl', element: <RtlTestPage /> },
+          ]
+        : []),
       { path: '*', element: <NotFoundPage /> },
     ],
   },

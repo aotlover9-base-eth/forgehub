@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card, PageHeader, TextField } from '../design';
 import { usePasswordResetRequest } from '../api/hooks';
+import { m } from '../i18n/messages';
 
 /**
  * Ask for a reset link. The confirmation state is shown for
@@ -32,25 +33,23 @@ export default function ForgotPasswordPage() {
   return (
     <div style={{ maxWidth: 440, margin: '0 auto' }}>
       <PageHeader
-        title="Forgot your password?"
-        subtitle="Enter the email address on your account and we will send you a reset link."
+        title={m.auth.forgotTitle}
+        subtitle={m.auth.forgotSubtitle}
       />
       <Card variant="outlined">
         {sentTo ? (
           <div style={{ display: 'grid', gap: 'var(--fh-space-3)' }}>
             <p style={{ margin: 0 }}>
-              If an account exists for <strong>{sentTo}</strong>, a reset link is on its way. It
-              expires in one hour.
+              {m.auth.forgotSentBefore} <strong>{sentTo}</strong>{m.auth.forgotSentAfter}
             </p>
             <p style={{ margin: 0 }}>
-              No email after a few minutes? Check spam, then <Link to="/login">log in</Link> and
-              try again.
+              {m.auth.forgotNoEmailBefore} <Link to="/login">{m.auth.forgotNoEmailLogin}</Link> {m.auth.forgotNoEmailAfter}
             </p>
           </div>
         ) : (
           <form onSubmit={submit} style={{ display: 'grid', gap: 'var(--fh-space-4)' }}>
             <TextField
-              label="Email"
+              label={m.auth.forgotEmail}
               value={email}
               onChange={setEmail}
               type="email"
@@ -58,13 +57,13 @@ export default function ForgotPasswordPage() {
               required
             />
             <Button variant="filled" type="submit" disabled={request.isPending || !email.trim()}>
-              {request.isPending ? 'Sending…' : 'Send reset link'}
+              {request.isPending ? m.auth.forgotPending : m.auth.forgotSubmit}
             </Button>
           </form>
         )}
       </Card>
       <p>
-        Remembered it after all? <Link to="/login">Log in</Link>
+        {m.auth.forgotRemembered} <Link to="/login">{m.auth.forgotLoginLink}</Link>
       </p>
     </div>
   );
