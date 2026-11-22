@@ -397,3 +397,40 @@ fn local_shadowing_and_typo_suggestions() {
     assert!(stderr.contains("hello"), "{stderr}");
     assert!(a.marker().is_none());
 }
+
+#[test]
+fn activity_log_via_cli() {
+    let base = start_server();
+    let token = signup_and_token(&base, "anna");
+    let a = rig(&base);
+    cli_login(&a, &token);
+    a.write_local("cloudy", "cloudy");
+    assert_eq!(a.run(&["push", "cloudy"]).0, 0);
+    a.delete_local("cloudy");
+
+    // First confirmed run: a fresh trust grant, reported to
+    // the activity log (Peak C7).
+    let (code, _, stderr) = a.run(&["cloudy", "-y"]);
+    assert_eq!(code, 0, "{stderr}");
+
+    let (code, stdout, stderr) = a.run(&["activity"]);
+    assert_eq!(code, 0, "{stderr}");
+    assert!(stdout.contains("snippet_created"), "{stdout}");
+    assert!(stdout.contains("snippet_trusted"), "{stdout}");
+    assert!(stdout.contains("ref=anna/cloudy"), "{stdout}");
+    assert!(stdout.contains("login"), "{stdout}");
+
+    // A second run of already-trusted content is not a new
+    // trust event.
+    std::fs::remove_file(a.p("marker.txt")).unwrap();
+    let (code, _, _) = a.run(&["cloudy", "-y"]);
+    assert_eq!(code, 0);
+    let (_, out) = api_get(&base, &token, "/api/v1/me/activity?limit=50");
+    let trusted = out["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "snippet_trusted")
+        .count();
+    assert_eq!(trusted, 1, "{out}");
+}

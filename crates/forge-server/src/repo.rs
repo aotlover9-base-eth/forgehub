@@ -676,6 +676,42 @@ pub trait CollectionRepo: Send + Sync {
     async fn active_share_link_count(&self, collection_id: i64) -> RepoResult<i64>;
 }
 
+/// One activity-log row (Peak C7). `detail` is a small JSON
+/// object whose shape depends on `kind`.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow, Serialize)]
+pub struct ActivityRow {
+    /// Primary key.
+    pub id: i64,
+    /// The user the event belongs to.
+    pub user_id: i64,
+    /// Event kind (`snippet_created`, `login`, ...).
+    pub kind: String,
+    /// JSON detail object, stored as text.
+    pub detail: String,
+    /// User agent for login events (device recognition).
+    pub user_agent: String,
+    /// Event time.
+    pub created_at: String,
+}
+
+/// Activity log repository (Peak C7).
+#[async_trait]
+pub trait ActivityRepo: Send + Sync {
+    /// Append one event.
+    async fn record(
+        &self,
+        user_id: i64,
+        kind: &str,
+        detail: &str,
+        user_agent: &str,
+        now: &str,
+    ) -> RepoResult<()>;
+    /// A user's events, newest first, capped at `limit`.
+    async fn list_for_user(&self, user_id: i64, limit: i64) -> RepoResult<Vec<ActivityRow>>;
+    /// Whether any login event exists for this user + agent.
+    async fn has_login_from(&self, user_id: i64, user_agent: &str) -> RepoResult<bool>;
+}
+
 /// Password-reset tokens repository (2026-11-20 increment).
 #[async_trait]
 pub trait PasswordResetRepo: Send + Sync {
@@ -710,6 +746,8 @@ pub struct Repos {
     pub reports: std::sync::Arc<dyn ReportRepo>,
     /// Collections (Peak C1).
     pub collections: std::sync::Arc<dyn CollectionRepo>,
+    /// Activity log (Peak C7).
+    pub activity: std::sync::Arc<dyn ActivityRepo>,
     /// Password-reset tokens.
     pub password_resets: std::sync::Arc<dyn PasswordResetRepo>,
 }
@@ -727,7 +765,8 @@ impl Repos {
             snippets: store.clone(),
             reports: store.clone(),
             collections: store.clone(),
-            password_resets: store,
+            password_resets: store.clone(),
+            activity: store,
         }
     }
 }
@@ -2178,6 +2217,52 @@ impl CollectionRepo for SqliteStore {
         .bind(collection_id)
         .fetch_one(&self.pool)
         .await?)
+    }
+}
+
+#[async_trait]
+impl ActivityRepo for SqliteStore {
+    async fn record(
+        &self,
+        user_id: i64,
+        kind: &str,
+        detail: &str,
+        user_agent: &str,
+        now: &str,
+    ) -> RepoResult<()> {
+        sqlx::query(
+            "INSERT INTO activity_events (user_id, kind, detail, user_agent, created_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+        )
+        .bind(user_id)
+        .bind(kind)
+        .bind(detail)
+        .bind(user_agent)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn list_for_user(&self, user_id: i64, limit: i64) -> RepoResult<Vec<ActivityRow>> {
+        Ok(sqlx::query_as::<_, ActivityRow>(
+            "SELECT * FROM activity_events WHERE user_id = ?1 ORDER BY created_at DESC, id DESC LIMIT ?2",
+        )
+        .bind(user_id)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn has_login_from(&self, user_id: i64, user_agent: &str) -> RepoResult<bool> {
+        let n: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM activity_events WHERE user_id = ?1 AND kind = 'login' AND user_agent = ?2",
+        )
+        .bind(user_id)
+        .bind(user_agent)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(n > 0)
     }
 }
 

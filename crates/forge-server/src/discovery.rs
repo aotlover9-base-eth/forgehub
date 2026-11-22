@@ -640,6 +640,16 @@ async fn fork(
         }
         Err(e) => return Err(e.into()),
     };
+    crate::activity::record(
+        &state,
+        ctx.0.user.id,
+        "snippet_forked",
+        serde_json::json!({
+            "from": format!("{owner}/{name}"),
+            "name": new_name,
+        }),
+    )
+    .await;
     let json = snippet_json(&state, &snippet, &version, Some(&ctx.0.user)).await?;
     Ok((StatusCode::CREATED, Json(json)).into_response())
 }

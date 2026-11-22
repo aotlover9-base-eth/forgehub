@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, apiRaw, ApiError, setCsrfToken } from './client';
 import type {
+  ActivityEvent,
   ApiTokenInfo,
   Collection,
   CollectionDetail,
@@ -409,6 +410,15 @@ export function useSessions() {
     queryKey: ['sessions'],
     retry: false,
     queryFn: () => api<{ sessions: SessionInfo[] }>('/me/sessions'),
+  });
+}
+
+/** The account activity log (Peak C7), newest first. */
+export function useActivity(limit = 50) {
+  return useQuery<{ events: ActivityEvent[] }>({
+    queryKey: ['activity', limit],
+    retry: false,
+    queryFn: () => api<{ events: ActivityEvent[] }>(`/me/activity?limit=${limit}`),
   });
 }
 

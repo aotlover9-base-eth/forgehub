@@ -1060,6 +1060,28 @@ Examples:
   fg rollback ubuntu-setup 2
 ```
 
+### `forgehub activity`
+
+```text
+Show the account activity log (Peak C7): sign-ins, snippet creates/pushes/forks, token changes and trust grants, newest first. The same log is in the web app under Settings - Security, exportable as JSON
+
+Usage: forgehub activity [OPTIONS]
+
+Options:
+      --json                 Print machine-readable JSON instead of human output
+      --limit <LIMIT>        How many events to list at most (1-200) [default: 50]
+      --registry <REGISTRY>  Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+  -y, --yes                  Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...           Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline              Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>        Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help                 Print help (see more with '--help')
+
+Examples:
+  fg activity
+  fg activity --limit 10 --json
+```
+
 ### `forgehub collection`
 
 ```text

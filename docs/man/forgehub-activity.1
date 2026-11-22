@@ -1,0 +1,23 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH activity 1  "activity " 
+.SH NAME
+activity \- Show the account activity log (Peak C7): sign\-ins, snippet creates/pushes/forks, token changes and trust grants, newest first. The same log is in the web app under Settings \- Security, exportable as JSON
+.SH SYNOPSIS
+\fBactivity\fR [\fB\-\-limit\fR] [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] 
+.SH DESCRIPTION
+Show the account activity log (Peak C7): sign\-ins, snippet creates/pushes/forks, token changes and trust grants, newest first. The same log is in the web app under Settings \- Security, exportable as JSON
+.SH OPTIONS
+.TP
+\fB\-\-limit\fR \fI<LIMIT>\fR [default: 50]
+How many events to list at most (1\-200)
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry base URL (default: `FORGEHUB_REGISTRY` or config)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH EXTRA
+Examples:
+  fg activity
+  fg activity \-\-limit 10 \-\-json

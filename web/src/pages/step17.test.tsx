@@ -229,3 +229,42 @@ describe('SettingsPage danger zone', () => {
     expect(results.violations).toEqual([]);
   });
 });
+
+describe('SettingsPage activity (Peak C7)', () => {
+  it('renders the activity log on the Security tab with plain-language events', async () => {
+    server.use(
+      ...authedHandlers(),
+      http.get('/api/v1/me/activity', () =>
+        HttpResponse.json({
+          events: [
+            {
+              id: 3,
+              kind: 'snippet_trusted',
+              detail: { ref: 'bob/setup', version: 2 },
+              created_at: '2026-11-22T01:00:00Z',
+            },
+            {
+              id: 2,
+              kind: 'login',
+              detail: { via: 'login', new_device: true, ip: '192.0.2.1' },
+              created_at: '2026-11-22T00:00:00Z',
+            },
+            {
+              id: 1,
+              kind: 'token_created',
+              detail: { name: 'laptop', prefix: 'abcd1234' },
+              created_at: '2026-11-21T00:00:00Z',
+            },
+          ],
+        }),
+      ),
+    );
+    renderWithRouter([{ path: '/settings', element: <SettingsPage /> }], '/settings');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Security' })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Security' }));
+    await waitFor(() => expect(screen.getByText(/Trusted bob\/setup/)).toBeTruthy());
+    expect(screen.getByText(/Signed in via login from a new device/)).toBeTruthy();
+    expect(screen.getByText(/Created API token "laptop"/)).toBeTruthy();
+    expect(screen.getByText('Export as JSON')).toBeTruthy();
+  });
+});

@@ -82,6 +82,15 @@ export interface CollectionItem {
   position: number;
 }
 
+/** One activity-log event (Peak C7). `detail` is a small
+ * object whose shape depends on `kind`. */
+export interface ActivityEvent {
+  id: number;
+  kind: string;
+  detail: Record<string, unknown>;
+  created_at: string;
+}
+
 /** A collection share link as the owner sees it (Peak C6,
  * ADR 0011). The full token is never in this shape - it is
  * returned once, at creation, in `CreatedShareLink`. */

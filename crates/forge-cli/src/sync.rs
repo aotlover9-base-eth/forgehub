@@ -1802,6 +1802,87 @@ pub(crate) fn url_encode(text: &str) -> String {
 
 /// `fg fork <owner/name> [--as name]` - server fork, then an
 /// optional pull (prompted on a TTY).
+/// Best-effort activity report (Peak C7): tell the server a
+/// trust grant happened, so the owner's activity log can show
+/// it. Never fails the caller - the local trust store is the
+/// source of truth, and an offline or unreachable server just
+/// means the event is not in the cloud log.
+pub fn report_trust(sess: &Session, owner: &str, name: &str, version: i64, hash: &str) {
+    let _ = sess.client.post_json(
+        "/me/activity",
+        &serde_json::json!({
+            "kind": "snippet_trusted",
+            "detail": {
+                "ref": format!("{owner}/{name}"),
+                "version": version,
+                "hash": hash,
+            },
+        }),
+        Some(&sess.entry.token),
+    );
+}
+
+/// `fg activity` (Peak C7): the account's activity log,
+/// newest first.
+pub fn cmd_activity(
+    store: &Store,
+    stdin: &mut impl BufRead,
+    registry: Option<&str>,
+    limit: i64,
+    json_out: bool,
+) -> Result<i32> {
+    let sess = session(store, stdin, registry)?;
+    let (_, body, _) = sess
+        .client
+        .get(
+            &format!("/me/activity?limit={limit}"),
+            Some(&sess.entry.token),
+        )
+        .map_err(|e| api_fail(&e, &sess.entry.token))?;
+    if json_out {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&body).unwrap_or_default()
+        );
+        return Ok(0);
+    }
+    let events = body["events"].as_array().cloned().unwrap_or_default();
+    if events.is_empty() {
+        println!("no activity yet");
+        return Ok(0);
+    }
+    for event in &events {
+        println!(
+            "{}  {}  {}",
+            event["created_at"].as_str().unwrap_or_default(),
+            event["kind"].as_str().unwrap_or_default(),
+            describe_detail(&event["detail"]),
+        );
+    }
+    Ok(0)
+}
+
+/// One-line summary of an activity event's detail object.
+fn describe_detail(detail: &serde_json::Value) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for key in ["ref", "name", "from", "prefix", "via"] {
+        if let Some(v) = detail.get(key).and_then(|v| v.as_str()) {
+            parts.push(format!("{key}={v}"));
+        }
+    }
+    if let Some(v) = detail.get("version").and_then(serde_json::Value::as_i64) {
+        parts.push(format!("v{v}"));
+    }
+    if detail
+        .get("new_device")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
+    {
+        parts.push("new device".to_string());
+    }
+    parts.join(" ")
+}
+
 /// `fg import --from-gist <url>` (Peak C5): the server
 /// fetches the gist (ADR 0010) and imports its files as
 /// private snippets; this prints the per-file outcome.

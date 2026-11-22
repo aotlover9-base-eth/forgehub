@@ -33,6 +33,7 @@ import {
   usePatchMe,
   useRevokeSession,
   useRevokeToken,
+  useActivity,
   useSessions,
   useTokens,
 } from '../api/hooks';
@@ -317,7 +318,81 @@ function SecurityTab() {
           </>
         )}
       </Card>
+      <ActivityCard />
     </div>
+  );
+}
+
+/** Plain-language rendering of one activity event. */
+function describeEvent(kind: string, detail: Record<string, unknown>): string {
+  const s = (key: string) => (typeof detail[key] === 'string' ? (detail[key] as string) : '');
+  switch (kind) {
+    case 'login':
+      return `Signed in via ${s('via') || 'login'}${detail.new_device === true ? ' from a new device' : ''}${s('ip') ? ` (${s('ip')})` : ''}`;
+    case 'snippet_created':
+      return `Created snippet ${s('name')}`;
+    case 'snippet_pushed':
+      return `Pushed ${s('name')} - version ${String(detail.version ?? '')}`;
+    case 'snippet_forked':
+      return `Forked ${s('from')} as ${s('name')}`;
+    case 'token_created':
+      return `Created API token "${s('name')}"`;
+    case 'token_revoked':
+      return `Revoked API token ${s('prefix')}...`;
+    case 'snippet_trusted':
+      return `Trusted ${s('ref')} (version ${String(detail.version ?? '')})`;
+    default:
+      return kind;
+  }
+}
+
+/**
+ * The activity log (Peak C7): sign-ins, snippet and token
+ * events and trust grants for this account, with a JSON
+ * export. Only the owner ever sees this - the endpoint is
+ * session/token-scoped to the caller.
+ */
+function ActivityCard() {
+  const activity = useActivity(50);
+  return (
+    <Card variant="outlined">
+      <h2 style={{ marginTop: 0 }}>Activity</h2>
+      <p style={{ marginTop: 0 }}>
+        Sign-ins, snippet changes, token changes and trust grants on your account, newest
+        first. Sign-ins from a device you have not used before are flagged.
+      </p>
+      {activity.isPending ? (
+        <Skeleton />
+      ) : activity.isError ? (
+        <ErrorState
+          title="Could not load your activity"
+          message="Please try again in a moment."
+          onRetry={() => void activity.refetch()}
+        />
+      ) : activity.data.events.length === 0 ? (
+        <p style={{ margin: 0 }}>No activity yet.</p>
+      ) : (
+        <md-list>
+          {activity.data.events.map((event) => (
+            <md-list-item key={event.id}>
+              <span slot="headline">{describeEvent(event.kind, event.detail)}</span>
+              <span slot="supporting-text">{event.created_at}</span>
+            </md-list-item>
+          ))}
+        </md-list>
+      )}
+      <p style={{ margin: 0 }}>
+        <Button
+          variant="outlined"
+          icon="download"
+          onClick={() => {
+            window.location.href = '/api/v1/me/activity/export';
+          }}
+        >
+          Export as JSON
+        </Button>
+      </p>
+    </Card>
   );
 }
 

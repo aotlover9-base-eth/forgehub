@@ -450,6 +450,9 @@ pub fn run_cloud(
     args: &CloudRunArgs,
 ) -> Result<i32> {
     let my_name = local_username(store, stdin);
+    // The session exists only on the online path; trust
+    // reporting (Peak C7) uses it when present.
+    let mut sess: Option<Session> = None;
     let fetched = if args.offline {
         let owner = refr
             .owner
@@ -462,24 +465,26 @@ pub fn run_cloud(
             })?;
         fetch_offline(store, &owner, &refr.name, refr.version)?
     } else {
-        let sess = session(store, stdin, None)?;
-        let owner = refr.owner.clone().unwrap_or_else(|| sess.username.clone());
+        let s = session(store, stdin, None)?;
+        let owner = refr.owner.clone().unwrap_or_else(|| s.username.clone());
         if !args.json {
             eprintln!(
                 "forgehub: fetching {owner}/{} from {}",
-                refr.name, sess.registry
+                refr.name, s.registry
             );
         }
-        fetch_and_cache(
-            store,
-            &sess,
-            &owner,
-            &refr.name,
-            refr.version,
-            args.no_cache,
-        )?
+        let fetched = fetch_and_cache(store, &s, &owner, &refr.name, refr.version, args.no_cache)?;
+        sess = Some(s);
+        fetched
     };
-    run_fetched(store, stdin, &fetched, my_name.as_deref(), args)
+    run_fetched(
+        store,
+        stdin,
+        &fetched,
+        my_name.as_deref(),
+        args,
+        sess.as_ref(),
+    )
 }
 
 /// The changed-hash diff: the previously cached body for the
@@ -640,6 +645,7 @@ pub fn run_fetched(
     fetched: &Fetched,
     my_username: Option<&str>,
     args: &CloudRunArgs,
+    sess: Option<&Session>,
 ) -> Result<i32> {
     let own = my_username == Some(fetched.owner.as_str());
     let trust_db = TrustDb::open(&store.trust_db_path())?;
@@ -714,6 +720,20 @@ pub fn run_fetched(
         &fetched.hash,
         fetched.version,
     );
+    // A fresh grant (this exact content was not already
+    // trusted) is reported to the activity log, best-effort
+    // (Peak C7). Already-trusted re-runs are not new events.
+    if let Some(sess) = sess {
+        if trusted_hash != Some(fetched.hash.as_str()) {
+            crate::sync::report_trust(
+                sess,
+                &fetched.owner,
+                &fetched.name,
+                fetched.version,
+                &fetched.hash,
+            );
+        }
+    }
     if args.json {
         println!(
             "{}",
@@ -1043,6 +1063,13 @@ pub fn cmd_trust_add(
         &fetched.hash,
         fetched.version,
     )?;
+    crate::sync::report_trust(
+        &sess,
+        &fetched.owner,
+        &fetched.name,
+        fetched.version,
+        &fetched.hash,
+    );
     if json {
         println!(
             "{}",

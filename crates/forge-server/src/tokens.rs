@@ -173,6 +173,13 @@ async fn create_token_handler(
         None => None,
     };
     let (row, plaintext) = create_token(&state, ctx.user.id, &name, &scopes, expires_at).await?;
+    crate::activity::record(
+        &state,
+        ctx.user.id,
+        "token_created",
+        serde_json::json!({ "name": row.name, "prefix": row.prefix, "scopes": row.scopes }),
+    )
+    .await;
     let mut json = token_json(&row);
     json["token"] = serde_json::Value::String(plaintext);
     Ok((StatusCode::CREATED, Json(json)).into_response())
@@ -186,10 +193,18 @@ async fn revoke_token(
 ) -> Result<Response, ApiError> {
     crate::auth::verify_csrf(&headers, &ctx.session)?;
     let rows = state.repos.tokens.list_for_user(ctx.user.id).await?;
-    if !rows.iter().any(|t| t.id == id) {
+    let Some(row) = rows.iter().find(|t| t.id == id) else {
         return Err(ApiError::not_found("token_not_found", "Token not found"));
-    }
+    };
+    let prefix = row.prefix.clone();
     state.repos.tokens.revoke(id, &now_iso()).await?;
+    crate::activity::record(
+        &state,
+        ctx.user.id,
+        "token_revoked",
+        serde_json::json!({ "prefix": prefix }),
+    )
+    .await;
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
@@ -209,6 +224,13 @@ async fn revoke_current(
     match &ctx.kind {
         crate::auth::AuthKind::Token(row) => {
             state.repos.tokens.revoke(row.id, &now_iso()).await?;
+            crate::activity::record(
+                &state,
+                ctx.user.id,
+                "token_revoked",
+                serde_json::json!({ "prefix": row.prefix }),
+            )
+            .await;
             Ok(StatusCode::NO_CONTENT.into_response())
         }
         crate::auth::AuthKind::Session(_) => Err(ApiError::new(

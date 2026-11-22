@@ -970,6 +970,78 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SnippetPage' }
         '404': { $ref: '#/components/responses/Error' }
+  /me/activity:
+    get:
+      tags: [account]
+      summary: The caller's activity log, newest first (Peak C7 - sign-ins with a new-device flag, snippet creates/pushes/forks, token changes, reported trust grants)
+      operationId: listActivity
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
+      responses:
+        '200':
+          description: The events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/ActivityEvent' }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [account]
+      summary: Report a client-side event (allow-list - only `snippet_trusted`, which only the CLI can know about; detail must carry a snippet `ref`)
+      operationId: reportActivity
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, detail]
+              properties:
+                kind: { type: string, enum: [snippet_trusted] }
+                detail:
+                  type: object
+                  required: [ref]
+                  properties:
+                    ref: { type: string, example: 'anna/deploy' }
+                    version: { type: integer }
+                    hash: { type: string }
+      responses:
+        '201': { description: Recorded }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /me/activity/export:
+    get:
+      tags: [account]
+      summary: The caller's activity log as a JSON file download (up to 1000 events)
+      operationId: exportActivity
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      responses:
+        '200':
+          description: JSON attachment (Content-Disposition forgehub-activity.json)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user, exported_at, events]
+                properties:
+                  user: { type: string }
+                  exported_at: { $ref: '#/components/schemas/Timestamp' }
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/ActivityEvent' }
+        '401': { $ref: '#/components/responses/Error' }
   /imports/history/analyze:
     post:
       tags: [imports]
@@ -1547,6 +1619,19 @@ components:
         visibility: { $ref: '#/components/schemas/Visibility' }
         latest_version: { type: integer }
         position: { type: integer }
+    ActivityEvent:
+      type: object
+      required: [id, kind, detail, created_at]
+      properties:
+        id: { type: integer }
+        kind:
+          type: string
+          enum: [login, snippet_created, snippet_pushed, snippet_forked, token_created, token_revoked, snippet_trusted]
+        detail:
+          type: object
+          description: 'Small kind-specific object (name, ref, version, via, new_device, ...).'
+          additionalProperties: true
+        created_at: { $ref: '#/components/schemas/Timestamp' }
     ShareLink:
       type: object
       required: [id, prefix, created_at, expires_at, revoked_at, active]

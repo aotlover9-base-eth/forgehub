@@ -536,6 +536,13 @@ async fn create_snippet(
         }
         Err(e) => return Err(e.into()),
     };
+    crate::activity::record(
+        &state,
+        ctx.0.user.id,
+        "snippet_created",
+        serde_json::json!({ "name": name }),
+    )
+    .await;
     let json = snippet_json(&state, &snippet, &version, Some(&ctx.0.user)).await?;
     let mut resp = (StatusCode::CREATED, Json(json)).into_response();
     resp.headers_mut().insert(
@@ -725,6 +732,13 @@ async fn put_snippet(
         .by_id(snippet_row.id)
         .await?
         .ok_or_else(ApiError::internal)?;
+    crate::activity::record(
+        &state,
+        ctx.0.user.id,
+        "snippet_pushed",
+        serde_json::json!({ "name": fresh.name, "version": version.version }),
+    )
+    .await;
     let mut json = snippet_json(&state, &fresh, &version, Some(&ctx.0.user)).await?;
     json["unchanged"] = serde_json::Value::Bool(false);
     Ok(Json(json).into_response())

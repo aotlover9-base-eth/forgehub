@@ -80,6 +80,7 @@ const KNOWN_COMMANDS: &[&str] = &[
     "collection",
     "update",
     "trust",
+    "activity",
     "remote",
     "help",
 ];
@@ -573,6 +574,19 @@ enum Command {
         /// How many versions to list at most.
         #[arg(long, default_value_t = 50)]
         limit: u32,
+        /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
+        #[arg(long)]
+        registry: Option<String>,
+    },
+    /// Show the account activity log (Peak C7): sign-ins,
+    /// snippet creates/pushes/forks, token changes and trust
+    /// grants, newest first. The same log is in the web app
+    /// under Settings - Security, exportable as JSON.
+    #[command(after_help = "Examples:\n  fg activity\n  fg activity --limit 10 --json")]
+    Activity {
+        /// How many events to list at most (1-200).
+        #[arg(long, default_value_t = 50)]
+        limit: i64,
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
         registry: Option<String>,
@@ -1143,6 +1157,9 @@ fn dispatch_cloud(
             limit,
             registry,
         } => history_cmd::cmd_history(store, stdin, reference, registry.as_deref(), json, *limit),
+        Command::Activity { limit, registry } => {
+            sync::cmd_activity(store, stdin, registry.as_deref(), *limit, json)
+        }
         Command::Rollback {
             reference,
             version,

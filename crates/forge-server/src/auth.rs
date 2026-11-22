@@ -506,11 +506,17 @@ fn attach_cookie(resp: &mut Response, cookie: &str) {
 
 /// Create a session row for `user_id` and return it with the
 /// `Set-Cookie` value. The plaintext id never touches the database.
+///
+/// Also records the sign-in in the activity log (Peak C7),
+/// flagging it when this user agent has never signed in
+/// before ("login from a new device"). `context` is how the
+/// session started: login | signup | device.
 async fn start_session(
     state: &AppState,
     user_id: i64,
     ip: Option<SocketAddr>,
     headers: &HeaderMap,
+    context: &str,
 ) -> Result<(SessionRow, String), ApiError> {
     let id = random_hex(32);
     let now = chrono::Utc::now();
@@ -532,6 +538,25 @@ async fn start_session(
             .map(|ua| ua.chars().take(120).collect()),
     };
     state.repos.sessions.create(&row).await?;
+    let ua = row.ua_hint.clone().unwrap_or_default();
+    let new_device = !state
+        .repos
+        .activity
+        .has_login_from(user_id, &ua)
+        .await
+        .unwrap_or(false);
+    crate::activity::record_with_ua(
+        state,
+        user_id,
+        "login",
+        serde_json::json!({
+            "via": context,
+            "ip": row.ip_hint,
+            "new_device": new_device,
+        }),
+        &ua,
+    )
+    .await;
     Ok((row, session_cookie(state, &id)))
 }
 
@@ -883,7 +908,7 @@ async fn signup(
         }
         Err(e) => return Err(e.into()),
     };
-    let (session, cookie) = start_session(&state, user.id, ip, &headers).await?;
+    let (session, cookie) = start_session(&state, user.id, ip, &headers, "signup").await?;
     let mut resp = (StatusCode::CREATED, Json(me_json(&user, Some(&session)))).into_response();
     attach_cookie(&mut resp, &cookie);
     Ok(resp)
@@ -946,7 +971,7 @@ async fn login(
     if let Some(raw) = cookie_value(&headers, SESSION_COOKIE) {
         let _ = state.repos.sessions.delete(&sha256_hex(raw)).await;
     }
-    let (session, cookie) = start_session(&state, user.id, ip, &headers).await?;
+    let (session, cookie) = start_session(&state, user.id, ip, &headers, "login").await?;
     let mut resp = (StatusCode::OK, Json(me_json(&user, Some(&session)))).into_response();
     attach_cookie(&mut resp, &cookie);
     Ok(resp)
@@ -1275,7 +1300,7 @@ async fn patch_me(
         // Revoke every session (including this one) and rotate:
         // the caller gets a fresh session + cookie (T-ACCT-2).
         state.repos.sessions.delete_for_user(user.id).await?;
-        let (fresh, cookie) = start_session(&state, user.id, ip, &headers).await?;
+        let (fresh, cookie) = start_session(&state, user.id, ip, &headers, "device").await?;
         session = fresh;
         new_cookie = Some(cookie);
     }
