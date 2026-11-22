@@ -6,6 +6,8 @@ Help layout (Peak B2): `forgehub --help` groups commands under Library, Cloud, S
 
 Listing (Peak B4): `fg list` and `fg search` share `--tag`, `--visibility` (last-synced visibility from the snippet's `.meta` sidecar), `--sort name|recent`, `--since 30m|24h|7d|2w` and `--long` (aligned table). `fg find <query>` fuzzy-matches local and cached cloud names, ranked; `--plain` prints bare names for piping (e.g. into fzf), `--limit` caps the results. Push and pull record the snippet's visibility in the sidecar so the filter works offline. Exit codes: 0 ok · 1 failure · 2 refused/not confirmed · 3 not found · 4 auth required · 130 interrupted.
 
+Collections (Peak C1): `fg collection list|create|show|add|remove|order|visibility|delete` manages ordered snippet collections on the registry. A collection never widens access: the server filters its items through the snippet read rules for every viewer. `fg run <collection>` (bare name for yours, `owner/name` for someone else's) runs the visible members in order through the normal trust flow, stopping at the first failure or refusal.
+
 Config (Peak B9): `fg config list|get|set` manages five validated keys of `config.yaml`: `registry_url`, `color` (the `--color` flag wins over it), `shell`, `default_visibility` (applies only when a push creates a snippet; existing snippets keep theirs) and `cache_size_mb` (1-10240). `list` shows each key's effective value and its source (config, default or unset); `--json` shapes are stable. Secrets are refused as keys - tokens live only in the credential store.
 
 ## Commands at a glance
@@ -42,6 +44,7 @@ Config (Peak B9): `fg config list|get|set` manages five validated keys of `confi
 - `forgehub alias` - Manage the `fg` shell alias (install|uninstall|show)
 - `forgehub completions` - Print shell completions (dynamic: local snippet names included)
 - `forgehub ui` - Browse snippets in a terminal UI (Local · Mine · Explore)
+- `forgehub collection` - Manage snippet collections (ordered runbooks)
 - `forgehub cache` - Inspect and manage the cloud run cache
 - `forgehub config` - Read and write the local configuration (registry, colour, shell, default visibility, cache size)
 - `forgehub update` - Check whether a newer `ForgeHub` is available (never downloads or replaces anything)
@@ -991,6 +994,195 @@ Usage: forgehub config set [OPTIONS] <KEY> <VALUE>
 Arguments:
   <KEY>    Key name (see `fg config list`)
   <VALUE>  The new value
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+### `forgehub collection`
+
+```text
+Manage snippet collections: ordered runbooks you can share and run end to end with `fg run <collection>`
+
+Usage: forgehub collection [OPTIONS] <COMMAND>
+
+Commands:
+  list        List your collections
+  create      Create a collection
+  show        Show a collection and its items in order (a bare name means one of yours; use owner/name for someone else's)
+  add         Add a snippet (owner/name) to a collection
+  remove      Remove a snippet (owner/name) from a collection
+  order       Set the item order: list every item as owner/name, in the new order
+  visibility  Change a collection's visibility
+  delete      Delete a collection (the snippets are not deleted)
+  help        Print this message or the help of the given subcommand(s)
+
+Options:
+      --json                 Print machine-readable JSON instead of human output
+      --registry <REGISTRY>  Registry to talk to (default: the active login)
+  -y, --yes                  Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...           Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline              Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>        Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help                 Print help (see more with '--help')
+
+Examples:
+  fg collection create deploy
+  fg collection add deploy anna/restart-api
+  fg collection show deploy
+  fg run deploy
+```
+
+#### `forgehub collection list`
+
+```text
+List your collections
+
+Usage: forgehub collection list [OPTIONS]
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection create`
+
+```text
+Create a collection
+
+Usage: forgehub collection create [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>  Collection name (same rules as snippet names)
+
+Options:
+      --description <DESCRIPTION>  Short description
+      --json                       Print machine-readable JSON instead of human output
+      --visibility <VISIBILITY>    Collection visibility: private|unlisted|public [default: private]
+  -y, --yes                        Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...                 Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline                    Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>              Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help                       Print help (see more with '--help')
+```
+
+#### `forgehub collection show`
+
+```text
+Show a collection and its items in order (a bare name means one of yours; use owner/name for someone else's)
+
+Usage: forgehub collection show [OPTIONS] <REFR>
+
+Arguments:
+  <REFR>  Collection reference: name or owner/name
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection add`
+
+```text
+Add a snippet (owner/name) to a collection
+
+Usage: forgehub collection add [OPTIONS] <COLLECTION> <SNIPPET>
+
+Arguments:
+  <COLLECTION>  Collection name (yours)
+  <SNIPPET>     Snippet reference: owner/name
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection remove`
+
+```text
+Remove a snippet (owner/name) from a collection
+
+Usage: forgehub collection remove [OPTIONS] <COLLECTION> <SNIPPET>
+
+Arguments:
+  <COLLECTION>  Collection name (yours)
+  <SNIPPET>     Snippet reference: owner/name
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection order`
+
+```text
+Set the item order: list every item as owner/name, in the new order
+
+Usage: forgehub collection order [OPTIONS] <COLLECTION> [ITEMS]...
+
+Arguments:
+  <COLLECTION>  Collection name (yours)
+  [ITEMS]...    Every item, in the new order
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection visibility`
+
+```text
+Change a collection's visibility
+
+Usage: forgehub collection visibility [OPTIONS] <COLLECTION> <VISIBILITY>
+
+Arguments:
+  <COLLECTION>  Collection name (yours)
+  <VISIBILITY>  private|unlisted|public
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection delete`
+
+```text
+Delete a collection (the snippets are not deleted)
+
+Usage: forgehub collection delete [OPTIONS] <COLLECTION>
+
+Arguments:
+  <COLLECTION>  Collection name (yours)
 
 Options:
       --json           Print machine-readable JSON instead of human output

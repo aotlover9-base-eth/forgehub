@@ -6,6 +6,7 @@
 
 pub mod admin;
 pub mod auth;
+pub mod collections;
 pub mod config;
 pub mod db;
 pub mod device;

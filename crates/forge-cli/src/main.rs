@@ -14,6 +14,7 @@ mod cache;
 mod cloud;
 mod cloudrun;
 mod cmds;
+mod collections_cmd;
 mod config_cmd;
 mod exit;
 mod history;
@@ -73,6 +74,7 @@ const KNOWN_COMMANDS: &[&str] = &[
     "ui",
     "cache",
     "config",
+    "collection",
     "update",
     "trust",
     "remote",
@@ -621,6 +623,18 @@ enum Command {
         #[command(subcommand)]
         action: CacheCommand,
     },
+    /// Manage snippet collections: ordered runbooks you can
+    /// share and run end to end with `fg run <collection>`.
+    #[command(
+        after_help = "Examples:\n  fg collection create deploy\n  fg collection add deploy anna/restart-api\n  fg collection show deploy\n  fg run deploy"
+    )]
+    Collection {
+        /// Registry to talk to (default: the active login).
+        #[arg(long)]
+        registry: Option<String>,
+        #[command(subcommand)]
+        action: CollectionCommand,
+    },
     #[command(next_help_heading = "Tools")]
     /// Read and write the local configuration (registry, colour,
     /// shell, default visibility, cache size). No secrets: tokens
@@ -661,6 +675,64 @@ enum CacheCommand {
         /// Maximum cache size after pruning.
         #[arg(long)]
         max_size: String,
+    },
+}
+
+/// Subcommands of `collection` (Peak C1).
+#[derive(Subcommand)]
+enum CollectionCommand {
+    /// List your collections.
+    List,
+    /// Create a collection.
+    Create {
+        /// Collection name (same rules as snippet names).
+        name: String,
+        /// Short description.
+        #[arg(long)]
+        description: Option<String>,
+        /// Collection visibility: private|unlisted|public.
+        #[arg(long, default_value = "private")]
+        visibility: String,
+    },
+    /// Show a collection and its items in order (a bare name
+    /// means one of yours; use owner/name for someone else's).
+    Show {
+        /// Collection reference: name or owner/name.
+        refr: String,
+    },
+    /// Add a snippet (owner/name) to a collection.
+    Add {
+        /// Collection name (yours).
+        collection: String,
+        /// Snippet reference: owner/name.
+        snippet: String,
+    },
+    /// Remove a snippet (owner/name) from a collection.
+    Remove {
+        /// Collection name (yours).
+        collection: String,
+        /// Snippet reference: owner/name.
+        snippet: String,
+    },
+    /// Set the item order: list every item as owner/name, in
+    /// the new order.
+    Order {
+        /// Collection name (yours).
+        collection: String,
+        /// Every item, in the new order.
+        items: Vec<String>,
+    },
+    /// Change a collection's visibility.
+    Visibility {
+        /// Collection name (yours).
+        collection: String,
+        /// private|unlisted|public.
+        visibility: String,
+    },
+    /// Delete a collection (the snippets are not deleted).
+    Delete {
+        /// Collection name (yours).
+        collection: String,
     },
 }
 
@@ -885,6 +957,50 @@ fn dispatch_parameterize(
 /// The cloud commands (Steps 11–12), dispatched separately so
 /// `run_cli` stays a flat local-command match. Returns `None`
 /// for local commands.
+/// Dispatch `fg collection ...` (Peak C1).
+fn dispatch_collection(
+    store: &store::Store,
+    stdin: &mut impl BufRead,
+    json: bool,
+    yes: bool,
+    registry: Option<&str>,
+    action: &CollectionCommand,
+) -> anyhow::Result<i32> {
+    let args = collections_cmd::Args {
+        store,
+        json,
+        yes,
+        registry,
+    };
+    match action {
+        CollectionCommand::List => collections_cmd::cmd_list(&args, stdin),
+        CollectionCommand::Create {
+            name,
+            description,
+            visibility,
+        } => collections_cmd::cmd_create(&args, stdin, name, description.as_deref(), visibility),
+        CollectionCommand::Show { refr } => collections_cmd::cmd_show(&args, stdin, refr),
+        CollectionCommand::Add {
+            collection,
+            snippet,
+        } => collections_cmd::cmd_add(&args, stdin, collection, snippet),
+        CollectionCommand::Remove {
+            collection,
+            snippet,
+        } => collections_cmd::cmd_remove(&args, stdin, collection, snippet),
+        CollectionCommand::Order { collection, items } => {
+            collections_cmd::cmd_order(&args, stdin, collection, items)
+        }
+        CollectionCommand::Visibility {
+            collection,
+            visibility,
+        } => collections_cmd::cmd_visibility(&args, stdin, collection, visibility),
+        CollectionCommand::Delete { collection } => {
+            collections_cmd::cmd_delete(&args, stdin, collection)
+        }
+    }
+}
+
 fn dispatch_cloud(
     cli: &Cli,
     store: &store::Store,
@@ -900,6 +1016,9 @@ fn dispatch_cloud(
             cloud::cmd_logout(store, stdin, registry.as_deref(), *revoke, json)
         }
         Command::Whoami { registry } => cloud::cmd_whoami(store, stdin, registry.as_deref(), json),
+        Command::Collection { registry, action } => {
+            dispatch_collection(store, stdin, json, yes, registry.as_deref(), action)
+        }
         Command::Push {
             name,
             all,

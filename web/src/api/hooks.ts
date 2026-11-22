@@ -2,6 +2,8 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { api, apiRaw, ApiError, setCsrfToken } from './client';
 import type {
   ApiTokenInfo,
+  Collection,
+  CollectionDetail,
   CreatedToken,
   Me,
   PublicProfile,
@@ -446,5 +448,129 @@ export function useDeviceDecision() {
         method: 'POST',
         body: JSON.stringify({ user_code }),
       }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Collections (Peak C1)
+// ---------------------------------------------------------------------------
+
+const collectionPath = (owner: string, name: string) =>
+  `/collections/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+
+/** The signed-in user's collections, most recently updated first. */
+export function useMyCollections(enabled = true) {
+  return useQuery<{ collections: Collection[] }>({
+    queryKey: ['my-collections'],
+    enabled,
+    queryFn: () => api<{ collections: Collection[] }>('/me/collections'),
+  });
+}
+
+/** One collection with its visible items, in order. */
+export function useCollection(owner: string, name: string) {
+  return useQuery<CollectionDetail>({
+    queryKey: ['collection', owner, name],
+    retry: false,
+    queryFn: () => api<CollectionDetail>(collectionPath(owner, name)),
+  });
+}
+
+function useInvalidateCollections() {
+  const queryClient = useQueryClient();
+  return (owner?: string, name?: string) => {
+    void queryClient.invalidateQueries({ queryKey: ['my-collections'] });
+    if (owner && name) {
+      void queryClient.invalidateQueries({ queryKey: ['collection', owner, name] });
+    }
+  };
+}
+
+export function useCreateCollection() {
+  const invalidate = useInvalidateCollections();
+  return useMutation<
+    Collection,
+    ApiError,
+    { name: string; description: string; visibility: Visibility }
+  >({
+    mutationFn: (input) =>
+      api<Collection>('/collections', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: (created) => invalidate(created.owner, created.name),
+  });
+}
+
+export function usePatchCollection() {
+  const invalidate = useInvalidateCollections();
+  return useMutation<
+    Collection,
+    ApiError,
+    { owner: string; name: string; description?: string; visibility?: Visibility }
+  >({
+    mutationFn: ({ owner, name, description, visibility }) =>
+      api<Collection>(collectionPath(owner, name), {
+        method: 'PATCH',
+        body: JSON.stringify({ description, visibility }),
+      }),
+    onSuccess: (updated) => invalidate(updated.owner, updated.name),
+  });
+}
+
+export function useDeleteCollection() {
+  const invalidate = useInvalidateCollections();
+  return useMutation<void, ApiError, { owner: string; name: string }>({
+    mutationFn: ({ owner, name }) =>
+      api<void>(collectionPath(owner, name), { method: 'DELETE' }),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useAddToCollection() {
+  const invalidate = useInvalidateCollections();
+  return useMutation<
+    void,
+    ApiError,
+    { owner: string; name: string; snippetOwner: string; snippetName: string }
+  >({
+    mutationFn: ({ owner, name, snippetOwner, snippetName }) =>
+      api<void>(
+        `${collectionPath(owner, name)}/items/${encodeURIComponent(snippetOwner)}/${encodeURIComponent(snippetName)}`,
+        { method: 'PUT' },
+      ),
+    onSuccess: (_data, vars) => invalidate(vars.owner, vars.name),
+  });
+}
+
+export function useRemoveFromCollection() {
+  const invalidate = useInvalidateCollections();
+  return useMutation<
+    void,
+    ApiError,
+    { owner: string; name: string; snippetOwner: string; snippetName: string }
+  >({
+    mutationFn: ({ owner, name, snippetOwner, snippetName }) =>
+      api<void>(
+        `${collectionPath(owner, name)}/items/${encodeURIComponent(snippetOwner)}/${encodeURIComponent(snippetName)}`,
+        { method: 'DELETE' },
+      ),
+    onSuccess: (_data, vars) => invalidate(vars.owner, vars.name),
+  });
+}
+
+export function useReorderCollection() {
+  const invalidate = useInvalidateCollections();
+  return useMutation<
+    Collection,
+    ApiError,
+    { owner: string; name: string; items: string[] }
+  >({
+    mutationFn: ({ owner, name, items }) =>
+      api<Collection>(`${collectionPath(owner, name)}/reorder`, {
+        method: 'POST',
+        body: JSON.stringify({ items }),
+      }),
+    onSuccess: (updated) => invalidate(updated.owner, updated.name),
   });
 }

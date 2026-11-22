@@ -970,6 +970,187 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SnippetPage' }
         '404': { $ref: '#/components/responses/Error' }
+  /collections:
+    post:
+      tags: [collections]
+      summary: Create a collection (Peak C1)
+      operationId: createCollection
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CollectionInput' }
+      responses:
+        '201':
+          description: The created collection
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Collection' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /me/collections:
+    get:
+      tags: [collections]
+      summary: The current user's collections with item counts
+      operationId: myCollections
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      responses:
+        '200':
+          description: The user's collections
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [collections]
+                properties:
+                  collections:
+                    type: array
+                    items: { $ref: '#/components/schemas/Collection' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /collections/{owner}/{name}:
+    parameters:
+      - name: owner
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Username' }
+      - name: name
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/SnippetName' }
+    get:
+      tags: [collections]
+      summary: Read a collection and its items (items are filtered by the snippet read rules; a collection never widens access)
+      operationId: getCollection
+      security: [{ cookieSession: [] }, { bearerToken: [] }, {}]
+      responses:
+        '200':
+          description: The collection with its visible items in order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CollectionDetail' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [collections]
+      summary: Update a collection's description or visibility (owner only)
+      operationId: patchCollection
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CollectionPatch' }
+      responses:
+        '200':
+          description: The updated collection
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Collection' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [collections]
+      summary: Delete a collection (owner only; the snippets are untouched)
+      operationId: deleteCollection
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /collections/{owner}/{name}/items/{snippetOwner}/{snippetName}:
+    parameters:
+      - name: owner
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Username' }
+      - name: name
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/SnippetName' }
+      - name: snippetOwner
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Username' }
+      - name: snippetName
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/SnippetName' }
+    put:
+      tags: [collections]
+      summary: Add a snippet to a collection (owner only; the snippet must be readable by the owner)
+      operationId: addCollectionItem
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      responses:
+        '201': { description: Added }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [collections]
+      summary: Remove a snippet from a collection (owner only)
+      operationId: removeCollectionItem
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      responses:
+        '204': { description: Removed }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /collections/{owner}/{name}/reorder:
+    parameters:
+      - name: owner
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Username' }
+      - name: name
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/SnippetName' }
+    post:
+      tags: [collections]
+      summary: Set the item order (owner only; the list must be exactly the current items)
+      operationId: reorderCollection
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items: { type: string, example: 'anna/restart-api' }
+      responses:
+        '200':
+          description: The updated collection
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Collection' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
 components:
   securitySchemes:
     cookieSession:
@@ -1169,6 +1350,51 @@ components:
           type: array
           items: { $ref: '#/components/schemas/Snippet' }
         next_cursor: { type: [string, 'null'] }
+    Collection:
+      type: object
+      required: [owner, name, description, visibility, item_count, created_at, updated_at]
+      properties:
+        owner: { $ref: '#/components/schemas/Username' }
+        name: { $ref: '#/components/schemas/SnippetName' }
+        description: { type: string }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+        item_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CollectionItem:
+      type: object
+      required: [owner, name, description, visibility, latest_version, position]
+      properties:
+        owner: { $ref: '#/components/schemas/Username' }
+        name: { $ref: '#/components/schemas/SnippetName' }
+        description: { type: string }
+        visibility: { $ref: '#/components/schemas/Visibility' }
+        latest_version: { type: integer }
+        position: { type: integer }
+    CollectionDetail:
+      allOf:
+        - { $ref: '#/components/schemas/Collection' }
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/CollectionItem' }
+            total_items:
+              type: integer
+              description: Owner only - the unfiltered item count, so the owner can see that some items are hidden from their current view.
+    CollectionInput:
+      type: object
+      required: [name]
+      properties:
+        name: { $ref: '#/components/schemas/SnippetName' }
+        description: { type: string, maxLength: 280 }
+        visibility: { $ref: '#/components/schemas/Visibility', default: private }
+    CollectionPatch:
+      type: object
+      properties:
+        description: { type: string, maxLength: 280 }
+        visibility: { $ref: '#/components/schemas/Visibility' }
     SearchPage:
       type: object
       required: [results]

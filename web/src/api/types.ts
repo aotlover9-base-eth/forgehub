@@ -49,6 +49,35 @@ export interface SnippetPage {
   next_cursor: string | null;
 }
 
+/** A snippet collection (Peak C1). */
+export interface Collection {
+  owner: string;
+  name: string;
+  description: string;
+  visibility: Visibility;
+  item_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** One item of a collection detail response. */
+export interface CollectionItem {
+  owner: string;
+  name: string;
+  description: string;
+  visibility: Visibility;
+  latest_version: number;
+  position: number;
+}
+
+/** Collection detail: the collection plus its visible items
+ * in order. `total_items` is present only for the owner and
+ * counts items the server hid from this view. */
+export interface CollectionDetail extends Collection {
+  items: CollectionItem[];
+  total_items?: number;
+}
+
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
 }

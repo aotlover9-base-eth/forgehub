@@ -246,6 +246,69 @@ fn run_not_found(store: &Store, stdin: &mut impl BufRead, name: &str) -> CliErro
     CliError::not_found(msg)
 }
 
+/// Run an explicit cloud reference (`owner/name` or an `@N`
+/// pin). On a not-found with no version pin, fall back to a
+/// collection of that name (Peak C1) before giving up.
+fn run_explicit_ref(
+    store: &Store,
+    stdin: &mut impl BufRead,
+    refr: &crate::cloudrun::RunRef,
+    args: &RunArgs,
+) -> Result<i32> {
+    let cloud_args = args.to_cloud();
+    match crate::cloudrun::run_cloud(store, stdin, refr, &cloud_args) {
+        Err(e) if crate::exit::code_of(&e) == 3 && refr.version.is_none() => {
+            match crate::collections_cmd::try_run_collection(
+                store,
+                stdin,
+                refr.owner.as_deref(),
+                &refr.name,
+                &cloud_args,
+            ) {
+                Some(result) => result,
+                None => Err(e),
+            }
+        }
+        other => other,
+    }
+}
+
+/// The bare-name cloud fallback: my own cloud snippet of this
+/// name (needs a credential, or the --offline cache), then one
+/// of my collections (Peak C1), then the not-found error with
+/// suggestions.
+fn run_bare_name_cloud(
+    store: &Store,
+    stdin: &mut impl BufRead,
+    refr: &crate::cloudrun::RunRef,
+    args: &RunArgs,
+) -> Result<i32> {
+    let can_cloud = args.offline
+        || matches!(
+            crate::cloud::active_credential(store, stdin, None),
+            Ok(Some(_))
+        );
+    if can_cloud {
+        let cloud_args = args.to_cloud();
+        match crate::cloudrun::run_cloud(store, stdin, refr, &cloud_args) {
+            Err(ce) if crate::exit::code_of(&ce) == 3 => {
+                if let Some(result) = crate::collections_cmd::try_run_collection(
+                    store,
+                    stdin,
+                    None,
+                    &args.name,
+                    &cloud_args,
+                ) {
+                    return result;
+                }
+                return Err(run_not_found(store, stdin, &args.name).into());
+            }
+            other => return other,
+        }
+    }
+    Err(run_not_found(store, stdin, &args.name).into())
+}
+
 /// `fg run <name> [KEY=value…]` and the `fg <name>` shorthand.
 ///
 /// Resolution (Step 13): an explicit `owner/name` or an `@N`
@@ -255,28 +318,13 @@ fn run_not_found(store: &Store, stdin: &mut impl BufRead, name: &str) -> CliErro
 pub fn cmd_run(store: &Store, stdin: &mut impl BufRead, args: &RunArgs) -> Result<i32> {
     let refr = crate::cloudrun::parse_reference(&args.name);
     if refr.owner.is_some() || refr.version.is_some() {
-        return crate::cloudrun::run_cloud(store, stdin, &refr, &args.to_cloud());
+        return run_explicit_ref(store, stdin, &refr, args);
     }
     let snippet = match store.load(&args.name) {
         Ok(s) => s,
         Err(e) => {
             if crate::exit::code_of(&e) == 3 {
-                // Cloud fallback: my own cloud snippet of this
-                // name (needs a credential, or --offline cache).
-                let can_cloud = args.offline
-                    || matches!(
-                        crate::cloud::active_credential(store, stdin, None),
-                        Ok(Some(_))
-                    );
-                if can_cloud {
-                    match crate::cloudrun::run_cloud(store, stdin, &refr, &args.to_cloud()) {
-                        Err(ce) if crate::exit::code_of(&ce) == 3 => {
-                            return Err(run_not_found(store, stdin, &args.name).into());
-                        }
-                        other => return other,
-                    }
-                }
-                return Err(run_not_found(store, stdin, &args.name).into());
+                return run_bare_name_cloud(store, stdin, &refr, args);
             }
             return Err(e);
         }

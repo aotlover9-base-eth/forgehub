@@ -1,0 +1,50 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH collection 1  "collection " 
+.SH NAME
+collection \- Manage snippet collections: ordered runbooks you can share and run end to end with `fg run <collection>`
+.SH SYNOPSIS
+\fBcollection\fR [\fB\-\-registry\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Manage snippet collections: ordered runbooks you can share and run end to end with `fg run <collection>`
+.SH OPTIONS
+.TP
+\fB\-\-registry\fR \fI<REGISTRY>\fR
+Registry to talk to (default: the active login)
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH SUBCOMMANDS
+.TP
+collection\-list(1)
+List your collections
+.TP
+collection\-create(1)
+Create a collection
+.TP
+collection\-show(1)
+Show a collection and its items in order (a bare name means one of yours; use owner/name for someone else\*(Aqs)
+.TP
+collection\-add(1)
+Add a snippet (owner/name) to a collection
+.TP
+collection\-remove(1)
+Remove a snippet (owner/name) from a collection
+.TP
+collection\-order(1)
+Set the item order: list every item as owner/name, in the new order
+.TP
+collection\-visibility(1)
+Change a collection\*(Aqs visibility
+.TP
+collection\-delete(1)
+Delete a collection (the snippets are not deleted)
+.TP
+collection\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH EXTRA
+Examples:
+  fg collection create deploy
+  fg collection add deploy anna/restart\-api
+  fg collection show deploy
+  fg run deploy

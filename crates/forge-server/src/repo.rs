@@ -542,6 +542,98 @@ pub struct PasswordResetRow {
     pub used_at: Option<String>,
 }
 
+/// A collection row (Peak C1; metadata only - items are separate).
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow, Serialize)]
+pub struct CollectionRow {
+    /// Primary key.
+    pub id: i64,
+    /// Owner.
+    pub owner_id: i64,
+    /// Name (unique per owner, snippet-name rules).
+    pub name: String,
+    /// Short description.
+    pub description: String,
+    /// private | unlisted | public.
+    pub visibility: String,
+    /// Creation time.
+    pub created_at: String,
+    /// Last metadata/item change.
+    pub updated_at: String,
+}
+
+/// One item of a collection, joined with its snippet's summary
+/// fields and owner username.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow, Serialize)]
+pub struct CollectionItemRow {
+    /// The snippet's primary key.
+    pub snippet_id: i64,
+    /// Snippet owner's user id.
+    pub snippet_owner_id: i64,
+    /// Snippet owner's username.
+    pub owner_username: String,
+    /// Snippet name.
+    pub name: String,
+    /// Snippet description.
+    pub description: String,
+    /// Snippet visibility (private | unlisted | public).
+    pub visibility: String,
+    /// Snippet latest version number.
+    pub latest_version: i64,
+    /// Admin hide marker on the snippet.
+    pub hidden_at: Option<String>,
+    /// Soft-delete marker on the snippet.
+    pub deleted_at: Option<String>,
+    /// Position within the collection (ascending order).
+    pub position: i64,
+    /// When the item was added.
+    pub added_at: String,
+}
+
+/// Collections repository (Peak C1).
+#[async_trait]
+pub trait CollectionRepo: Send + Sync {
+    /// Insert a collection; `Conflict` on duplicate name.
+    async fn create(
+        &self,
+        owner_id: i64,
+        name: &str,
+        description: &str,
+        visibility: &str,
+        now: &str,
+    ) -> RepoResult<CollectionRow>;
+    /// By owner + name.
+    async fn by_owner_name(&self, owner_id: i64, name: &str) -> RepoResult<Option<CollectionRow>>;
+    /// Count for an owner (plan limit enforcement).
+    async fn count_for_owner(&self, owner_id: i64) -> RepoResult<i64>;
+    /// List an owner's collections, most recently updated first,
+    /// each with its total item count.
+    async fn list_for_owner(&self, owner_id: i64) -> RepoResult<Vec<(CollectionRow, i64)>>;
+    /// Update description and/or visibility; `NotFound` if gone.
+    async fn update(
+        &self,
+        id: i64,
+        description: Option<&str>,
+        visibility: Option<&str>,
+        now: &str,
+    ) -> RepoResult<CollectionRow>;
+    /// Delete a collection (items cascade).
+    async fn delete(&self, id: i64) -> RepoResult<()>;
+    /// Items in position order (includes snippets the caller may
+    /// not read; filtering is the handler's job).
+    async fn items(&self, collection_id: i64) -> RepoResult<Vec<CollectionItemRow>>;
+    /// Item count.
+    async fn item_count(&self, collection_id: i64) -> RepoResult<i64>;
+    /// Append a snippet at the end; `Conflict` if already present.
+    async fn add_item(&self, collection_id: i64, snippet_id: i64, now: &str) -> RepoResult<()>;
+    /// Remove a snippet; false when it was not an item.
+    async fn remove_item(&self, collection_id: i64, snippet_id: i64) -> RepoResult<bool>;
+    /// Rewrite positions to the given snippet-id order. The
+    /// handler guarantees the list is exactly the current set.
+    async fn set_order(&self, collection_id: i64, snippet_ids: &[i64]) -> RepoResult<()>;
+    /// Touch the collection's `updated_at` (item changes).
+    async fn touch(&self, id: i64, now: &str) -> RepoResult<()>;
+}
+
 /// Password-reset tokens repository (2026-11-20 increment).
 #[async_trait]
 pub trait PasswordResetRepo: Send + Sync {
@@ -574,6 +666,8 @@ pub struct Repos {
     pub snippets: std::sync::Arc<dyn SnippetRepo>,
     /// Reports.
     pub reports: std::sync::Arc<dyn ReportRepo>,
+    /// Collections (Peak C1).
+    pub collections: std::sync::Arc<dyn CollectionRepo>,
     /// Password-reset tokens.
     pub password_resets: std::sync::Arc<dyn PasswordResetRepo>,
 }
@@ -590,6 +684,7 @@ impl Repos {
             device_codes: store.clone(),
             snippets: store.clone(),
             reports: store.clone(),
+            collections: store.clone(),
             password_resets: store,
         }
     }
@@ -1764,6 +1859,197 @@ impl SnippetRepo for SqliteStore {
 }
 
 // ---------------------------------------------------------------- reports
+
+#[async_trait]
+impl CollectionRepo for SqliteStore {
+    async fn create(
+        &self,
+        owner_id: i64,
+        name: &str,
+        description: &str,
+        visibility: &str,
+        now: &str,
+    ) -> RepoResult<CollectionRow> {
+        let res = sqlx::query(
+            "INSERT INTO collections (owner_id, name, description, visibility, created_at, updated_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
+        )
+        .bind(owner_id)
+        .bind(name)
+        .bind(description)
+        .bind(visibility)
+        .bind(now)
+        .execute(&self.pool)
+        .await
+        .map_err(map_unique)?;
+        Ok(CollectionRow {
+            id: res.last_insert_rowid(),
+            owner_id,
+            name: name.to_string(),
+            description: description.to_string(),
+            visibility: visibility.to_string(),
+            created_at: now.to_string(),
+            updated_at: now.to_string(),
+        })
+    }
+
+    async fn by_owner_name(&self, owner_id: i64, name: &str) -> RepoResult<Option<CollectionRow>> {
+        Ok(sqlx::query_as::<_, CollectionRow>(
+            "SELECT * FROM collections WHERE owner_id = ?1 AND name = ?2",
+        )
+        .bind(owner_id)
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await?)
+    }
+
+    async fn count_for_owner(&self, owner_id: i64) -> RepoResult<i64> {
+        Ok(
+            sqlx::query_scalar("SELECT COUNT(*) FROM collections WHERE owner_id = ?1")
+                .bind(owner_id)
+                .fetch_one(&self.pool)
+                .await?,
+        )
+    }
+
+    async fn list_for_owner(&self, owner_id: i64) -> RepoResult<Vec<(CollectionRow, i64)>> {
+        let rows = sqlx::query_as::<_, CollectionRow>(
+            "SELECT * FROM collections WHERE owner_id = ?1 ORDER BY updated_at DESC, id DESC",
+        )
+        .bind(owner_id)
+        .fetch_all(&self.pool)
+        .await?;
+        let mut out = Vec::with_capacity(rows.len());
+        for row in rows {
+            let count = self.item_count(row.id).await?;
+            out.push((row, count));
+        }
+        Ok(out)
+    }
+
+    async fn update(
+        &self,
+        id: i64,
+        description: Option<&str>,
+        visibility: Option<&str>,
+        now: &str,
+    ) -> RepoResult<CollectionRow> {
+        let current = sqlx::query_as::<_, CollectionRow>("SELECT * FROM collections WHERE id = ?1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or_else(|| RepoError::NotFound("collection".to_string()))?;
+        let description = description.unwrap_or(&current.description);
+        let visibility = visibility.unwrap_or(&current.visibility);
+        sqlx::query(
+            "UPDATE collections SET description = ?1, visibility = ?2, updated_at = ?3 WHERE id = ?4",
+        )
+        .bind(description)
+        .bind(visibility)
+        .bind(now)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        Ok(CollectionRow {
+            description: description.to_string(),
+            visibility: visibility.to_string(),
+            updated_at: now.to_string(),
+            ..current
+        })
+    }
+
+    async fn delete(&self, id: i64) -> RepoResult<()> {
+        sqlx::query("DELETE FROM collections WHERE id = ?1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn items(&self, collection_id: i64) -> RepoResult<Vec<CollectionItemRow>> {
+        Ok(sqlx::query_as::<_, CollectionItemRow>(
+            "SELECT s.id AS snippet_id, s.owner_id AS snippet_owner_id, \
+                    u.username AS owner_username, s.name AS name, \
+                    s.description AS description, s.visibility AS visibility, \
+                    s.latest_version AS latest_version, s.hidden_at AS hidden_at, \
+                    s.deleted_at AS deleted_at, ci.position AS position, \
+                    ci.added_at AS added_at \
+             FROM collection_items ci \
+             JOIN snippets s ON s.id = ci.snippet_id \
+             JOIN users u ON u.id = s.owner_id \
+             WHERE ci.collection_id = ?1 \
+             ORDER BY ci.position ASC, ci.snippet_id ASC",
+        )
+        .bind(collection_id)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn item_count(&self, collection_id: i64) -> RepoResult<i64> {
+        Ok(
+            sqlx::query_scalar("SELECT COUNT(*) FROM collection_items WHERE collection_id = ?1")
+                .bind(collection_id)
+                .fetch_one(&self.pool)
+                .await?,
+        )
+    }
+
+    async fn add_item(&self, collection_id: i64, snippet_id: i64, now: &str) -> RepoResult<()> {
+        let next: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(MAX(position), -1) + 1 FROM collection_items WHERE collection_id = ?1",
+        )
+        .bind(collection_id)
+        .fetch_one(&self.pool)
+        .await?;
+        sqlx::query(
+            "INSERT INTO collection_items (collection_id, snippet_id, position, added_at) VALUES (?1, ?2, ?3, ?4)",
+        )
+        .bind(collection_id)
+        .bind(snippet_id)
+        .bind(next)
+        .bind(now)
+        .execute(&self.pool)
+        .await
+        .map_err(map_unique)?;
+        Ok(())
+    }
+
+    async fn remove_item(&self, collection_id: i64, snippet_id: i64) -> RepoResult<bool> {
+        let res = sqlx::query(
+            "DELETE FROM collection_items WHERE collection_id = ?1 AND snippet_id = ?2",
+        )
+        .bind(collection_id)
+        .bind(snippet_id)
+        .execute(&self.pool)
+        .await?;
+        Ok(res.rows_affected() > 0)
+    }
+
+    async fn set_order(&self, collection_id: i64, snippet_ids: &[i64]) -> RepoResult<()> {
+        let mut tx = self.pool.begin().await?;
+        for (position, snippet_id) in snippet_ids.iter().enumerate() {
+            sqlx::query(
+                "UPDATE collection_items SET position = ?1 WHERE collection_id = ?2 AND snippet_id = ?3",
+            )
+            .bind(i64::try_from(position).unwrap_or(i64::MAX))
+            .bind(collection_id)
+            .bind(snippet_id)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn touch(&self, id: i64, now: &str) -> RepoResult<()> {
+        sqlx::query("UPDATE collections SET updated_at = ?1 WHERE id = ?2")
+            .bind(now)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+}
 
 #[async_trait]
 impl ReportRepo for SqliteStore {

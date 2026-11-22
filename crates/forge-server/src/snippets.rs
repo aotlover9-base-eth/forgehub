@@ -429,7 +429,7 @@ pub(crate) fn check_write_scope_and_csrf(
     }
 }
 
-fn validate_visibility(value: &str) -> Result<(), ApiError> {
+pub(crate) fn validate_visibility(value: &str) -> Result<(), ApiError> {
     match value {
         "private" | "unlisted" | "public" => Ok(()),
         other => Err(ApiError::validation(format!(

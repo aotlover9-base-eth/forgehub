@@ -53,7 +53,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [x] B9 - config (`fg config get|set|list` in new `config_cmd.rs`: registry_url/color/shell/default_visibility/cache_size_mb with validation, aliases, effective-value + source display, `--json`; color wired flag > config > auto; default_visibility wired create-only into push + TUI push; `config` added to KNOWN_COMMANDS. Closes the owed items: docs/man regenerated (11 updated, 10 new), B5 cloud edit verified live by a new sync integration test, B0 release measurements re-taken (version 6.5 ms mean, run-to-prompt 8.2 ms mean PTY, binary 9.3 MiB - all within budget). Local gates: fmt clean, clippy clean, 481 tests passed / 0 failed. CI run `44974125129` FULLY GREEN, all five jobs.)
 
 ### Phase C - new features
-- [ ] C1 - snippet collections
+- [x] C1 - snippet collections (migration 0003 + CollectionRepo + 8 endpoints in `collections.rs`, never-widens-access item filtering; `fg collection` 8 subcommands + `fg run <collection>` fallback with stop-on-failure; web Library Collections section + `/collections/:owner/:name` page + add-from-menu; OpenAPI + man + cli-reference updated. Tests: 7 server + 3 CLI integration, 5 web. Local gates: fmt clean, clippy clean, 491 Rust tests passed, web lint/typecheck/test/build green. CI verification pending at commit time.)
 - [ ] C2 - typed parameters and prompts
 - [ ] C3 - snippet history and rollback in the CLI
 - [ ] C4 - public pages and sharing
@@ -66,7 +66,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 
 Phase A COMPLETE 2026-11-22: summary in `reports/report_Peak-A-summary.md`, tagged `peak-phase-a`. CI green on the A8 head (`3bb18b0`, run `44965399856`, all five jobs) and on the WP-0b fix head (`0ab22f8`, run `44963120867`).
 
-Next WP: Phase B summary + tag `peak-phase-b`, then C1 - snippet collections.
+Next WP: C2 - typed parameters.
 
 ### A8 blocker note (2026-11-22, ~23:25 IST) - READ FIRST ON RESUME
 

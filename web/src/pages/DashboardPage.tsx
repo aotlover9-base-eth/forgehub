@@ -25,7 +25,9 @@ import {
 } from '../design';
 import { ApiError, apiUrl } from '../api/client';
 import {
+  useAddToCollection,
   useDeleteSnippet,
+  useMyCollections,
   useMySnippets,
   usePatchSnippet,
   useSetVisibility,
@@ -33,6 +35,7 @@ import {
   type SnippetSort,
   type VisibilityFilter,
 } from '../api/hooks';
+import CollectionsPanel from './CollectionsPanel';
 import type { Snippet, Visibility } from '../api/types';
 import { relativeTime } from '../validation';
 
@@ -76,6 +79,8 @@ export default function DashboardPage() {
   const [cursor, setCursor] = useState(0);
   const [sheetName, setSheetName] = useState<string | null>(null);
   const snippets = useMySnippets(filter, sort);
+  const myCollections = useMyCollections();
+  const addToCollection = useAddToCollection();
   const deleteSnippet = useDeleteSnippet();
   const setVisibility = useSetVisibility();
   const patchSnippet = usePatchSnippet();
@@ -190,6 +195,20 @@ export default function DashboardPage() {
       navigate(`/${snippet.owner}/${snippet.name}`);
     } else if (action === 'delete') {
       setToDelete(snippet);
+    } else if (action.startsWith('collection:')) {
+      const collectionName = action.slice('collection:'.length);
+      addToCollection.mutate(
+        {
+          owner: snippet.owner,
+          name: collectionName,
+          snippetOwner: snippet.owner,
+          snippetName: snippet.name,
+        },
+        {
+          onSuccess: () => toast({ message: `${snippet.name} added to ${collectionName}` }),
+          onError: (error) => toast({ message: error.uiMessage }),
+        },
+      );
     } else if (action.startsWith('visibility:')) {
       const visibility = action.slice('visibility:'.length) as Visibility;
       setVisibility.mutate(
@@ -411,6 +430,11 @@ export default function DashboardPage() {
                           label: `Make ${v}`,
                           icon: v === 'public' ? 'public' : v === 'unlisted' ? 'link' : 'lock',
                         })),
+                        ...(myCollections.data?.collections ?? []).map((c) => ({
+                          id: `collection:${c.name}`,
+                          label: `Add to ${c.name}`,
+                          icon: 'playlist_add',
+                        })),
                         { id: 'delete', label: 'Delete', icon: 'delete' },
                       ]}
                       onSelect={(id) => onMenu(snippet, id)}
@@ -421,6 +445,10 @@ export default function DashboardPage() {
             </div>
           </Card>
         )}
+
+        <div style={{ marginTop: 'var(--fh-space-4)' }}>
+          <CollectionsPanel />
+        </div>
       </div>
 
       {sheetSnippet ? (

@@ -1,0 +1,22 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH create 1  "create " 
+.SH NAME
+create \- Create a collection
+.SH SYNOPSIS
+\fBcreate\fR [\fB\-\-description\fR] [\fB\-\-visibility\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fINAME\fR> 
+.SH DESCRIPTION
+Create a collection
+.SH OPTIONS
+.TP
+\fB\-\-description\fR \fI<DESCRIPTION>\fR
+Short description
+.TP
+\fB\-\-visibility\fR \fI<VISIBILITY>\fR [default: private]
+Collection visibility: private|unlisted|public
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fINAME\fR>
+Collection name (same rules as snippet names)

@@ -36,6 +36,7 @@ import NotFoundPage from './pages/NotFoundPage';
 // Route-level code splitting: the heavy screens load on
 // demand so the first paint stays small.
 const HomePage = lazy(() => import('./pages/HomePage'));
+const CollectionPage = lazy(() => import('./pages/CollectionPage'));
 const EditorPage = lazy(() => import('./pages/EditorPage'));
 const SnippetPage = lazy(() => import('./pages/SnippetPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
@@ -136,6 +137,8 @@ function titleForPath(pathname: string): string {
   if (STATIC_TITLES[pathname]) return STATIC_TITLES[pathname];
   const edit = /^\/([^/]+)\/([^/]+)\/edit$/.exec(pathname);
   if (edit) return `Edit ${edit[2]} - ForgeHub`;
+  const collection = /^\/collections\/([^/]+)\/([^/]+)$/.exec(pathname);
+  if (collection) return `${collection[2]} - Collection by ${collection[1]} - ForgeHub`;
   const snippet = /^\/([^/]+)\/([^/]+)$/.exec(pathname);
   if (snippet) return `${snippet[2]} by ${snippet[1]} - ForgeHub`;
   const profile = /^\/([^/]+)$/.exec(pathname);
@@ -351,6 +354,7 @@ const router = createBrowserRouter([
         ),
       },
       { path: 'explore', element: <ExplorePage /> },
+      { path: 'collections/:owner/:name', element: <CollectionPage /> },
       { path: 'device', element: <DevicePage /> },
       {
         path: 'settings',
