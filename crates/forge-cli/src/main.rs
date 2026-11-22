@@ -23,6 +23,7 @@ mod record;
 mod runner;
 mod store;
 mod sync;
+mod topics;
 mod trust;
 mod tui;
 mod update;
@@ -73,7 +74,8 @@ const KNOWN_COMMANDS: &[&str] = &[
     "help",
 ];
 
-/// Dynamic completion: local snippet names for name-taking commands.
+/// Dynamic completion: local snippet names plus cached
+/// `owner/name` references for name-taking commands (Peak B2).
 /// Called by the shell through the `clap_complete` env protocol
 /// (`COMPLETE=<shell> forgehub`); never runs during normal use.
 fn complete_snippet_name(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
@@ -81,12 +83,27 @@ fn complete_snippet_name(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> 
         return Vec::new();
     };
     let prefix = current.to_string_lossy();
-    store
-        .names()
+    let cached = cache::entries(&store)
+        .iter()
+        .map(|e| format!("{}/{}", e.owner, e.name))
+        .collect();
+    merge_candidates(store.names(), cached, &prefix)
         .into_iter()
-        .filter(|n| n.starts_with(prefix.as_ref()))
         .map(CompletionCandidate::new)
         .collect()
+}
+
+/// Merge local names and cached `owner/name` references into one
+/// sorted, de-duplicated candidate list matching `prefix`.
+fn merge_candidates(locals: Vec<String>, cached: Vec<String>, prefix: &str) -> Vec<String> {
+    let mut all: Vec<String> = locals
+        .into_iter()
+        .chain(cached)
+        .filter(|n| n.starts_with(prefix))
+        .collect();
+    all.sort();
+    all.dedup();
+    all
 }
 
 /// Long `--version` output (Step 21): version, source commit
@@ -107,7 +124,8 @@ const LONG_VERSION: &str = concat!(
     long_version = LONG_VERSION,
     about = "ForgeHub - a cloud home for shell command snippets",
     long_about = "Save shell command snippets once, run them anywhere with `fg <name>`. \
-                  Local commands work fully offline; cloud commands (login, push, pull, fork) sync with your ForgeHub server."
+                  Local commands work fully offline; cloud commands (login, push, pull, fork) sync with your ForgeHub server.",
+    after_help = "Concepts: fg help <topic> - alias, trust, hash-pinning, yes, offline"
 )]
 struct Cli {
     /// Print machine-readable JSON instead of human output.
@@ -140,6 +158,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(next_help_heading = "Library")]
     /// Create the `ForgeHub` home and config.
     #[command(after_help = "Examples:\n  fg init")]
     Init,
@@ -348,6 +367,7 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
+    #[command(next_help_heading = "Cloud")]
     /// Log in to a `ForgeHub` server (device-code flow in the browser).
     #[command(after_help = "Examples:\n  fg login
   fg login --registry https://forgehub.example.com")]
@@ -381,6 +401,7 @@ enum Command {
   fg push --all")]
     Push {
         /// Local snippet name (omit with --all).
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: Option<String>,
         /// Push every local snippet and print a summary.
         #[arg(long)]
@@ -409,6 +430,7 @@ enum Command {
   fg pull ubuntu-setup --force")]
     Pull {
         /// `owner/name`, or a bare name for your own snippet.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         reference: String,
         /// Save under a different local name.
         #[arg(long = "as")]
@@ -428,6 +450,7 @@ enum Command {
   fg status ubuntu-setup")]
     Status {
         /// Only this snippet (default: everything tracked).
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: Option<String>,
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
@@ -437,6 +460,7 @@ enum Command {
     #[command(after_help = "Examples:\n  fg diff ubuntu-setup")]
     Diff {
         /// Local snippet name.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
@@ -446,6 +470,7 @@ enum Command {
     #[command(after_help = "Examples:\n  fg fork alice/deploy --as my-deploy")]
     Fork {
         /// `owner/name` of the snippet to fork.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         reference: String,
         /// Name for the fork (default: the source name).
         #[arg(long = "as")]
@@ -462,6 +487,7 @@ enum Command {
         #[command(subcommand)]
         action: RemoteCommand,
     },
+    #[command(next_help_heading = "Safety")]
     /// Manage execution trust for cloud snippets (Step 13):
     /// `trust list`, `trust revoke <owner/name>`, or approve an
     /// exact snippet directly: `trust <owner/name@hash>`.
@@ -473,8 +499,10 @@ enum Command {
         action: Option<TrustCommand>,
         /// Shorthand for `trust add`: `owner/name@hash` or
         /// `owner/name@version`.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         reference: Option<String>,
     },
+    #[command(next_help_heading = "Tools")]
     /// Check the environment and library health.
     #[command(after_help = "Examples:\n  fg doctor
   fg doctor alias")]
@@ -501,6 +529,7 @@ enum Command {
     /// Browse snippets in a terminal UI (Local · Mine · Explore).
     #[command(after_help = "Examples:\n  fg ui")]
     Ui,
+    #[command(next_help_heading = "Safety")]
     /// Inspect and manage the cloud run cache.
     #[command(after_help = "Examples:\n  fg cache list
   fg cache clear")]
@@ -508,6 +537,7 @@ enum Command {
         #[command(subcommand)]
         action: CacheCommand,
     },
+    #[command(next_help_heading = "Cloud")]
     /// Check whether a newer `ForgeHub` is available (never
     /// downloads or replaces anything).
     #[command(after_help = "Examples:\n  fg update --check")]
@@ -538,11 +568,13 @@ enum TrustCommand {
     /// Revoke trust for one snippet.
     Revoke {
         /// `owner/name` whose trust should be removed.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         reference: String,
     },
     /// Approve an exact snippet without running it.
     Add {
         /// `owner/name@hash` or `owner/name@version`.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         reference: String,
     },
 }
@@ -582,6 +614,7 @@ enum RemoteCommand {
     /// Show one cloud snippet in full.
     Show {
         /// `owner/name`, or a bare name for your own snippet.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         reference: String,
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
@@ -590,6 +623,7 @@ enum RemoteCommand {
     /// Delete one of your cloud snippets (soft-delete, 30-day undo).
     Delete {
         /// Snippet name.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
         /// Registry base URL (default: `FORGEHUB_REGISTRY` or config).
         #[arg(long)]
@@ -598,6 +632,7 @@ enum RemoteCommand {
     /// Change a snippet's visibility: public|unlisted|private.
     Visibility {
         /// Snippet name.
+        #[arg(add = ArgValueCompleter::new(complete_snippet_name))]
         name: String,
         /// The new visibility.
         visibility: String,
@@ -1166,10 +1201,22 @@ fn main() -> ExitCode {
     // and exits; otherwise it returns immediately.
     clap_complete::CompleteEnv::with_factory(<Cli as clap::CommandFactory>::command).complete();
 
+    // Help topics (Peak B2): `fg help <topic>` for concepts, not
+    // commands. Intercepted before clap so a topic can never
+    // shadow a subcommand - every topic name is a non-command,
+    // and clap still owns `fg help <command>`.
+    let raw_args: Vec<String> = std::env::args().skip(1).collect();
+    if raw_args.len() == 2 && raw_args[0] == "help" {
+        if let Some(text) = topics::topic(&raw_args[1]) {
+            println!("{text}");
+            return ExitCode::from(0);
+        }
+    }
+
     // Shorthand: `fg <name> [KEY=value…]` means `fg run <name> …` when
     // the first word is not a known command or flag (spec-cli §6 step 1:
     // subcommands always win over snippet names).
-    let raw: Vec<String> = std::env::args().skip(1).collect();
+    let raw: Vec<String> = raw_args;
     let mut argv: Vec<String> = vec![std::env::args().next().unwrap_or_else(|| "forgehub".into())];
     if let Some(first) = raw.first() {
         if !first.starts_with('-') && !KNOWN_COMMANDS.contains(&first.as_str()) {
@@ -1203,6 +1250,28 @@ mod tests {
     #[test]
     fn version_string_is_not_empty() {
         assert_ne!(env!("CARGO_PKG_VERSION"), "");
+    }
+
+    #[test]
+    fn merge_candidates_unions_sorts_and_filters() {
+        let locals = vec!["deploy".to_string(), "docker-up".to_string()];
+        let cached = vec![
+            "alice/deploy".to_string(),
+            "bob/docker-up".to_string(),
+            "alice/deploy".to_string(),
+        ];
+        assert_eq!(
+            super::merge_candidates(locals.clone(), cached.clone(), ""),
+            vec!["alice/deploy", "bob/docker-up", "deploy", "docker-up"]
+        );
+        assert_eq!(
+            super::merge_candidates(locals.clone(), cached.clone(), "do"),
+            vec!["docker-up"]
+        );
+        assert_eq!(
+            super::merge_candidates(locals, cached, "alice/"),
+            vec!["alice/deploy"]
+        );
     }
 
     #[test]
