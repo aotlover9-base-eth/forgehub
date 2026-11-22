@@ -29,6 +29,20 @@ pub enum ColorMode {
     Never,
 }
 
+/// The environment inputs to style resolution, grouped so the
+/// resolver takes one struct instead of a row of bools.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Environment {
+    /// `NO_COLOR` is present.
+    pub no_color: bool,
+    /// `TERM` is `dumb`.
+    pub term_dumb: bool,
+    /// A UTF-8 locale is in effect.
+    pub utf8: bool,
+    /// Stdout is a terminal.
+    pub tty: bool,
+}
+
 /// The resolved rendering style for this process.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Style {
@@ -49,25 +63,19 @@ impl Style {
     /// Pure resolution, split out for tests: every input is a
     /// parameter, nothing is read from the environment here.
     #[must_use]
-    pub fn resolve(
-        mode: ColorMode,
-        no_color: bool,
-        term_dumb: bool,
-        utf8: bool,
-        tty: bool,
-    ) -> Style {
+    pub fn resolve(mode: ColorMode, env: Environment) -> Style {
         let color = match mode {
             ColorMode::Always => true,
             ColorMode::Never => false,
-            ColorMode::Auto => tty && !no_color && !term_dumb,
+            ColorMode::Auto => env.tty && !env.no_color && !env.term_dumb,
         };
         Style {
             color,
-            unicode: utf8 && !term_dumb,
+            unicode: env.utf8 && !env.term_dumb,
         }
     }
 
-    fn paint(&self, code: &str, text: &str) -> String {
+    fn paint(self, code: &str, text: &str) -> String {
         if self.color {
             format!("\x1b[{code}m{text}\x1b[0m")
         } else {
@@ -77,44 +85,50 @@ impl Style {
 
     /// The one accent: headings and selection only.
     #[must_use]
-    pub fn accent(&self, text: &str) -> String {
+    pub fn accent(self, text: &str) -> String {
         self.paint("34", text)
     }
 
     /// Secondary text.
+    // Staged adoption: dim/kv/card/warn are exercised by this
+    // module's tests now and land at their call sites in B3
+    // (run card), B6 (status/whoami) and B8 (cache warning).
+    #[allow(dead_code)]
     #[must_use]
-    pub fn dim(&self, text: &str) -> String {
+    pub fn dim(self, text: &str) -> String {
         self.paint("2", text)
     }
 
     /// Success only.
     #[must_use]
-    pub fn success(&self, text: &str) -> String {
+    pub fn success(self, text: &str) -> String {
         self.paint("32", text)
     }
 
     /// Warnings only.
+    #[allow(dead_code)]
     #[must_use]
-    pub fn warn(&self, text: &str) -> String {
+    pub fn warn(self, text: &str) -> String {
         self.paint("33", text)
     }
 
     /// Errors only.
     #[must_use]
-    pub fn error(&self, text: &str) -> String {
+    pub fn error(self, text: &str) -> String {
         self.paint("31", text)
     }
 
     /// A section heading in the accent colour.
     #[must_use]
-    pub fn heading(&self, text: &str) -> String {
+    pub fn heading(self, text: &str) -> String {
         self.accent(text)
     }
 
     /// An aligned key-value block: keys padded to the widest key,
     /// dimmed when colour is on.
+    #[allow(dead_code)]
     #[must_use]
-    pub fn kv(&self, pairs: &[(&str, &str)]) -> String {
+    pub fn kv(self, pairs: &[(&str, &str)]) -> String {
         let width = pairs
             .iter()
             .map(|(k, _)| k.chars().count())
@@ -131,8 +145,9 @@ impl Style {
     /// borders in Unicode locales, ASCII otherwise. Widths are
     /// character counts; wide glyphs (CJK, emoji) are not
     /// width-compensated.
+    #[allow(dead_code)]
     #[must_use]
-    pub fn card(&self, title: &str, lines: &[String]) -> String {
+    pub fn card(self, title: &str, lines: &[String]) -> String {
         let (tl, tr, bl, br, h, v) = if self.unicode {
             (
                 '\u{256d}', '\u{256e}', '\u{2570}', '\u{256f}', '\u{2500}', '\u{2502}',
@@ -198,7 +213,15 @@ pub fn init(mode: ColorMode) -> Style {
             lower.contains("utf-8") || lower.contains("utf8")
         });
     let tty = std::io::stdout().is_terminal();
-    let resolved = Style::resolve(mode, no_color, term_dumb, utf8, tty);
+    let resolved = Style::resolve(
+        mode,
+        Environment {
+            no_color,
+            term_dumb,
+            utf8,
+            tty,
+        },
+    );
     *STYLE.get_or_init(|| resolved)
 }
 
@@ -206,34 +229,87 @@ pub fn init(mode: ColorMode) -> Style {
 mod tests {
     use super::*;
 
+    /// A capable terminal: UTF-8, no NO_COLOR, not dumb, TTY.
+    const CAPABLE: Environment = Environment {
+        no_color: false,
+        term_dumb: false,
+        utf8: true,
+        tty: true,
+    };
+
     #[test]
     fn auto_colours_only_on_a_capable_terminal() {
-        assert!(Style::resolve(ColorMode::Auto, false, false, true, true).color);
+        assert!(Style::resolve(ColorMode::Auto, CAPABLE).color);
         assert!(
-            !Style::resolve(ColorMode::Auto, false, false, true, false).color,
+            !Style::resolve(
+                ColorMode::Auto,
+                Environment {
+                    tty: false,
+                    ..CAPABLE
+                }
+            )
+            .color,
             "piped"
         );
         assert!(
-            !Style::resolve(ColorMode::Auto, true, false, true, true).color,
+            !Style::resolve(
+                ColorMode::Auto,
+                Environment {
+                    no_color: true,
+                    ..CAPABLE
+                }
+            )
+            .color,
             "NO_COLOR"
         );
         assert!(
-            !Style::resolve(ColorMode::Auto, false, true, true, true).color,
+            !Style::resolve(
+                ColorMode::Auto,
+                Environment {
+                    term_dumb: true,
+                    ..CAPABLE
+                }
+            )
+            .color,
             "TERM=dumb"
         );
     }
 
     #[test]
     fn always_and_never_override_the_terminal() {
-        assert!(Style::resolve(ColorMode::Always, true, true, false, false).color);
-        assert!(!Style::resolve(ColorMode::Never, false, false, true, true).color);
+        let hostile = Environment {
+            no_color: true,
+            term_dumb: true,
+            utf8: false,
+            tty: false,
+        };
+        assert!(Style::resolve(ColorMode::Always, hostile).color);
+        assert!(!Style::resolve(ColorMode::Never, CAPABLE).color);
     }
 
     #[test]
     fn unicode_needs_utf8_and_a_capable_term() {
-        assert!(Style::resolve(ColorMode::Auto, false, false, true, true).unicode);
-        assert!(!Style::resolve(ColorMode::Auto, false, false, false, true).unicode);
-        assert!(!Style::resolve(ColorMode::Auto, false, true, true, true).unicode);
+        assert!(Style::resolve(ColorMode::Auto, CAPABLE).unicode);
+        assert!(
+            !Style::resolve(
+                ColorMode::Auto,
+                Environment {
+                    utf8: false,
+                    ..CAPABLE
+                }
+            )
+            .unicode
+        );
+        assert!(
+            !Style::resolve(
+                ColorMode::Auto,
+                Environment {
+                    term_dumb: true,
+                    ..CAPABLE
+                }
+            )
+            .unicode
+        );
     }
 
     #[test]

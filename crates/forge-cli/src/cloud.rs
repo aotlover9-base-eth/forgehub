@@ -963,7 +963,11 @@ fn finish_login(
             })
         );
     } else {
-        println!("Logged in as {} on {registry}.", entry.username);
+        println!(
+            "{}",
+            crate::output::style()
+                .success(&format!("Logged in as {} on {registry}.", entry.username))
+        );
         println!(
             "  token: fgh_{}… (stored in {}, never printed in full)",
             token_prefix(&entry.token),

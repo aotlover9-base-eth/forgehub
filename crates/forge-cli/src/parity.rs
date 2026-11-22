@@ -695,7 +695,7 @@ pub fn cmd_stats(store: &Store, limit: u32, explain: bool, json: bool) -> Result
         }
         return Ok(0);
     }
-    println!("Most used:");
+    println!("{}", crate::output::style().heading("Most used:"));
     let width = top.iter().map(|s| s.workflow.len()).max().unwrap_or(0);
     for s in &top {
         println!(

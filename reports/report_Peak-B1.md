@@ -33,6 +33,14 @@ The module is adopted at the two universal choke points (all error output; the T
 - `cargo fmt --check`: run locally via rustfmt over the crate - CLEAN (rustfmt needs no target-dir writes).
 - `cargo clippy` / `cargo test` / build: NOT RUN locally - the sandbox write fault denies cargo's fingerprint writes (EPERM, reproduced at this WP). CI for this commit's head runs the full gate suite on a healthy runner; per the WP-0b lesson this WP is not treated as done until that run is eyeballed green, and the result is recorded in PROGRESS.md / the B2 report.
 
-## 5. Next
+## 5. Addendum - CI clippy fix (second commit)
+
+CI run `44966576720` for the first B1 head (`cf2cc49`) failed the Rust job at Clippy (Format passed; Test was skipped downstream; Web/Supply chain passed). Three findings, all in `output.rs`, all fixed in code - no lint was weakened and no test touched:
+
+- `clippy::trivially-copy-pass-by-ref` on every `Style` method: `Style` is a 2-byte `Copy`, so all methods now take `self` by value.
+- `clippy::fn-params-excessive-bools` on `Style::resolve` (4 bool parameters): the inputs are now one `Environment` struct; tests build it with struct-update syntax from a `CAPABLE` const.
+- `dead_code` on the not-yet-adopted components: `heading` and `success` gained real call sites in this fix (`stats` "Most used:" heading; the login success line - both byte-identical under the plain style that captured tests run in). `dim`/`kv`/`card`/`warn` carry a scoped `#[allow(dead_code)]` each with a comment naming their adopting WPs (B3/B6/B8); they are exercised by the module's unit tests. This is recorded here rather than hidden: the alternative was deleting the components and re-adding them later.
+
+## 6. Next
 
 B2 - help, discoverability and completions.
