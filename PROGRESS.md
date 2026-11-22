@@ -41,7 +41,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [x] A8 - visual regression suite (72 goldens; generated on a CI runner - the sandbox write fault blocked local generation; see `reports/report_Peak-A8.md`)
 
 ### Phase B - CLI improvements
-- [ ] B0 - audit and baseline
+- [x] B0 - audit and baseline (`docs/cli/PEAK-AUDIT.md`, findings F1-F14 with a fix map to B1-B9; budgets re-measured where the write fault allows, the rest owed at B9)
 - [ ] B1 - output design system for the terminal
 - [ ] B2 - help, discoverability and completions
 - [ ] B3 - run experience
@@ -66,7 +66,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 
 Phase A COMPLETE 2026-11-22: summary in `reports/report_Peak-A-summary.md`, tagged `peak-phase-a`. CI green on the A8 head (`3bb18b0`, run `44965399856`, all five jobs) and on the WP-0b fix head (`0ab22f8`, run `44963120867`).
 
-Next WP: B0 - CLI audit and baseline.
+Next WP: B1 - output design system for the terminal.
 
 ### A8 blocker note (2026-11-22, ~23:25 IST) - READ FIRST ON RESUME
 
