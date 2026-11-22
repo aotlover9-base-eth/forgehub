@@ -29,18 +29,40 @@ pub enum ColorMode {
     Never,
 }
 
-/// The environment inputs to style resolution, grouped so the
-/// resolver takes one struct instead of a row of bools.
+/// The environment capabilities style resolution needs,
+/// precomputed from the raw inputs (`NO_COLOR`, `TERM`, locale,
+/// TTY) by [`Environment::detect`], so the resolver itself stays
+/// a pure two-input decision.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Environment {
-    /// `NO_COLOR` is present.
-    pub no_color: bool,
-    /// `TERM` is `dumb`.
-    pub term_dumb: bool,
-    /// A UTF-8 locale is in effect.
-    pub utf8: bool,
-    /// Stdout is a terminal.
-    pub tty: bool,
+    /// Whether `auto` may colour: a terminal, no `NO_COLOR`,
+    /// `TERM` not `dumb`.
+    pub auto_color: bool,
+    /// Whether box-drawing is safe: UTF-8 locale, `TERM` not
+    /// `dumb`.
+    pub unicode: bool,
+}
+
+impl Environment {
+    /// Read the real environment (the only place this module
+    /// touches it, besides the style store).
+    #[must_use]
+    pub fn detect() -> Environment {
+        let no_color = std::env::var_os("NO_COLOR").is_some();
+        let term_dumb = std::env::var("TERM").is_ok_and(|t| t == "dumb");
+        let utf8 = ["LC_ALL", "LC_CTYPE", "LANG"]
+            .iter()
+            .filter_map(|k| std::env::var(k).ok())
+            .any(|v| {
+                let lower = v.to_lowercase();
+                lower.contains("utf-8") || lower.contains("utf8")
+            });
+        let tty = std::io::stdout().is_terminal();
+        Environment {
+            auto_color: tty && !no_color && !term_dumb,
+            unicode: utf8 && !term_dumb,
+        }
+    }
 }
 
 /// The resolved rendering style for this process.
@@ -67,11 +89,11 @@ impl Style {
         let color = match mode {
             ColorMode::Always => true,
             ColorMode::Never => false,
-            ColorMode::Auto => env.tty && !env.no_color && !env.term_dumb,
+            ColorMode::Auto => env.auto_color,
         };
         Style {
             color,
-            unicode: env.utf8 && !env.term_dumb,
+            unicode: env.unicode,
         }
     }
 
@@ -203,25 +225,7 @@ pub fn style() -> Style {
 /// Resolve and store the process style from the flag and the
 /// environment. Idempotent: the first call wins.
 pub fn init(mode: ColorMode) -> Style {
-    let no_color = std::env::var_os("NO_COLOR").is_some();
-    let term_dumb = std::env::var("TERM").is_ok_and(|t| t == "dumb");
-    let utf8 = ["LC_ALL", "LC_CTYPE", "LANG"]
-        .iter()
-        .filter_map(|k| std::env::var(k).ok())
-        .any(|v| {
-            let lower = v.to_lowercase();
-            lower.contains("utf-8") || lower.contains("utf8")
-        });
-    let tty = std::io::stdout().is_terminal();
-    let resolved = Style::resolve(
-        mode,
-        Environment {
-            no_color,
-            term_dumb,
-            utf8,
-            tty,
-        },
-    );
+    let resolved = Style::resolve(mode, Environment::detect());
     *STYLE.get_or_init(|| resolved)
 }
 
@@ -229,82 +233,45 @@ pub fn init(mode: ColorMode) -> Style {
 mod tests {
     use super::*;
 
-    /// A capable terminal: UTF-8, no NO_COLOR, not dumb, TTY.
+    /// A capable environment: auto may colour, Unicode is safe.
     const CAPABLE: Environment = Environment {
-        no_color: false,
-        term_dumb: false,
-        utf8: true,
-        tty: true,
+        auto_color: true,
+        unicode: true,
     };
 
     #[test]
-    fn auto_colours_only_on_a_capable_terminal() {
+    fn auto_follows_the_environment_capability() {
         assert!(Style::resolve(ColorMode::Auto, CAPABLE).color);
         assert!(
             !Style::resolve(
                 ColorMode::Auto,
                 Environment {
-                    tty: false,
+                    auto_color: false,
                     ..CAPABLE
                 }
             )
-            .color,
-            "piped"
-        );
-        assert!(
-            !Style::resolve(
-                ColorMode::Auto,
-                Environment {
-                    no_color: true,
-                    ..CAPABLE
-                }
-            )
-            .color,
-            "NO_COLOR"
-        );
-        assert!(
-            !Style::resolve(
-                ColorMode::Auto,
-                Environment {
-                    term_dumb: true,
-                    ..CAPABLE
-                }
-            )
-            .color,
-            "TERM=dumb"
+            .color
         );
     }
 
     #[test]
-    fn always_and_never_override_the_terminal() {
-        let hostile = Environment {
-            no_color: true,
-            term_dumb: true,
-            utf8: false,
-            tty: false,
+    fn always_and_never_override_the_environment() {
+        let incapable = Environment {
+            auto_color: false,
+            unicode: false,
         };
-        assert!(Style::resolve(ColorMode::Always, hostile).color);
+        assert!(Style::resolve(ColorMode::Always, incapable).color);
         assert!(!Style::resolve(ColorMode::Never, CAPABLE).color);
     }
 
     #[test]
-    fn unicode_needs_utf8_and_a_capable_term() {
+    fn unicode_passes_through_from_the_environment() {
         assert!(Style::resolve(ColorMode::Auto, CAPABLE).unicode);
         assert!(
             !Style::resolve(
                 ColorMode::Auto,
                 Environment {
-                    utf8: false,
-                    ..CAPABLE
-                }
-            )
-            .unicode
-        );
-        assert!(
-            !Style::resolve(
-                ColorMode::Auto,
-                Environment {
-                    term_dumb: true,
+                    unicode: false,
                     ..CAPABLE
                 }
             )

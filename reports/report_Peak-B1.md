@@ -40,6 +40,7 @@ CI run `44966576720` for the first B1 head (`cf2cc49`) failed the Rust job at Cl
 - `clippy::trivially-copy-pass-by-ref` on every `Style` method: `Style` is a 2-byte `Copy`, so all methods now take `self` by value.
 - `clippy::fn-params-excessive-bools` on `Style::resolve` (4 bool parameters): the inputs are now one `Environment` struct; tests build it with struct-update syntax from a `CAPABLE` const.
 - `dead_code` on the not-yet-adopted components: `heading` and `success` gained real call sites in this fix (`stats` "Most used:" heading; the login success line - both byte-identical under the plain style that captured tests run in). `dim`/`kv`/`card`/`warn` carry a scoped `#[allow(dead_code)]` each with a comment naming their adopting WPs (B3/B6/B8); they are exercised by the module's unit tests. This is recorded here rather than hidden: the alternative was deleting the components and re-adding them later.
+- The fix's own CI run (`44967175936`) caught one more: `clippy::struct_excessive_bools` on the new `Environment` struct (4 bool fields). Restructured rather than allowed: `Environment` now carries the two precomputed capabilities (`auto_color`, `unicode`) from `Environment::detect()`, and `Style::resolve` is a pure two-input decision. A third commit carries this; the B1 lesson is that this workspace's clippy set is pedantic-grade, so new code gets a mental pedantic pass before pushing.
 
 ## 6. Next
 
