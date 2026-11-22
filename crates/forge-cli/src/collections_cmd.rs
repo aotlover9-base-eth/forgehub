@@ -319,6 +319,125 @@ pub fn cmd_visibility(
     Ok(0)
 }
 
+/// `fg collection share <collection> [--days N]` (Peak C6):
+/// mint a read-only share link. The full URL is printed once;
+/// the server stores only its hash.
+pub fn cmd_share(
+    ctx: &Args<'_>,
+    stdin: &mut impl BufRead,
+    collection: &str,
+    days: i64,
+) -> Result<i32> {
+    let sess = session(ctx.store, stdin, ctx.registry)?;
+    let (owner, name) = own_collection_ref(&sess, collection)?;
+    let (_, body, _) = sess
+        .client
+        .post_json(
+            &format!("{}/share-links", collection_path(&owner, &name)),
+            &json!({ "expires_in_days": days }),
+            Some(&sess.entry.token),
+        )
+        .map_err(|e| api_fail(&e, &sess.entry.token))?;
+    if ctx.json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&body).unwrap_or_default()
+        );
+        return Ok(0);
+    }
+    let base = sess.registry.trim_end_matches('/');
+    println!(
+        "{}",
+        out::style().success(&format!(
+            "share link for {owner}/{name} (expires {})",
+            body["expires_at"].as_str().unwrap_or_default()
+        ))
+    );
+    println!("  {base}{}", body["url"].as_str().unwrap_or_default());
+    println!("  Anyone with this link can read the collection's current snippets.");
+    println!("  It is shown once - the server stores only a hash of it.");
+    println!(
+        "  Revoke it with: fg collection unshare {name} {}",
+        body["id"]
+    );
+    Ok(0)
+}
+
+/// `fg collection shares <collection>`: list share links
+/// (prefixes only - full tokens are never stored).
+pub fn cmd_shares(ctx: &Args<'_>, stdin: &mut impl BufRead, collection: &str) -> Result<i32> {
+    let sess = session(ctx.store, stdin, ctx.registry)?;
+    let (owner, name) = own_collection_ref(&sess, collection)?;
+    let (_, body, _) = sess
+        .client
+        .get(
+            &format!("{}/share-links", collection_path(&owner, &name)),
+            Some(&sess.entry.token),
+        )
+        .map_err(|e| api_fail(&e, &sess.entry.token))?;
+    if ctx.json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&body).unwrap_or_default()
+        );
+        return Ok(0);
+    }
+    let links = body["links"].as_array().cloned().unwrap_or_default();
+    if links.is_empty() {
+        println!("no share links for {owner}/{name}");
+        return Ok(0);
+    }
+    for link in &links {
+        let state = if link["active"].as_bool() == Some(true) {
+            "active"
+        } else if link["revoked_at"].is_string() {
+            "revoked"
+        } else {
+            "expired"
+        };
+        println!(
+            "  #{}  fgl_{}...  {}  expires {}",
+            link["id"],
+            link["prefix"].as_str().unwrap_or_default(),
+            state,
+            link["expires_at"].as_str().unwrap_or_default()
+        );
+    }
+    Ok(0)
+}
+
+/// `fg collection unshare <collection> <id>`: revoke a link.
+pub fn cmd_unshare(
+    ctx: &Args<'_>,
+    stdin: &mut impl BufRead,
+    collection: &str,
+    id: i64,
+) -> Result<i32> {
+    let sess = session(ctx.store, stdin, ctx.registry)?;
+    let (owner, name) = own_collection_ref(&sess, collection)?;
+    sess.client
+        .delete(
+            &format!("{}/share-links/{id}", collection_path(&owner, &name)),
+            Some(&sess.entry.token),
+        )
+        .map_err(|e| api_fail(&e, &sess.entry.token))?;
+    success(&format!("revoked share link #{id} for {owner}/{name}"));
+    Ok(0)
+}
+
+/// Resolve a collection reference that must be the caller's
+/// own (share-link management is owner-only, ADR 0011).
+fn own_collection_ref(sess: &Session, collection: &str) -> Result<(String, String)> {
+    let (owner, name) = split_ref(collection, &sess.username);
+    if owner != sess.username {
+        return Err(CliError::failure(format!(
+            "forgehub: {owner}/{name} is not yours\n  what: share links are managed by the collection's owner\n  fix: collections you own are listed by `fg collection list`"
+        ))
+        .into());
+    }
+    Ok((owner, name))
+}
+
 /// `fg collection delete <collection>` (asks unless -y).
 pub fn cmd_delete(ctx: &Args<'_>, stdin: &mut impl BufRead, collection: &str) -> Result<i32> {
     let sess = session(ctx.store, stdin, ctx.registry)?;

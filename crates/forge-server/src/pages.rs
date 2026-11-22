@@ -19,7 +19,7 @@ use axum::Router;
 /// Escape a string for HTML text and attribute contexts. All
 /// interpolated values pass through here - descriptions and
 /// bodies are attacker-controlled.
-fn esc(text: &str) -> String {
+pub(crate) fn esc(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
         match c {

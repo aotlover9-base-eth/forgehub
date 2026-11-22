@@ -35,7 +35,7 @@ pub(crate) const MAX_COLLECTIONS_PER_USER: i64 = 100;
 /// Plan limit per collection.
 pub(crate) const MAX_ITEMS_PER_COLLECTION: i64 = 200;
 
-fn collection_not_found() -> ApiError {
+pub(crate) fn collection_not_found() -> ApiError {
     ApiError::not_found("collection_not_found", "Collection not found")
 }
 
@@ -122,7 +122,7 @@ async fn resolve_collection(
 /// Resolve a collection the caller OWNS (mutations). Any other
 /// outcome - someone else's collection included - is the same
 /// 404, so write attempts never confirm existence.
-async fn resolve_own_collection(
+pub(crate) async fn resolve_own_collection(
     state: &AppState,
     ctx: &RequireUser,
     owner: &str,

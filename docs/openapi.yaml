@@ -1101,6 +1101,94 @@ paths:
                     items: { $ref: '#/components/schemas/Collection' }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+  /collections/{owner}/{name}/share-links:
+    parameters:
+      - name: owner
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Username' }
+      - name: name
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/SnippetName' }
+    post:
+      tags: [collections]
+      summary: Mint a read-only share link for a collection (owner only; ADR 0011 - the full token is returned once, only its hash is stored; links always expire)
+      operationId: createShareLink
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expires_in_days: { type: integer, enum: [1, 7, 30], default: 7 }
+      responses:
+        '201':
+          description: The link's management view plus the one-time URL and token
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ShareLink' }
+                  - type: object
+                    required: [url, token]
+                    properties:
+                      url: { type: string, example: '/shared/fgl_...' }
+                      token: { type: string }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    get:
+      tags: [collections]
+      summary: List a collection's share links (owner only; prefixes, never tokens)
+      operationId: listShareLinks
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      responses:
+        '200':
+          description: The links, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [links]
+                properties:
+                  links:
+                    type: array
+                    items: { $ref: '#/components/schemas/ShareLink' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /collections/{owner}/{name}/share-links/{id}:
+    parameters:
+      - name: owner
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Username' }
+      - name: name
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/SnippetName' }
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    delete:
+      tags: [collections]
+      summary: Revoke a share link (owner only; instant)
+      operationId: revokeShareLink
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /collections/{owner}/{name}:
     parameters:
       - name: owner
@@ -1459,6 +1547,16 @@ components:
         visibility: { $ref: '#/components/schemas/Visibility' }
         latest_version: { type: integer }
         position: { type: integer }
+    ShareLink:
+      type: object
+      required: [id, prefix, created_at, expires_at, revoked_at, active]
+      properties:
+        id: { type: integer }
+        prefix: { type: string, description: 'First 8 token characters, for identification only.' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        expires_at: { $ref: '#/components/schemas/Timestamp' }
+        revoked_at: { type: ['string', 'null'], format: date-time }
+        active: { type: boolean, description: 'Unrevoked and unexpired.' }
     CollectionDetail:
       allOf:
         - { $ref: '#/components/schemas/Collection' }

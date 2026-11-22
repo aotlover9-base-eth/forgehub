@@ -18,6 +18,7 @@ pub mod mail;
 pub mod pages;
 pub mod ratelimit;
 pub mod repo;
+pub mod shares;
 pub mod snippets;
 pub mod state;
 pub mod tokens;

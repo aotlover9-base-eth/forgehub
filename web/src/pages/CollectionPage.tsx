@@ -19,11 +19,14 @@ import { ApiError } from '../api/client';
 import {
   useAddToCollection,
   useCollection,
+  useCreateShareLink,
   useDeleteCollection,
   useMe,
   usePatchCollection,
   useRemoveFromCollection,
   useReorderCollection,
+  useRevokeShareLink,
+  useShareLinks,
 } from '../api/hooks';
 import type { Visibility } from '../api/types';
 
@@ -143,6 +146,8 @@ export default function CollectionPage() {
           </p>
         </div>
       </Card>
+
+      {isOwner ? <ShareLinksCard owner={data.owner} name={data.name} /> : null}
 
       {isOwner ? (
         <Card>
@@ -298,5 +303,110 @@ export default function CollectionPage() {
         }
       />
     </div>
+  );
+}
+
+const EXPIRY_CHOICES = [1, 7, 30];
+
+/**
+ * Share links (Peak C6, ADR 0011): the owner can mint an
+ * expiring, revocable read-only link. The full URL is shown
+ * once, right after minting - the server stores only a hash,
+ * so it can never be displayed again.
+ */
+function ShareLinksCard({ owner, name }: { owner: string; name: string }) {
+  const toast = useToast();
+  const links = useShareLinks(owner, name, true);
+  const create = useCreateShareLink(owner, name);
+  const revoke = useRevokeShareLink(owner, name);
+  const [days, setDays] = useState(7);
+  const [freshUrl, setFreshUrl] = useState('');
+
+  const mint = () => {
+    create.mutate(
+      { expires_in_days: days },
+      {
+        onSuccess: (link) => {
+          setFreshUrl(`${window.location.origin}${link.url}`);
+          toast({ message: 'Share link created - copy it now, it is shown only once' });
+        },
+        onError: (error) => toast({ message: error.uiMessage }),
+      },
+    );
+  };
+
+  return (
+    <Card>
+      <div style={{ display: 'grid', gap: 'var(--fh-space-3)', padding: 'var(--fh-space-4)' }}>
+        <h2 style={{ margin: 0 }}>Share links</h2>
+        <p style={{ margin: 0 }}>
+          Anyone with a share link can read every snippet currently in this collection -
+          including private ones - without an account. Links only grant reading: running
+          still needs an account and access. Removing a snippet removes it from every
+          link, and you can revoke a link at any time.
+        </p>
+        <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span>Expires after:</span>
+          <md-chip-set aria-label="Share link expiry">
+            {EXPIRY_CHOICES.map((d) => (
+              <md-filter-chip
+                key={d}
+                label={d === 1 ? '1 day' : `${d} days`}
+                selected={days === d || undefined}
+                onClick={() => setDays(d)}
+              />
+            ))}
+          </md-chip-set>
+          <Button variant="tonal" icon="link" onClick={mint} disabled={create.isPending}>
+            Create share link
+          </Button>
+        </div>
+        {freshUrl ? (
+          <div style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center' }}>
+            <code style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{freshUrl}</code>
+            <CopyIconButton
+              text={freshUrl}
+              label="Copy share link"
+              onCopied={() => toast({ message: 'Share link copied' })}
+            />
+          </div>
+        ) : null}
+        {links.data && links.data.links.length > 0 ? (
+          <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
+            {links.data.links.map((link) => (
+              <div
+                key={link.id}
+                style={{ display: 'flex', gap: 'var(--fh-space-2)', alignItems: 'center', flexWrap: 'wrap' }}
+              >
+                <code>fgl_{link.prefix}...</code>
+                <span>
+                  {link.active
+                    ? `active - expires ${link.expires_at.slice(0, 10)}`
+                    : link.revoked_at
+                      ? 'revoked'
+                      : `expired ${link.expires_at.slice(0, 10)}`}
+                </span>
+                <span style={{ flex: 1 }} />
+                {link.active ? (
+                  <Button
+                    variant="text"
+                    icon="link_off"
+                    onClick={() =>
+                      revoke.mutate(link.id, {
+                        onSuccess: () => toast({ message: 'Share link revoked' }),
+                        onError: (error) => toast({ message: error.uiMessage }),
+                      })
+                    }
+                    disabled={revoke.isPending}
+                  >
+                    Revoke
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </Card>
   );
 }

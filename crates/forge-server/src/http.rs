@@ -178,13 +178,16 @@ pub fn build_router(state: AppState) -> Router {
         .merge(crate::snippets::routes())
         .merge(crate::collections::routes())
         .merge(crate::imports::routes())
+        .merge(crate::shares::routes())
         .merge(crate::discovery::routes())
         .fallback(api_not_found);
     // Static web app (skipped with a warning when not built yet).
     let web_dir = state.config.web_dir.clone();
     // Public snippet pages (Peak C4) live outside /api/v1 and
     // outside the SPA fallback, server-rendered.
-    let pages = crate::pages::routes().with_state(state.clone());
+    let pages = crate::pages::routes()
+        .merge(crate::shares::page_routes())
+        .with_state(state.clone());
     let api = apply_api_layers(api, &state).with_state(state);
 
     let mut app = Router::new().nest("/api/v1", api).merge(pages);

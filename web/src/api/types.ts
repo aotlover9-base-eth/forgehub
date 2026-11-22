@@ -82,6 +82,25 @@ export interface CollectionItem {
   position: number;
 }
 
+/** A collection share link as the owner sees it (Peak C6,
+ * ADR 0011). The full token is never in this shape - it is
+ * returned once, at creation, in `CreatedShareLink`. */
+export interface ShareLink {
+  id: number;
+  prefix: string;
+  created_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+  active: boolean;
+}
+
+/** The create response: the one-time full URL plus the
+ * management view of the link. */
+export interface CreatedShareLink extends ShareLink {
+  url: string;
+  token: string;
+}
+
 /** One mined history candidate (Peak C5). */
 export interface HistoryCandidate {
   name: string;

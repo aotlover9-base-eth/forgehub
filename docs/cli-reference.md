@@ -1076,6 +1076,9 @@ Commands:
   order       Set the item order: list every item as owner/name, in the new order
   visibility  Change a collection's visibility
   delete      Delete a collection (the snippets are not deleted)
+  share       Mint a read-only share link for a collection (Peak C6, ADR 0011). The full URL is printed once - only its hash is stored. Anyone with the link can read the collection's current snippets; the link expires and can be revoked with `collection unshare`
+  shares      List a collection's share links (prefixes only)
+  unshare     Revoke a share link by its id (see `collection shares`)
   help        Print this message or the help of the given subcommand(s)
 
 Options:
@@ -1239,6 +1242,65 @@ Usage: forgehub collection delete [OPTIONS] <COLLECTION>
 
 Arguments:
   <COLLECTION>  Collection name (yours)
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection share`
+
+```text
+Mint a read-only share link for a collection (Peak C6, ADR 0011). The full URL is printed once - only its hash is stored. Anyone with the link can read the collection's current snippets; the link expires and can be revoked with `collection unshare`
+
+Usage: forgehub collection share [OPTIONS] <COLLECTION>
+
+Arguments:
+  <COLLECTION>  Collection name (yours)
+
+Options:
+      --days <DAYS>    Expiry: 1, 7 or 30 days [default: 7]
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection shares`
+
+```text
+List a collection's share links (prefixes only)
+
+Usage: forgehub collection shares [OPTIONS] <COLLECTION>
+
+Arguments:
+  <COLLECTION>  Collection name (yours)
+
+Options:
+      --json           Print machine-readable JSON instead of human output
+  -y, --yes            Skip confirmation prompts (never bypasses hash-change or third-party trust prompts; see spec-cli §7)
+  -v, --verbose...     Verbose request logging to stderr (method, status, timing; tokens are never printed)
+      --offline        Offline mode: cloud commands fail fast with an offline message; local commands and `run --offline` still work
+      --color <COLOR>  Colour output: `auto` colours only on a capable terminal and honours `NO_COLOR`; `never` is always plain. Default: the `color` key from `fg config`, else `auto` [possible values: auto, always, never]
+  -h, --help           Print help (see more with '--help')
+```
+
+#### `forgehub collection unshare`
+
+```text
+Revoke a share link by its id (see `collection shares`)
+
+Usage: forgehub collection unshare [OPTIONS] <COLLECTION> <ID>
+
+Arguments:
+  <COLLECTION>  Collection name (yours)
+  <ID>          Link id
 
 Options:
       --json           Print machine-readable JSON instead of human output

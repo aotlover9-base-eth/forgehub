@@ -169,3 +169,84 @@ describe('CollectionsPanel', () => {
     await waitFor(() => expect(created?.name).toBe('deploys'));
   });
 });
+
+describe('ShareLinksCard (Peak C6)', () => {
+  it('mints a link, shows the URL once, lists prefixes and revokes', async () => {
+    let mintedDays: number | null = null;
+    let revokedId: number | null = null;
+    interface LinkFixture {
+      id: number;
+      prefix: string;
+      created_at: string;
+      expires_at: string;
+      revoked_at: string | null;
+      active: boolean;
+    }
+    let links: LinkFixture[] = [
+      {
+        id: 3,
+        prefix: 'abcd1234',
+        created_at: '2026-11-20T00:00:00Z',
+        expires_at: '2026-11-27T00:00:00Z',
+        revoked_at: null,
+        active: true,
+      },
+    ];
+    server.use(
+      http.get('/api/v1/me', () => HttpResponse.json({ ...meFixture, username: 'anna' })),
+      http.get('/api/v1/collections/anna/runbook', () => HttpResponse.json(detail)),
+      http.get('/api/v1/collections/anna/runbook/share-links', () =>
+        HttpResponse.json({ links }),
+      ),
+      http.post('/api/v1/collections/anna/runbook/share-links', async ({ request }) => {
+        const body = (await request.json()) as { expires_in_days: number };
+        mintedDays = body.expires_in_days;
+        const created = {
+          id: 4,
+          prefix: 'efgh5678',
+          created_at: '2026-11-22T00:00:00Z',
+          expires_at: '2026-11-29T00:00:00Z',
+          revoked_at: null,
+          active: true,
+          url: '/shared/fgl_efgh5678therestofthetoken0000000000000000',
+          token: 'fgl_efgh5678therestofthetoken0000000000000000',
+        };
+        links = [
+          {
+            id: created.id,
+            prefix: created.prefix,
+            created_at: created.created_at,
+            expires_at: created.expires_at,
+            revoked_at: null,
+            active: true,
+          },
+          ...links,
+        ];
+        return HttpResponse.json(created, { status: 201 });
+      }),
+      http.delete('/api/v1/collections/anna/runbook/share-links/:id', ({ params }) => {
+        revokedId = Number(params.id);
+        links = links.map((l) =>
+          l.id === revokedId ? { ...l, active: false, revoked_at: '2026-11-22T01:00:00Z' } : l,
+        );
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderAt('/collections/anna/runbook', <CollectionPage />, '/collections/:owner/:name');
+    await waitFor(() => expect(screen.getByText('Share links')).toBeTruthy());
+    // The existing link lists by prefix, never the full token.
+    await waitFor(() => expect(screen.getByText('fgl_abcd1234...')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Create share link'));
+    await waitFor(() => expect(mintedDays).toBe(7));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/\/shared\/fgl_efgh5678therestofthetoken0000000000000000/),
+      ).toBeTruthy(),
+    );
+
+    const revokeButtons = screen.getAllByText('Revoke');
+    fireEvent.click(revokeButtons[0]);
+    await waitFor(() => expect(revokedId).not.toBeNull());
+  });
+});

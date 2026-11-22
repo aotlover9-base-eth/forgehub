@@ -4,9 +4,11 @@ import type {
   ApiTokenInfo,
   Collection,
   CollectionDetail,
+  CreatedShareLink,
   CreatedToken,
   GistImportResult,
   HistoryAnalysis,
+  ShareLink,
   Me,
   PublicProfile,
   SearchPage,
@@ -536,6 +538,41 @@ export function useCollection(owner: string, name: string) {
     queryKey: ['collection', owner, name],
     retry: false,
     queryFn: () => api<CollectionDetail>(collectionPath(owner, name)),
+  });
+}
+
+/** A collection's share links (owner only; Peak C6). */
+export function useShareLinks(owner: string, name: string, enabled: boolean) {
+  return useQuery<{ links: ShareLink[] }>({
+    queryKey: ['share-links', owner, name],
+    enabled,
+    retry: false,
+    queryFn: () => api<{ links: ShareLink[] }>(`${collectionPath(owner, name)}/share-links`),
+  });
+}
+
+/** Mint a share link; the result carries the one-time URL. */
+export function useCreateShareLink(owner: string, name: string) {
+  const queryClient = useQueryClient();
+  return useMutation<CreatedShareLink, ApiError, { expires_in_days: number }>({
+    mutationFn: (input) =>
+      api<CreatedShareLink>(`${collectionPath(owner, name)}/share-links`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['share-links', owner, name] }),
+  });
+}
+
+/** Revoke a share link by id. */
+export function useRevokeShareLink(owner: string, name: string) {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, number>({
+    mutationFn: (id) =>
+      api<void>(`${collectionPath(owner, name)}/share-links/${id}`, { method: 'DELETE' }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['share-links', owner, name] }),
   });
 }
 

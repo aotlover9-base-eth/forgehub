@@ -771,6 +771,30 @@ enum CollectionCommand {
         /// Collection name (yours).
         collection: String,
     },
+    /// Mint a read-only share link for a collection (Peak C6,
+    /// ADR 0011). The full URL is printed once - only its hash
+    /// is stored. Anyone with the link can read the
+    /// collection's current snippets; the link expires and can
+    /// be revoked with `collection unshare`.
+    Share {
+        /// Collection name (yours).
+        collection: String,
+        /// Expiry: 1, 7 or 30 days.
+        #[arg(long, default_value_t = 7)]
+        days: i64,
+    },
+    /// List a collection's share links (prefixes only).
+    Shares {
+        /// Collection name (yours).
+        collection: String,
+    },
+    /// Revoke a share link by its id (see `collection shares`).
+    Unshare {
+        /// Collection name (yours).
+        collection: String,
+        /// Link id.
+        id: i64,
+    },
 }
 
 /// Subcommands of `config` (Peak B9).
@@ -1032,6 +1056,15 @@ fn dispatch_collection(
             collection,
             visibility,
         } => collections_cmd::cmd_visibility(&args, stdin, collection, visibility),
+        CollectionCommand::Share { collection, days } => {
+            collections_cmd::cmd_share(&args, stdin, collection, *days)
+        }
+        CollectionCommand::Shares { collection } => {
+            collections_cmd::cmd_shares(&args, stdin, collection)
+        }
+        CollectionCommand::Unshare { collection, id } => {
+            collections_cmd::cmd_unshare(&args, stdin, collection, *id)
+        }
         CollectionCommand::Delete { collection } => {
             collections_cmd::cmd_delete(&args, stdin, collection)
         }

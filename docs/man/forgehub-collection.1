@@ -40,6 +40,15 @@ Change a collection\*(Aqs visibility
 collection\-delete(1)
 Delete a collection (the snippets are not deleted)
 .TP
+collection\-share(1)
+Mint a read\-only share link for a collection (Peak C6, ADR 0011). The full URL is printed once \- only its hash is stored. Anyone with the link can read the collection\*(Aqs current snippets; the link expires and can be revoked with `collection unshare`
+.TP
+collection\-shares(1)
+List a collection\*(Aqs share links (prefixes only)
+.TP
+collection\-unshare(1)
+Revoke a share link by its id (see `collection shares`)
+.TP
 collection\-help(1)
 Print this message or the help of the given subcommand(s)
 .SH EXTRA

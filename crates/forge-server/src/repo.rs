@@ -589,6 +589,26 @@ pub struct CollectionItemRow {
     pub added_at: String,
 }
 
+/// A collection share link (Peak C6, ADR 0011). Only the
+/// token's hash and prefix are stored - never the plaintext.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow, Serialize)]
+pub struct ShareLinkRow {
+    /// Primary key.
+    pub id: i64,
+    /// The collection the link grants read access to.
+    pub collection_id: i64,
+    /// SHA-256 hex of the full token.
+    pub token_hash: String,
+    /// First 8 random characters, for owner-side identification.
+    pub token_prefix: String,
+    /// Creation time.
+    pub created_at: String,
+    /// Expiry (always set; links never live forever).
+    pub expires_at: String,
+    /// Set once when the owner revokes the link.
+    pub revoked_at: Option<String>,
+}
+
 /// Collections repository (Peak C1).
 #[async_trait]
 pub trait CollectionRepo: Send + Sync {
@@ -632,6 +652,28 @@ pub trait CollectionRepo: Send + Sync {
     async fn set_order(&self, collection_id: i64, snippet_ids: &[i64]) -> RepoResult<()>;
     /// Touch the collection's `updated_at` (item changes).
     async fn touch(&self, id: i64, now: &str) -> RepoResult<()>;
+    /// Insert a share link (Peak C6); `Conflict` on hash reuse.
+    async fn create_share_link(
+        &self,
+        collection_id: i64,
+        token_hash: &str,
+        token_prefix: &str,
+        now: &str,
+        expires_at: &str,
+    ) -> RepoResult<ShareLinkRow>;
+    /// A collection's share links, newest first.
+    async fn share_links(&self, collection_id: i64) -> RepoResult<Vec<ShareLinkRow>>;
+    /// Look a link up by token hash, joined with its collection
+    /// and the collection's owner.
+    async fn share_link_by_hash(
+        &self,
+        token_hash: &str,
+    ) -> RepoResult<Option<(ShareLinkRow, CollectionRow, UserRow)>>;
+    /// Revoke a link (idempotent per row: false when already
+    /// revoked or not part of the collection).
+    async fn revoke_share_link(&self, id: i64, collection_id: i64, now: &str) -> RepoResult<bool>;
+    /// Count of unrevoked links for a collection (limit checks).
+    async fn active_share_link_count(&self, collection_id: i64) -> RepoResult<i64>;
 }
 
 /// Password-reset tokens repository (2026-11-20 increment).
@@ -2048,6 +2090,94 @@ impl CollectionRepo for SqliteStore {
             .execute(&self.pool)
             .await?;
         Ok(())
+    }
+
+    async fn create_share_link(
+        &self,
+        collection_id: i64,
+        token_hash: &str,
+        token_prefix: &str,
+        now: &str,
+        expires_at: &str,
+    ) -> RepoResult<ShareLinkRow> {
+        let res = sqlx::query(
+            "INSERT INTO collection_share_links (collection_id, token_hash, token_prefix, created_at, expires_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+        )
+        .bind(collection_id)
+        .bind(token_hash)
+        .bind(token_prefix)
+        .bind(now)
+        .bind(expires_at)
+        .execute(&self.pool)
+        .await
+        .map_err(map_unique)?;
+        Ok(ShareLinkRow {
+            id: res.last_insert_rowid(),
+            collection_id,
+            token_hash: token_hash.to_string(),
+            token_prefix: token_prefix.to_string(),
+            created_at: now.to_string(),
+            expires_at: expires_at.to_string(),
+            revoked_at: None,
+        })
+    }
+
+    async fn share_links(&self, collection_id: i64) -> RepoResult<Vec<ShareLinkRow>> {
+        Ok(sqlx::query_as::<_, ShareLinkRow>(
+            "SELECT * FROM collection_share_links WHERE collection_id = ?1 ORDER BY created_at DESC, id DESC",
+        )
+        .bind(collection_id)
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    async fn share_link_by_hash(
+        &self,
+        token_hash: &str,
+    ) -> RepoResult<Option<(ShareLinkRow, CollectionRow, UserRow)>> {
+        let link = sqlx::query_as::<_, ShareLinkRow>(
+            "SELECT * FROM collection_share_links WHERE token_hash = ?1",
+        )
+        .bind(token_hash)
+        .fetch_optional(&self.pool)
+        .await?;
+        let Some(link) = link else { return Ok(None) };
+        let collection =
+            sqlx::query_as::<_, CollectionRow>("SELECT * FROM collections WHERE id = ?1")
+                .bind(link.collection_id)
+                .fetch_optional(&self.pool)
+                .await?;
+        let Some(collection) = collection else {
+            return Ok(None);
+        };
+        let owner = sqlx::query_as::<_, UserRow>("SELECT * FROM users WHERE id = ?1")
+            .bind(collection.owner_id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(owner.map(|o| (link, collection, o)))
+    }
+
+    async fn revoke_share_link(&self, id: i64, collection_id: i64, now: &str) -> RepoResult<bool> {
+        let res = sqlx::query(
+            "UPDATE collection_share_links SET revoked_at = ?1 \
+             WHERE id = ?2 AND collection_id = ?3 AND revoked_at IS NULL",
+        )
+        .bind(now)
+        .bind(id)
+        .bind(collection_id)
+        .execute(&self.pool)
+        .await?;
+        Ok(res.rows_affected() > 0)
+    }
+
+    async fn active_share_link_count(&self, collection_id: i64) -> RepoResult<i64> {
+        Ok(sqlx::query_scalar(
+            "SELECT COUNT(*) FROM collection_share_links WHERE collection_id = ?1 AND revoked_at IS NULL",
+        )
+        .bind(collection_id)
+        .fetch_one(&self.pool)
+        .await?)
     }
 }
 

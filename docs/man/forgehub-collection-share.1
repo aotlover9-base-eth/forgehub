@@ -1,0 +1,19 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH share 1  "share " 
+.SH NAME
+share \- Mint a read\-only share link for a collection (Peak C6, ADR 0011). The full URL is printed once \- only its hash is stored. Anyone with the link can read the collection\*(Aqs current snippets; the link expires and can be revoked with `collection unshare`
+.SH SYNOPSIS
+\fBshare\fR [\fB\-\-days\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fICOLLECTION\fR> 
+.SH DESCRIPTION
+Mint a read\-only share link for a collection (Peak C6, ADR 0011). The full URL is printed once \- only its hash is stored. Anyone with the link can read the collection\*(Aqs current snippets; the link expires and can be revoked with `collection unshare`
+.SH OPTIONS
+.TP
+\fB\-\-days\fR \fI<DAYS>\fR [default: 7]
+Expiry: 1, 7 or 30 days
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+<\fICOLLECTION\fR>
+Collection name (yours)

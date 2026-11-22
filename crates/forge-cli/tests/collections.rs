@@ -293,3 +293,52 @@ fn collection_show_filters_and_foreign_runs_stay_gated() {
         assert!(!out.contains("OPEN-MARKER"), "{out}");
     }
 }
+
+#[test]
+fn share_link_commands_round_trip() {
+    let base = start_server();
+    let anna = rig(&base);
+    cli_login(&anna, &signup_and_token(&base, "anna"));
+    push(&anna, "sauce", "echo SAUCE-MARKER", "--private");
+    anna.run(&["collection", "create", "runbook"], None);
+    let (code, _, err) = anna.run(&["collection", "add", "runbook", "anna/sauce"], None);
+    assert_eq!(code, 0, "{err}");
+
+    // Mint: the full URL prints once.
+    let (code, out, err) = anna.run(&["collection", "share", "runbook"], None);
+    assert_eq!(code, 0, "{err}");
+    assert!(out.contains("/shared/fgl_"), "{out}");
+    let url = out
+        .lines()
+        .find(|l| l.contains("/shared/fgl_"))
+        .unwrap()
+        .trim()
+        .to_string();
+
+    // The anonymous page shows the private snippet's code.
+    let client = reqwest::blocking::Client::new();
+    let resp = client.get(&url).send().unwrap();
+    assert_eq!(resp.status(), 200);
+    let html = resp.text().unwrap();
+    assert!(html.contains("SAUCE-MARKER"), "{html}");
+
+    // List shows the prefix and an active state; bad expiry
+    // is refused by the server.
+    let (code, out, err) = anna.run(&["collection", "shares", "runbook"], None);
+    assert_eq!(code, 0, "{err}");
+    assert!(out.contains("active"), "{out}");
+    let (code, _, err) = anna.run(&["collection", "share", "runbook", "--days", "2"], None);
+    assert_ne!(code, 0);
+    assert!(err.contains("1, 7 or 30"), "{err}");
+
+    // Revoke by the listed id; the page dies with it.
+    let (code, out, _) = anna.run(&["--json", "collection", "shares", "runbook"], None);
+    assert_eq!(code, 0);
+    let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
+    let id = parsed["links"][0]["id"].as_i64().unwrap();
+    let (code, out, err) = anna.run(&["collection", "unshare", "runbook", &id.to_string()], None);
+    assert_eq!(code, 0, "{err}");
+    assert!(out.contains("revoked"), "{out}");
+    let resp = client.get(&url).send().unwrap();
+    assert_eq!(resp.status(), 404);
+}
