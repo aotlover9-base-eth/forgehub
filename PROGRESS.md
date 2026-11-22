@@ -42,7 +42,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 
 ### Phase B - CLI improvements
 - [x] B0 - audit and baseline (`docs/cli/PEAK-AUDIT.md`, findings F1-F14 with a fix map to B1-B9; budgets re-measured where the write fault allows, the rest owed at B9)
-- [ ] B1 - output design system for the terminal
+- [x] B1 - output design system for the terminal (new `output` module: `--color`/`NO_COLOR`/TTY resolution, accent+semantic paints, kv + surface card with ASCII fallback; `exit::render_error` adds io fix lines and the spec's `--json` error envelope (audit F15); TUI palette unified; F3 spec fix. Local cargo blocked by the write fault - CI verification of the head is the gate of record)
 - [ ] B2 - help, discoverability and completions
 - [ ] B3 - run experience
 - [ ] B4 - listing, search and find
@@ -66,7 +66,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 
 Phase A COMPLETE 2026-11-22: summary in `reports/report_Peak-A-summary.md`, tagged `peak-phase-a`. CI green on the A8 head (`3bb18b0`, run `44965399856`, all five jobs) and on the WP-0b fix head (`0ab22f8`, run `44963120867`).
 
-Next WP: B1 - output design system for the terminal.
+Next WP: B2 - help, discoverability and completions.
 
 ### A8 blocker note (2026-11-22, ~23:25 IST) - READ FIRST ON RESUME
 

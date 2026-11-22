@@ -41,6 +41,8 @@ Startup composition (code): clap parse, `Store::open` (reads config + scans `sni
 - **F13 - No `--color` flag and no shared output module (B1).** agent.md section 8.4 and the plan's B1 require the full contract: `NO_COLOR`, `--color=auto|always|never`, non-TTY plain output, ASCII fallback, one accent for headings/selection, red/amber/green reserved. Today non-TUI output never colours (so pipes are clean but terminals get no accent either), there is no `--color` flag, and each command formats ad hoc. B1 builds the one output module with the full contract and tests each mode.
 - **F14 - Man pages and cli-reference drift risk (B2).** `docs/cli-reference.md` (986 lines) spot-checks current for the audited surface (`--offline`, trust, cache, remote all present), but every B2/B4-B9 behaviour change must update it and `docs/man/` in the same commit - the plan already requires this for B2; this audit extends the rule to all Phase B WPs.
 
+- **F15 - The `--json` error envelope was not implemented (found in B1, fixed in B1).** spec-cli section 3 promises errors with `--json` as `{ "error": { "code", "message" } }` on stderr; the top-level error path printed the plain chain regardless of `--json`. B1 implements it in `exit::render_error` with tests.
+
 ## 4. The fix map
 
 | WP | Fixes |

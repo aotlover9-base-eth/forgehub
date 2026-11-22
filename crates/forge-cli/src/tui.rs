@@ -369,7 +369,9 @@ impl TuiState {
 }
 
 /// Colour policy: one accent, dim secondary, and the semantic
-/// trio only for messages. `NO_COLOR` / `TERM=dumb` → all plain.
+/// trio only for messages. Resolved through the shared output
+/// module (Peak B1): `--color`, `NO_COLOR`, `TERM=dumb` and
+/// non-UTF-8 locales all feed the same decision as the plain CLI.
 #[derive(Clone, Copy)]
 pub struct Palette {
     pub accent: Color,
@@ -381,23 +383,22 @@ pub struct Palette {
 
 impl Palette {
     pub fn detect() -> Palette {
-        let no_color = std::env::var_os("NO_COLOR").is_some();
-        let dumb = std::env::var("TERM").is_ok_and(|t| t == "dumb");
-        if no_color || dumb {
-            Palette {
-                accent: Color::Reset,
-                dim: Color::Reset,
-                error: Color::Reset,
-                warn: Color::Reset,
-                ascii: dumb,
-            }
-        } else {
+        let style = crate::output::style();
+        if style.color {
             Palette {
                 accent: Color::Blue,
                 dim: Color::DarkGray,
                 error: Color::Red,
                 warn: Color::Yellow,
-                ascii: false,
+                ascii: !style.unicode,
+            }
+        } else {
+            Palette {
+                accent: Color::Reset,
+                dim: Color::Reset,
+                error: Color::Reset,
+                warn: Color::Reset,
+                ascii: !style.unicode,
             }
         }
     }

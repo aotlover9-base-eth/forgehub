@@ -1,6 +1,6 @@
 # CLI reference
 
-Generated from the binary's own `--help` output (Step 22); the normative contract is `docs/spec-cli.md`. Global flags: `--json` (machine-readable output with stable keys), `-y/--yes` (answer confirmations where the trust model allows it), `--offline` (refuse all network use), `-v/--verbose` (request logging to stderr). Exit codes: 0 ok · 1 failure · 2 refused/not confirmed · 3 not found · 4 auth required · 130 interrupted.
+Generated from the binary's own `--help` output (Step 22); the normative contract is `docs/spec-cli.md`. Global flags: `--json` (machine-readable output with stable keys), `-y/--yes` (answer confirmations where the trust model allows it), `--offline` (refuse all network use), `-v/--verbose` (request logging to stderr), `--color auto|always|never` (Peak B1: `auto` colours only on a capable terminal and honours `NO_COLOR`; non-TTY output is always plain). Exit codes: 0 ok · 1 failure · 2 refused/not confirmed · 3 not found · 4 auth required · 130 interrupted.
 
 ## Commands at a glance
 

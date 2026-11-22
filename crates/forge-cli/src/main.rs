@@ -16,6 +16,7 @@ mod cloudrun;
 mod cmds;
 mod exit;
 mod history;
+mod output;
 mod parity;
 mod prompt;
 mod record;
@@ -127,6 +128,11 @@ struct Cli {
     /// message; local commands and `run --offline` still work.
     #[arg(long, global = true)]
     offline: bool,
+
+    /// Colour output: `auto` (default) colours only on a capable
+    /// terminal and honours `NO_COLOR`; `never` is always plain.
+    #[arg(long, global = true, value_enum, default_value_t = output::ColorMode::Auto)]
+    color: output::ColorMode,
 
     #[command(subcommand)]
     command: Command,
@@ -1018,6 +1024,7 @@ fn dispatch_manage(
 }
 
 fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
+    output::init(cli.color);
     cloud::VERBOSE.store(cli.verbose > 0, std::sync::atomic::Ordering::Relaxed);
     cloud::OFFLINE.store(cli.offline, std::sync::atomic::Ordering::Relaxed);
     let store = store::Store::open()?;
@@ -1178,13 +1185,15 @@ fn main() -> ExitCode {
             e.exit();
         }
     };
+    let json = cli.json;
     let stdin = std::io::stdin();
     let mut lock = stdin.lock();
     match run_cli(cli, &mut lock) {
         Ok(code) => ExitCode::from(u8::try_from(code).unwrap_or(1)),
         Err(err) => {
-            eprintln!("{err:#}");
-            ExitCode::from(exit::code_of(&err))
+            let (text, code) = exit::render_error(&err, json, output::style());
+            eprintln!("{text}");
+            ExitCode::from(code)
         }
     }
 }
