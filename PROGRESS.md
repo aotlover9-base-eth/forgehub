@@ -64,7 +64,9 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [ ] C9 - i18n groundwork and RTL check
 - [ ] C10 - release and upgrade hygiene
 
-Next WP: Phase A summary (`reports/report_Peak-A-summary.md`) + tag `peak-phase-a`, then Phase B (B0).
+Phase A COMPLETE 2026-11-22: summary in `reports/report_Peak-A-summary.md`, tagged `peak-phase-a`. CI green on the A8 head (`3bb18b0`, run `44965399856`, all five jobs) and on the WP-0b fix head (`0ab22f8`, run `44963120867`).
+
+Next WP: B0 - CLI audit and baseline.
 
 ### A8 blocker note (2026-11-22, ~23:25 IST) - READ FIRST ON RESUME
 
