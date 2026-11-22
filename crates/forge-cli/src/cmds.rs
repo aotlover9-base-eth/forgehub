@@ -416,39 +416,127 @@ fn missing_error(missing: &[String]) -> CliError {
     ))
 }
 
-/// `fg list [--tag t] [--long]` - the local library. JSON shape is
-/// spec-cli §3: `{ "workflows": [{ "name", "description", "tags",
-/// "mode", "origin" }] }`.
-pub fn cmd_list(store: &Store, tag: Option<&str>, long: bool, json: bool) -> i32 {
-    let snippets: Vec<Snippet> = store
-        .list()
-        .into_iter()
-        .filter(|s| tag.is_none_or(|t| s.tags.iter().any(|x| x == t)))
-        .collect();
-    if json {
-        let arr: Vec<_> = snippets
+/// Sort orders for the listing commands (Peak B4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+pub enum SortKey {
+    /// Name, A-Z.
+    Name,
+    /// Most recently modified first.
+    Recent,
+}
+
+/// The filter/sort set shared by `list` and `search` (Peak B4):
+/// one set of flags, one row shape, for both commands.
+#[derive(Clone, Debug, Default)]
+pub struct ListQuery {
+    /// Only snippets carrying this tag.
+    pub tag: Option<String>,
+    /// Only snippets whose last-synced visibility (sidecar)
+    /// equals this value: public, unlisted or private.
+    pub visibility: Option<String>,
+    /// Sort order; `None` keeps the store's listing order.
+    pub sort: Option<SortKey>,
+    /// Only snippets modified within this duration.
+    pub since: Option<std::time::Duration>,
+    /// Render the long table instead of compact rows.
+    pub long: bool,
+}
+
+/// Parse a `--since` value: `<n>(m|h|d|w)` (minutes, hours,
+/// days, weeks), capped at about 100 years so the cutoff
+/// arithmetic cannot underflow.
+pub fn parse_since(text: Option<&str>) -> Result<Option<std::time::Duration>, CliError> {
+    let Some(text) = text else {
+        return Ok(None);
+    };
+    let err = || {
+        CliError::failure(format!(
+            "forgehub: invalid --since value `{text}`\n  what: expected a duration like 30m, 24h, 7d or 2w\n  fix: pass e.g. --since 7d"
+        ))
+    };
+    let unit_secs: u64 = match text.chars().last() {
+        Some('m') => 60,
+        Some('h') => 3_600,
+        Some('d') => 86_400,
+        Some('w') => 604_800,
+        _ => return Err(err()),
+    };
+    let num: u64 = text[..text.len() - 1].parse().map_err(|_| err())?;
+    let secs = num.checked_mul(unit_secs).ok_or_else(err)?;
+    if secs > 100 * 365 * 86_400 {
+        return Err(err());
+    }
+    Ok(Some(std::time::Duration::from_secs(secs)))
+}
+
+/// Apply a [`ListQuery`]'s filters and sort to a snippet list.
+fn apply_list_query(store: &Store, mut snippets: Vec<Snippet>, query: &ListQuery) -> Vec<Snippet> {
+    if let Some(tag) = &query.tag {
+        snippets.retain(|s| s.tags.iter().any(|x| x == tag));
+    }
+    if let Some(vis) = &query.visibility {
+        snippets.retain(|s| {
+            crate::sync::load_meta(store, &s.name)
+                .and_then(|m| m.visibility)
+                .is_some_and(|v| &v == vis)
+        });
+    }
+    if let Some(since) = query.since {
+        let cutoff = std::time::SystemTime::now() - since;
+        snippets.retain(|s| store.modified(&s.name).is_some_and(|m| m >= cutoff));
+    }
+    match query.sort {
+        Some(SortKey::Name) => snippets.sort_by(|a, b| a.name.cmp(&b.name)),
+        Some(SortKey::Recent) => {
+            snippets.sort_by(|a, b| store.modified(&b.name).cmp(&store.modified(&a.name)));
+        }
+        None => {}
+    }
+    snippets
+}
+
+/// The spec-cli §3 JSON entry for one snippet in a list.
+fn workflow_json(s: &Snippet) -> serde_json::Value {
+    serde_json::json!({
+        "name": s.name,
+        "description": s.description,
+        "tags": s.tags,
+        "mode": match s.effective_mode() { Mode::Script => "script", Mode::Steps => "steps" },
+        "origin": "local",
+    })
+}
+
+/// Print listing rows: compact (the historical `list` shape) or,
+/// with `long`, the aligned table (Peak B4).
+fn print_snippet_rows(snippets: &[Snippet], long: bool) {
+    if long {
+        let name_w = snippets
             .iter()
-            .map(|s| {
-                serde_json::json!({
-                    "name": s.name,
-                    "description": s.description,
-                    "tags": s.tags,
-                    "mode": match s.effective_mode() { Mode::Script => "script", Mode::Steps => "steps" },
-                    "origin": "local",
-                })
-            })
-            .collect();
-        println!("{}", serde_json::json!({"workflows": arr}));
-        return 0;
-    }
-    if snippets.is_empty() {
+            .map(|s| s.name.chars().count())
+            .max()
+            .unwrap_or(4)
+            .max(4);
         println!(
-            "No snippets yet. Run `fg record` to create one, or add a YAML file to {}",
-            store.snippets_dir().display()
+            "{:<name_w$}  {:>8}  {:<6}  {:<8}  {:<8}  TAGS",
+            "NAME", "COMMANDS", "MODE", "SHELL", "HASH"
         );
-        return 0;
+        for s in snippets {
+            println!(
+                "{:<name_w$}  {:>8}  {:<6}  {:<8}  {:<8}  {}",
+                s.name,
+                s.command_count(),
+                match s.effective_mode() {
+                    Mode::Script => "script",
+                    Mode::Steps => "steps",
+                },
+                s.effective_shell(),
+                forge_core::hash::short_hash(s),
+                s.tags.join(", ")
+            );
+        }
+        return;
     }
-    for s in &snippets {
+    for s in snippets {
         let desc = if s.description.is_empty() {
             String::new()
         } else {
@@ -458,18 +546,33 @@ pub fn cmd_list(store: &Store, tag: Option<&str>, long: bool, json: bool) -> i32
         if !s.tags.is_empty() {
             println!("    tags: {}", s.tags.join(", "));
         }
-        if long {
-            println!(
-                "    mode: {} · shell: {} · hash: {}",
-                match s.effective_mode() {
-                    Mode::Script => "script",
-                    Mode::Steps => "steps",
-                },
-                s.effective_shell(),
-                forge_core::hash::short_hash(s)
-            );
-        }
     }
+}
+
+/// `fg list [--tag t] [--visibility v] [--sort s] [--since d]
+/// [--long]` - the local library. JSON shape is spec-cli §3:
+/// `{ "workflows": [{ "name", "description", "tags", "mode",
+/// "origin" }] }`.
+pub fn cmd_list(store: &Store, query: &ListQuery, json: bool) -> i32 {
+    let all = store.list();
+    let snippets = apply_list_query(store, all.clone(), query);
+    if json {
+        let arr: Vec<_> = snippets.iter().map(workflow_json).collect();
+        println!("{}", serde_json::json!({"workflows": arr}));
+        return 0;
+    }
+    if snippets.is_empty() {
+        if all.is_empty() {
+            println!(
+                "No snippets yet. Run `fg record` to create one, or add a YAML file to {}",
+                store.snippets_dir().display()
+            );
+        } else {
+            println!("No snippets match those filters.");
+        }
+        return 0;
+    }
+    print_snippet_rows(&snippets, query.long);
     0
 }
 
@@ -592,9 +695,9 @@ pub fn cmd_show(store: &Store, name: &str, json: bool) -> Result<i32> {
 
 /// `fg search <query>` - substring match over name, description, tags
 /// and commands.
-pub fn cmd_search(store: &Store, query: &str, json: bool) -> i32 {
+pub fn cmd_search(store: &Store, query: &str, list_query: &ListQuery, json: bool) -> i32 {
     let q = query.to_lowercase();
-    let matches: Vec<Snippet> = store
+    let matched: Vec<Snippet> = store
         .list()
         .into_iter()
         .filter(|s| {
@@ -606,19 +709,100 @@ pub fn cmd_search(store: &Store, query: &str, json: bool) -> i32 {
                     .any(|c| c.to_lowercase().contains(&q))
         })
         .collect();
+    let matches = apply_list_query(store, matched, list_query);
     if json {
-        let arr: Vec<_> = matches
-            .iter()
-            .map(|s| serde_json::json!({"name": s.name, "description": s.description, "tags": s.tags}))
-            .collect();
-        println!("{}", serde_json::json!(arr));
+        // Same schema as `list` (spec-cli §3), Peak B4: search
+        // used to return a bare array with fewer keys.
+        let arr: Vec<_> = matches.iter().map(workflow_json).collect();
+        println!("{}", serde_json::json!({"workflows": arr}));
         return 0;
     }
     if matches.is_empty() {
         println!("No snippets match `{query}`.");
+        return 0;
     }
-    for s in &matches {
-        println!("{} - {}", s.name, escape_display(&s.description));
+    print_snippet_rows(&matches, list_query.long);
+    0
+}
+
+/// Score a fuzzy (subsequence) match of `query` in `candidate`
+/// (Peak B4): `None` when the query's characters do not appear
+/// in order. Bonuses for a match at the start, after a separator
+/// and for consecutive runs; a small penalty for length, so
+/// tighter names rank first.
+#[must_use]
+pub fn fuzzy_score(query: &str, candidate: &str) -> Option<i32> {
+    let q: Vec<char> = query.to_lowercase().chars().collect();
+    let c: Vec<char> = candidate.to_lowercase().chars().collect();
+    if q.is_empty() {
+        return Some(0);
+    }
+    let mut score: i32 = 0;
+    let mut qi = 0usize;
+    let mut prev_matched = false;
+    for (i, ch) in c.iter().enumerate() {
+        if qi < q.len() && *ch == q[qi] {
+            score += 1;
+            if i == 0 {
+                score += 8;
+            } else if matches!(c[i - 1], '-' | '_' | '/' | ' ') {
+                score += 4;
+            }
+            if prev_matched {
+                score += 3;
+            }
+            prev_matched = true;
+            qi += 1;
+        } else {
+            prev_matched = false;
+        }
+    }
+    if qi < q.len() {
+        return None;
+    }
+    let extra = i32::try_from(c.len() - q.len()).unwrap_or(i32::MAX);
+    Some(score - extra / 8)
+}
+
+/// `fg find <query> [--plain] [--limit n]` - fuzzy name search
+/// over the local library and the cached cloud names, ranked
+/// (Peak B4). `--plain` prints bare names, one per line, for
+/// piping into tools like fzf.
+pub fn cmd_find(store: &Store, query: &str, plain: bool, limit: usize, json: bool) -> i32 {
+    let mut scored: Vec<(i32, String, String, &'static str)> = Vec::new();
+    for s in store.list() {
+        if let Some(score) = fuzzy_score(query, &s.name) {
+            scored.push((score, s.name.clone(), s.description.clone(), "local"));
+        }
+    }
+    for e in crate::cache::entries(store) {
+        let refr = format!("{}/{}", e.owner, e.name);
+        if let Some(score) = fuzzy_score(query, &refr) {
+            scored.push((score, refr, String::new(), "cache"));
+        }
+    }
+    scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    scored.truncate(limit);
+    if json {
+        let arr: Vec<_> = scored
+            .iter()
+            .map(|(score, name, _, source)| {
+                serde_json::json!({"name": name, "source": source, "score": score})
+            })
+            .collect();
+        println!("{}", serde_json::json!({"matches": arr}));
+        return 0;
+    }
+    if scored.is_empty() {
+        println!("No snippets match `{query}`.");
+        return 0;
+    }
+    for (_, name, desc, _) in &scored {
+        if plain || desc.is_empty() {
+            println!("{name}");
+        } else {
+            println!("{name} - {}", escape_display(desc));
+        }
     }
     0
 }
@@ -822,6 +1006,49 @@ mod tests {
         let err = resolve_or_prompt(&s, &std::collections::BTreeMap::new(), &mut input, true)
             .unwrap_err();
         assert!(format!("{err}").contains("WHO"));
+    }
+
+    #[test]
+    fn parse_since_units_and_errors() {
+        use std::time::Duration;
+        assert_eq!(parse_since(None).unwrap(), None);
+        assert_eq!(
+            parse_since(Some("30m")).unwrap(),
+            Some(Duration::from_secs(1_800))
+        );
+        assert_eq!(
+            parse_since(Some("24h")).unwrap(),
+            Some(Duration::from_secs(86_400))
+        );
+        assert_eq!(
+            parse_since(Some("7d")).unwrap(),
+            Some(Duration::from_secs(604_800))
+        );
+        assert_eq!(
+            parse_since(Some("2w")).unwrap(),
+            Some(Duration::from_secs(1_209_600))
+        );
+        assert!(parse_since(Some("7x")).is_err());
+        assert!(parse_since(Some("d")).is_err());
+        assert!(parse_since(Some("")).is_err());
+        assert!(parse_since(Some("-3d")).is_err());
+        assert!(
+            parse_since(Some("99999999w")).is_err(),
+            "absurd durations are rejected"
+        );
+    }
+
+    #[test]
+    fn fuzzy_score_ranks_prefix_and_tight_matches_first() {
+        assert!(fuzzy_score("xyz", "deploy").is_none());
+        let prefix = fuzzy_score("dep", "deploy").unwrap();
+        let scattered = fuzzy_score("dep", "docker-setup").unwrap();
+        assert!(prefix > scattered, "{prefix} vs {scattered}");
+        let exact = fuzzy_score("deploy", "deploy").unwrap();
+        let longer = fuzzy_score("deploy", "deploy-production").unwrap();
+        assert!(exact > longer, "{exact} vs {longer}");
+        assert_eq!(fuzzy_score("", "anything"), Some(0));
+        assert!(fuzzy_score("DEP", "deploy").is_some(), "case-insensitive");
     }
 
     #[test]

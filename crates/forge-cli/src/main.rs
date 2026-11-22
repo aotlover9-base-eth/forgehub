@@ -43,6 +43,7 @@ const KNOWN_COMMANDS: &[&str] = &[
     "list",
     "show",
     "search",
+    "find",
     "tag",
     "rename",
     "delete",
@@ -209,12 +210,24 @@ enum Command {
     },
     /// List local snippets.
     #[command(after_help = "Examples:\n  fg list --long
-  fg list --tag ubuntu")]
+  fg list --tag ubuntu
+  fg list --sort recent --since 7d")]
     List {
         /// Only show snippets with this tag.
         #[arg(long)]
         tag: Option<String>,
-        /// Show mode, shell and hash for each snippet.
+        /// Only show snippets whose last-synced visibility
+        /// matches (public, unlisted or private).
+        #[arg(long)]
+        visibility: Option<String>,
+        /// Sort order (default: as listed).
+        #[arg(long, value_enum)]
+        sort: Option<cmds::SortKey>,
+        /// Only show snippets modified within this duration
+        /// (e.g. 30m, 24h, 7d, 2w).
+        #[arg(long)]
+        since: Option<String>,
+        /// Show a table with mode, shell and hash for each snippet.
         #[arg(long)]
         long: bool,
     },
@@ -226,10 +239,44 @@ enum Command {
         name: String,
     },
     /// Search local snippets (name, description, tags, commands).
-    #[command(after_help = "Examples:\n  fg search docker")]
+    #[command(after_help = "Examples:\n  fg search docker
+  fg search docker --tag ubuntu --long")]
     Search {
         /// Search text.
         query: String,
+        /// Only show snippets with this tag.
+        #[arg(long)]
+        tag: Option<String>,
+        /// Only show snippets whose last-synced visibility
+        /// matches (public, unlisted or private).
+        #[arg(long)]
+        visibility: Option<String>,
+        /// Sort order (default: as listed).
+        #[arg(long, value_enum)]
+        sort: Option<cmds::SortKey>,
+        /// Only show snippets modified within this duration
+        /// (e.g. 30m, 24h, 7d, 2w).
+        #[arg(long)]
+        since: Option<String>,
+        /// Show the long table instead of compact rows.
+        #[arg(long)]
+        long: bool,
+    },
+    /// Fuzzy-find snippets by name (local library + cached cloud
+    /// names), ranked.
+    #[command(after_help = "Examples:\n  fg find dep
+  fg find dep --plain")]
+    Find {
+        /// Fuzzy query (characters in order, not necessarily
+        /// adjacent).
+        query: String,
+        /// Print bare names only, one per line (for piping into
+        /// tools like fzf).
+        #[arg(long)]
+        plain: bool,
+        /// Maximum number of matches to print.
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
     },
     /// Add or remove tags: fg tag <name> add|remove <tag>…
     #[command(after_help = "Examples:\n  fg tag ubuntu-setup add ubuntu base")]
@@ -1114,9 +1161,45 @@ fn run_cli(cli: Cli, stdin: &mut impl BufRead) -> anyhow::Result<i32> {
         Command::Trust { action, reference } => {
             dispatch_trust(&store, stdin, action, reference, cli.json)
         }
-        Command::List { tag, long } => Ok(cmds::cmd_list(&store, tag.as_deref(), long, cli.json)),
+        Command::List {
+            tag,
+            visibility,
+            sort,
+            since,
+            long,
+        } => {
+            let query = cmds::ListQuery {
+                tag,
+                visibility,
+                sort,
+                since: cmds::parse_since(since.as_deref())?,
+                long,
+            };
+            Ok(cmds::cmd_list(&store, &query, cli.json))
+        }
         Command::Show { name } => cmds::cmd_show(&store, &name, cli.json),
-        Command::Search { query } => Ok(cmds::cmd_search(&store, &query, cli.json)),
+        Command::Search {
+            query,
+            tag,
+            visibility,
+            sort,
+            since,
+            long,
+        } => {
+            let list_query = cmds::ListQuery {
+                tag,
+                visibility,
+                sort,
+                since: cmds::parse_since(since.as_deref())?,
+                long,
+            };
+            Ok(cmds::cmd_search(&store, &query, &list_query, cli.json))
+        }
+        Command::Find {
+            query,
+            plain,
+            limit,
+        } => Ok(cmds::cmd_find(&store, &query, plain, limit, cli.json)),
         Command::Tag { name, action, tags } => {
             cmds::cmd_tag(&store, &name, &action, &tags, cli.json)
         }

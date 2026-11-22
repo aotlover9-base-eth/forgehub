@@ -268,6 +268,14 @@ impl Store {
         Ok(self.snippets_dir().join(format!("{name}.yaml")))
     }
 
+    /// Last-modified time of a snippet's file, when it exists
+    /// (Peak B4: backs `list --sort recent` and `--since`).
+    #[must_use]
+    pub fn modified(&self, name: &str) -> Option<std::time::SystemTime> {
+        let path = self.snippet_path(name).ok()?;
+        std::fs::metadata(path).ok()?.modified().ok()
+    }
+
     /// Does a local snippet with this name exist?
     #[must_use]
     pub fn exists(&self, name: &str) -> bool {

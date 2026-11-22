@@ -2,7 +2,9 @@
 
 Generated from the binary's own `--help` output (Step 22); the normative contract is `docs/spec-cli.md`. Global flags: `--json` (machine-readable output with stable keys), `-y/--yes` (answer confirmations where the trust model allows it), `--offline` (refuse all network use), `-v/--verbose` (request logging to stderr), `--color auto|always|never` (Peak B1: `auto` colours only on a capable terminal and honours `NO_COLOR`; non-TTY output is always plain).
 
-Help layout (Peak B2): `forgehub --help` groups commands under Library, Cloud, Safety and Tools. Concept explainers live behind `fg help <topic>`: `alias`, `trust`, `hash-pinning`, `yes`, `offline`. Shell completions complete local snippet names and cached `owner/name` references for name- and reference-taking arguments. Exit codes: 0 ok · 1 failure · 2 refused/not confirmed · 3 not found · 4 auth required · 130 interrupted.
+Help layout (Peak B2): `forgehub --help` groups commands under Library, Cloud, Safety and Tools. Concept explainers live behind `fg help <topic>`: `alias`, `trust`, `hash-pinning`, `yes`, `offline`. Shell completions complete local snippet names and cached `owner/name` references for name- and reference-taking arguments.
+
+Listing (Peak B4): `fg list` and `fg search` share `--tag`, `--visibility` (last-synced visibility from the snippet's `.meta` sidecar), `--sort name|recent`, `--since 30m|24h|7d|2w` and `--long` (aligned table). `fg find <query>` fuzzy-matches local and cached cloud names, ranked; `--plain` prints bare names for piping (e.g. into fzf), `--limit` caps the results. Push and pull record the snippet's visibility in the sidecar so the filter works offline. Exit codes: 0 ok · 1 failure · 2 refused/not confirmed · 3 not found · 4 auth required · 130 interrupted.
 
 ## Commands at a glance
 

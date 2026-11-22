@@ -26,6 +26,8 @@ Environment: `FORGEHUB_HOME`, `FORGEHUB_REGISTRY`, `FORGEHUB_TOKEN` (CI override
 - **Human (default):** plain aligned columns for lists; rounded "surface" cards (box-drawing, ASCII fallback) for `show`, `whoami` and the run confirmation (§7). Colour per agent.md §8.4: one accent, dim secondary, red/amber/green only for error/warning/success; no colour when non-TTY, `NO_COLOR`, or `--color=never`.
 - **`--json`:** one JSON object on stdout, no other stdout output. Stable keys per command:
   - `list`: `{ "workflows": [{ "name", "description", "tags", "mode", "origin" }] }` (local) - cloud lists add `"owner"`, `"version"`, `"hash"`, `"visibility"`.
+  - `search`: the same `{ "workflows": [...] }` shape as `list` (Peak B4; search returned a bare array before). `list` and `search` share one filter set: `--tag`, `--visibility` (the snippet's last-synced visibility from its `.meta` sidecar; never-synced snippets match no visibility), `--sort name|recent`, `--since <n>(m|h|d|w)` (file mtime), and `--long` (an aligned table instead of compact rows).
+  - `find`: `{ "matches": [{ "name", "source": "local"|"cache", "score" }] }` - fuzzy subsequence ranking over local names and cached `owner/name` references (Peak B4); `--plain` prints bare names, one per line.
   - `show`: `{ "name", "description", "tags", "mode", "shell", "variables", "commands" }` where `commands` is the ordered list of command strings that would run.
   - `stats`: `{ "runs", "commands", "total_ms", "failures", "estimated_saved_ms", "workflows": [{ "name", "runs", "commands", "total_ms", "failures", "last_run" }] }`.
   - `doctor`: `{ "checks": [{ "name", "level": "ok|warn|fail", "detail" }], "ok": bool }`.

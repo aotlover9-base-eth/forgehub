@@ -44,8 +44,8 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 - [x] B0 - audit and baseline (`docs/cli/PEAK-AUDIT.md`, findings F1-F14 with a fix map to B1-B9; budgets re-measured where the write fault allows, the rest owed at B9)
 - [x] B1 - output design system for the terminal (new `output` module: `--color`/`NO_COLOR`/TTY resolution, accent+semantic paints, kv + surface card with ASCII fallback; `exit::render_error` adds io fix lines and the spec's `--json` error envelope (audit F15); TUI palette unified; F3 spec fix. Three commits: `cf2cc49` + clippy fixes `5444184`, `18c968b` - CI run `44967682285` fully green, all five jobs)
 - [x] B2 - help, discoverability and completions (grouped `--help`: Library/Cloud/Safety/Tools; `fg help <topic>` for alias/trust/hash-pinning/yes/offline in new `topics.rs`; completer now merges cached `owner/name` refs and is wired to push/pull/fork/status/diff/trust/remote reference args. CI run `44968051124` attempt 2 fully green; attempt 1 hit a pre-existing e2e race (`grep -q` + EPIPE panic under pipefail - see the B2 report; the EPIPE wart itself is assigned to B8). OWED before the Phase B tag: regenerate `docs/man/` - needs a built binary, blocked by the write fault)
-- [x] B3 - run experience (fetch progress line; one summary line for local + cloud runs via `runner::print_run_report`; `RunOutcome.failed_step` + the `--step` failure hint; golden tests pinning the confirmation card and the local plan bytes)
-- [ ] B4 - listing, search and find
+- [x] B3 - run experience (fetch progress line; one summary line for local + cloud runs via `runner::print_run_report`; `RunOutcome.failed_step` + the `--step` failure hint; golden tests pinning the confirmation card and the local plan bytes. CI run `44968959241` fully green)
+- [x] B4 - listing, search and find (one `ListQuery` filter set for list+search: `--tag`/`--visibility`/`--sort`/`--since`/`--long` table; sidecar Meta records visibility at push/pull so the filter works offline; search JSON unified to the list schema; new `fg find` fuzzy search with `--plain`/`--limit`)
 - [ ] B5 - editing and authoring
 - [ ] B6 - sync and status quality
 - [ ] B7 - trust and safety UX polish
@@ -66,7 +66,7 @@ Baseline before Peak: main @ `8f8af7b`, CI run 44926108115 green; local baseline
 
 Phase A COMPLETE 2026-11-22: summary in `reports/report_Peak-A-summary.md`, tagged `peak-phase-a`. CI green on the A8 head (`3bb18b0`, run `44965399856`, all five jobs) and on the WP-0b fix head (`0ab22f8`, run `44963120867`).
 
-Next WP: B4 - listing, search and find.
+Next WP: B5 - editing and authoring.
 
 ### A8 blocker note (2026-11-22, ~23:25 IST) - READ FIRST ON RESUME
 

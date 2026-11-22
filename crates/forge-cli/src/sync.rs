@@ -152,6 +152,11 @@ pub struct Meta {
     pub version: i64,
     /// Remote content hash at last sync.
     pub hash: String,
+    /// Remote visibility at last sync (Peak B4: recorded so
+    /// `fg list --visibility` can filter the local library).
+    /// Absent in sidecars written before B4.
+    #[serde(default)]
+    pub visibility: Option<String>,
 }
 
 /// Load the sidecar for a local snippet, when one exists and
@@ -209,6 +214,8 @@ pub struct PushOutcome {
     pub version: i64,
     /// Content hash after the push.
     pub hash: String,
+    /// Visibility after the push.
+    pub visibility: String,
     /// What happened.
     pub status: PushStatus,
 }
@@ -279,6 +286,12 @@ pub fn push_one(
                     name: remote_name.clone(),
                     version: remote_version,
                     hash: remote_hash,
+                    visibility: visibility.map(ToString::to_string).unwrap_or_else(|| {
+                        remote["visibility"]
+                            .as_str()
+                            .unwrap_or("private")
+                            .to_string()
+                    }),
                     status: PushStatus::Unchanged,
                 }
             } else {
@@ -324,6 +337,12 @@ pub fn push_one(
                     name: remote_name.clone(),
                     version,
                     hash,
+                    visibility: visibility.map(ToString::to_string).unwrap_or_else(|| {
+                        remote["visibility"]
+                            .as_str()
+                            .unwrap_or("private")
+                            .to_string()
+                    }),
                     status: if updated["unchanged"].as_bool() == Some(true) {
                         PushStatus::Unchanged
                     } else {
@@ -342,6 +361,7 @@ pub fn push_one(
             name: outcome.name.clone(),
             version: outcome.version,
             hash: outcome.hash.clone(),
+            visibility: Some(outcome.visibility.clone()),
         },
     )?;
     Ok(outcome)
@@ -398,6 +418,10 @@ fn push_create(
         name: remote_name.to_string(),
         version: created["version"].as_i64().unwrap_or(1),
         hash: created["hash"].as_str().unwrap_or(local_hash).to_string(),
+        visibility: created["visibility"]
+            .as_str()
+            .unwrap_or("private")
+            .to_string(),
         status: PushStatus::Created,
     })
 }
@@ -604,6 +628,12 @@ pub fn cmd_pull(
             name: name.clone(),
             version: remote_version,
             hash: remote_hash.clone(),
+            visibility: Some(
+                remote["visibility"]
+                    .as_str()
+                    .unwrap_or("private")
+                    .to_string(),
+            ),
         },
     )?;
     let url = web_url(&sess.registry, &owner, &name);
@@ -1371,6 +1401,7 @@ mod tests {
             name: "n".into(),
             version: 2,
             hash: "base".into(),
+            visibility: None,
         };
         assert_eq!(
             sync_state(Some("base"), Some("base"), Some(&meta)),
