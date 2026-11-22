@@ -37,6 +37,7 @@ import {
 } from '../api/hooks';
 import CollectionsPanel from './CollectionsPanel';
 import ImportPanel from './ImportPanel';
+import LibraryStats from './LibraryStats';
 import type { Snippet, Visibility } from '../api/types';
 import { relativeTime } from '../validation';
 
@@ -447,6 +448,9 @@ export default function DashboardPage() {
           </Card>
         )}
 
+        <div style={{ marginTop: 'var(--fh-space-4)' }}>
+          <LibraryStats />
+        </div>
         <div style={{ marginTop: 'var(--fh-space-4)' }}>
           <CollectionsPanel />
         </div>

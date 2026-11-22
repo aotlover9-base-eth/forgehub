@@ -9,6 +9,7 @@ import type {
   CreatedToken,
   GistImportResult,
   HistoryAnalysis,
+  MyStats,
   ShareLink,
   Me,
   PublicProfile,
@@ -410,6 +411,15 @@ export function useSessions() {
     queryKey: ['sessions'],
     retry: false,
     queryFn: () => api<{ sessions: SessionInfo[] }>('/me/sessions'),
+  });
+}
+
+/** The caller's library stats (Peak C8): own cloud runs only. */
+export function useMyStats() {
+  return useQuery<MyStats>({
+    queryKey: ['my-stats'],
+    retry: false,
+    queryFn: () => api<MyStats>('/me/stats'),
   });
 }
 

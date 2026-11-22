@@ -22,4 +22,5 @@ pub mod repo;
 pub mod shares;
 pub mod snippets;
 pub mod state;
+pub mod stats;
 pub mod tokens;

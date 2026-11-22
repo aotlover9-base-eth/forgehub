@@ -82,6 +82,27 @@ export interface CollectionItem {
   position: number;
 }
 
+/** Per-snippet run aggregates (Peak C8). */
+export interface WorkflowStat {
+  ref: string;
+  runs: number;
+  commands: number;
+  total_ms: number;
+  failures: number;
+  estimated_saved_ms: number;
+  last_run: string;
+}
+
+/** The caller's library stats: only their own cloud runs. */
+export interface MyStats {
+  runs: number;
+  commands: number;
+  total_ms: number;
+  failures: number;
+  estimated_saved_ms: number;
+  workflows: WorkflowStat[];
+}
+
 /** One activity-log event (Peak C7). `detail` is a small
  * object whose shape depends on `kind`. */
 export interface ActivityEvent {

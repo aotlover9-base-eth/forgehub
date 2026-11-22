@@ -180,6 +180,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(crate::imports::routes())
         .merge(crate::shares::routes())
         .merge(crate::activity::routes())
+        .merge(crate::stats::routes())
         .merge(crate::discovery::routes())
         .fallback(api_not_found);
     // Static web app (skipped with a warning when not built yet).

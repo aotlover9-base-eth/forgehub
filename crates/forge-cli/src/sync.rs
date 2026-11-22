@@ -1822,6 +1822,37 @@ pub fn report_trust(sess: &Session, owner: &str, name: &str, version: i64, hash:
     );
 }
 
+/// Best-effort cloud-run report (Peak C8): tell the server a
+/// cloud run completed, so the owner's library stats can
+/// count it. Only ever called on the online path; local runs
+/// are never reported (their stats live in the local history
+/// database behind `fg stats` and never leave the machine).
+/// Never fails the caller.
+#[allow(clippy::too_many_arguments)]
+pub fn report_run(
+    sess: &Session,
+    owner: &str,
+    name: &str,
+    version: i64,
+    commands: i64,
+    duration_ms: i64,
+    success: bool,
+    estimated_saved_ms: i64,
+) {
+    let _ = sess.client.post_json(
+        "/me/runs",
+        &serde_json::json!({
+            "ref": format!("{owner}/{name}"),
+            "version": version,
+            "commands": commands,
+            "duration_ms": duration_ms,
+            "success": success,
+            "estimated_saved_ms": estimated_saved_ms,
+        }),
+        Some(&sess.entry.token),
+    );
+}
+
 /// `fg activity` (Peak C7): the account's activity log,
 /// newest first.
 pub fn cmd_activity(

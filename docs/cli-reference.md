@@ -413,6 +413,12 @@ Examples:
   fg stats
 ```
 
+`fg stats` is local-only: it reads the on-machine history database and
+never sends anything anywhere. Cloud runs are additionally reported to
+your account (best-effort, online only) so the web app's "Your library"
+summary can show them; those aggregates count only your own runs
+(Peak C8).
+
 ### `forgehub backup`
 
 ```text

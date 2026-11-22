@@ -970,6 +970,57 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SnippetPage' }
         '404': { $ref: '#/components/responses/Error' }
+  /me/runs:
+    post:
+      tags: [account]
+      summary: Report one completed cloud run (Peak C8 - best-effort CLI reporting; rows belong to the runner, so stats count only the reporter's own runs; local runs are never reported)
+      operationId: reportRun
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Csrf' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ref, commands, duration_ms, success, estimated_saved_ms]
+              properties:
+                ref: { type: string, example: 'anna/deploy' }
+                version: { type: integer }
+                commands: { type: integer, minimum: 0, maximum: 100000 }
+                duration_ms: { type: integer, minimum: 0, maximum: 86400000 }
+                success: { type: boolean }
+                estimated_saved_ms: { type: integer, minimum: 0, description: 'Computed by the CLI with the fg stats formula.' }
+      responses:
+        '201': { description: Recorded }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /me/stats:
+    get:
+      tags: [account]
+      summary: The caller's library stats (Peak C8) - totals plus per-snippet aggregates over their own reported cloud runs
+      operationId: myStats
+      security: [{ cookieSession: [] }, { bearerToken: [] }]
+      responses:
+        '200':
+          description: The aggregates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runs, commands, total_ms, failures, estimated_saved_ms, workflows]
+                properties:
+                  runs: { type: integer }
+                  commands: { type: integer }
+                  total_ms: { type: integer }
+                  failures: { type: integer }
+                  estimated_saved_ms: { type: integer }
+                  workflows:
+                    type: array
+                    items: { $ref: '#/components/schemas/WorkflowStat' }
+        '401': { $ref: '#/components/responses/Error' }
   /me/activity:
     get:
       tags: [account]
@@ -1619,6 +1670,17 @@ components:
         visibility: { $ref: '#/components/schemas/Visibility' }
         latest_version: { type: integer }
         position: { type: integer }
+    WorkflowStat:
+      type: object
+      required: [ref, runs, commands, total_ms, failures, estimated_saved_ms, last_run]
+      properties:
+        ref: { type: string }
+        runs: { type: integer }
+        commands: { type: integer }
+        total_ms: { type: integer }
+        failures: { type: integer }
+        estimated_saved_ms: { type: integer }
+        last_run: { $ref: '#/components/schemas/Timestamp' }
     ActivityEvent:
       type: object
       required: [id, kind, detail, created_at]

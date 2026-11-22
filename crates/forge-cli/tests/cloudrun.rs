@@ -434,3 +434,31 @@ fn activity_log_via_cli() {
         .count();
     assert_eq!(trusted, 1, "{out}");
 }
+
+#[test]
+fn cloud_runs_land_in_library_stats() {
+    let base = start_server();
+    let token = signup_and_token(&base, "anna");
+    let a = rig(&base);
+    cli_login(&a, &token);
+    a.write_local("cloudy", "cloudy");
+    assert_eq!(a.run(&["push", "cloudy"]).0, 0);
+    a.delete_local("cloudy");
+
+    // Before any run: empty stats.
+    let (_, out) = api_get(&base, &token, "/api/v1/me/stats");
+    assert_eq!(out["runs"], 0, "{out}");
+
+    let (code, _, stderr) = a.run(&["cloudy", "-y"]);
+    assert_eq!(code, 0, "{stderr}");
+
+    let (_, out) = api_get(&base, &token, "/api/v1/me/stats");
+    assert_eq!(out["runs"], 1, "{out}");
+    assert_eq!(out["workflows"][0]["ref"], "anna/cloudy");
+    assert_eq!(out["workflows"][0]["runs"], 1);
+    assert_eq!(out["failures"], 0);
+    // The snippet has one command; the estimate uses the
+    // fg stats formula (commands x overhead - duration).
+    assert!(out["estimated_saved_ms"].as_i64().unwrap() > 0, "{out}");
+    assert!(out["workflows"][0]["last_run"].is_string());
+}

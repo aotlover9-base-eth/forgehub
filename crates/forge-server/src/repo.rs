@@ -712,6 +712,46 @@ pub trait ActivityRepo: Send + Sync {
     async fn has_login_from(&self, user_id: i64, user_agent: &str) -> RepoResult<bool>;
 }
 
+/// Aggregated run statistics for one snippet reference
+/// (Peak C8).
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow, Serialize)]
+pub struct WorkflowStatRow {
+    /// Snippet reference (owner/name).
+    pub ref_: String,
+    /// Completed runs reported.
+    pub runs: i64,
+    /// Commands automated across those runs.
+    pub commands: i64,
+    /// Total wall time spent running, milliseconds.
+    pub total_ms: i64,
+    /// Runs that exited non-zero.
+    pub failures: i64,
+    /// Estimated milliseconds saved across those runs.
+    pub saved_ms: i64,
+    /// Most recent run time.
+    pub last_run: String,
+}
+
+/// Cloud run reports repository (Peak C8).
+#[async_trait]
+pub trait RunStatsRepo: Send + Sync {
+    /// Record one reported cloud run.
+    #[allow(clippy::too_many_arguments)]
+    async fn record_run_report(
+        &self,
+        user_id: i64,
+        refr: &str,
+        version: i64,
+        commands: i64,
+        duration_ms: i64,
+        success: bool,
+        saved_ms: i64,
+        now: &str,
+    ) -> RepoResult<()>;
+    /// Per-reference aggregates for a user, most runs first.
+    async fn stats_for_user(&self, user_id: i64, limit: i64) -> RepoResult<Vec<WorkflowStatRow>>;
+}
+
 /// Password-reset tokens repository (2026-11-20 increment).
 #[async_trait]
 pub trait PasswordResetRepo: Send + Sync {
@@ -748,6 +788,8 @@ pub struct Repos {
     pub collections: std::sync::Arc<dyn CollectionRepo>,
     /// Activity log (Peak C7).
     pub activity: std::sync::Arc<dyn ActivityRepo>,
+    /// Cloud run reports (Peak C8).
+    pub run_stats: std::sync::Arc<dyn RunStatsRepo>,
     /// Password-reset tokens.
     pub password_resets: std::sync::Arc<dyn PasswordResetRepo>,
 }
@@ -766,7 +808,8 @@ impl Repos {
             reports: store.clone(),
             collections: store.clone(),
             password_resets: store.clone(),
-            activity: store,
+            activity: store.clone(),
+            run_stats: store,
         }
     }
 }
@@ -2263,6 +2306,51 @@ impl ActivityRepo for SqliteStore {
         .fetch_one(&self.pool)
         .await?;
         Ok(n > 0)
+    }
+}
+
+#[async_trait]
+impl RunStatsRepo for SqliteStore {
+    async fn record_run_report(
+        &self,
+        user_id: i64,
+        refr: &str,
+        version: i64,
+        commands: i64,
+        duration_ms: i64,
+        success: bool,
+        saved_ms: i64,
+        now: &str,
+    ) -> RepoResult<()> {
+        sqlx::query(
+            "INSERT INTO run_reports (user_id, ref, version, commands, duration_ms, success, saved_ms, created_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        )
+        .bind(user_id)
+        .bind(refr)
+        .bind(version)
+        .bind(commands)
+        .bind(duration_ms)
+        .bind(i64::from(success))
+        .bind(saved_ms)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn stats_for_user(&self, user_id: i64, limit: i64) -> RepoResult<Vec<WorkflowStatRow>> {
+        Ok(sqlx::query_as::<_, WorkflowStatRow>(
+            "SELECT ref AS ref_, COUNT(*) AS runs, COALESCE(SUM(commands), 0) AS commands, \
+             COALESCE(SUM(duration_ms), 0) AS total_ms, \
+             COALESCE(SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END), 0) AS failures, \
+             COALESCE(SUM(saved_ms), 0) AS saved_ms, MAX(created_at) AS last_run \
+             FROM run_reports WHERE user_id = ?1 GROUP BY ref ORDER BY runs DESC, ref ASC LIMIT ?2",
+        )
+        .bind(user_id)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?)
     }
 }
 

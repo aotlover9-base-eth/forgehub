@@ -638,6 +638,50 @@ fn confirm_run(
     Ok(confirmed)
 }
 
+/// Best-effort server reporting for a completed cloud run
+/// (online path only; `sess` is None offline):
+/// - a fresh trust grant goes to the activity log (Peak C7) -
+///   already-trusted re-runs are not new events;
+/// - the run itself goes to the owner's library stats
+///   (Peak C8), with the saved-time estimate computed by the
+///   same formula as `fg stats`.
+fn report_run_outcome(
+    store: &Store,
+    sess: Option<&Session>,
+    fetched: &Fetched,
+    trusted_hash: Option<&str>,
+    started: &std::time::Instant,
+    outcome: &runner::RunOutcome,
+) {
+    let Some(sess) = sess else { return };
+    if trusted_hash != Some(fetched.hash.as_str()) {
+        crate::sync::report_trust(
+            sess,
+            &fetched.owner,
+            &fetched.name,
+            fetched.version,
+            &fetched.hash,
+        );
+    }
+    let commands = i64::try_from(fetched.snippet.command_count()).unwrap_or(i64::MAX);
+    let duration_ms = i64::try_from(started.elapsed().as_millis()).unwrap_or(i64::MAX);
+    let overhead = store
+        .load_config()
+        .map_or(12.0, |c| c.human_overhead_seconds);
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    let saved_ms = ((commands as f64 * overhead * 1000.0) - duration_ms as f64).max(0.0) as i64;
+    crate::sync::report_run(
+        sess,
+        &fetched.owner,
+        &fetched.name,
+        fetched.version,
+        commands,
+        duration_ms,
+        outcome.exit_code == 0,
+        saved_ms,
+    );
+}
+
 /// Everything after the fetch: trust, card, confirm, execute.
 pub fn run_fetched(
     store: &Store,
@@ -720,20 +764,7 @@ pub fn run_fetched(
         &fetched.hash,
         fetched.version,
     );
-    // A fresh grant (this exact content was not already
-    // trusted) is reported to the activity log, best-effort
-    // (Peak C7). Already-trusted re-runs are not new events.
-    if let Some(sess) = sess {
-        if trusted_hash != Some(fetched.hash.as_str()) {
-            crate::sync::report_trust(
-                sess,
-                &fetched.owner,
-                &fetched.name,
-                fetched.version,
-                &fetched.hash,
-            );
-        }
-    }
+    report_run_outcome(store, sess, fetched, trusted_hash, &started, &outcome);
     if args.json {
         println!(
             "{}",
