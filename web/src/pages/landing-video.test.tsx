@@ -1,15 +1,17 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import LandingPage from './LandingPage';
 
-// The landing page (Peak A5): the hero shows the real
-// confirmation exchange as text, and the Intro section
-// carries the 60-second video. The contract under test:
-// poster + controls + default captions on the video, no
-// autoplay anywhere on the page (the Observe-era ambient
-// loop is gone), a skip link, and the full transcript.
+// The landing page is the Observe scene (restored 2026-11-23):
+// a glass nav, the Instrument Serif headline, the canonical
+// command in a glass pill, and below the fold the Intro
+// section with the 60-second video and the 8-second hero
+// loop. The contract under test: the scene structure, poster
+// + controls + default captions on the main video, never
+// autoplay-with-sound anywhere, and the loop degrading to
+// the poster still under reduced motion.
 
 function renderLanding() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -22,23 +24,45 @@ function renderLanding() {
   );
 }
 
-describe('LandingPage', () => {
-  it('shows the confirmation exchange in the hero', () => {
-    renderLanding();
-    expect(screen.getByRole('heading', { name: 'Save a command once, run it anywhere.' })).toBeTruthy();
-    expect(document.body.textContent).toContain('About to run: ubuntu-setup v3 by ada');
-    expect(document.body.textContent).toContain('Run it? [y/N]');
-    expect(document.body.textContent).toContain('uses sudo');
+function stubMatchMedia(matches: boolean) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+}
+
+afterEach(() => {
+  // jsdom has no matchMedia; drop any stub between tests.
+  delete (window as { matchMedia?: unknown }).matchMedia;
+});
+
+describe('LandingPage (Observe scene)', () => {
+  it('renders the serif headline and the command pill', () => {
+    const { container } = renderLanding();
+    const heading = screen.getByRole('heading', {
+      level: 1,
+      name: 'Save a command once, run it anywhere.',
+    });
+    expect(heading.className).toContain('observe-display');
+    expect(container.querySelector('.observe-root')).not.toBeNull();
+    expect(container.querySelector('.liquid-glass.observe-nav')).not.toBeNull();
+    const pill = container.querySelector('.liquid-glass.observe-pill');
+    expect(pill).not.toBeNull();
+    expect(pill!.textContent).toContain('fg ubuntu-setup');
+    expect(screen.getByRole('link', { name: 'Get started' }).getAttribute('href')).toBe('/signup');
   });
 
   it('offers the intro video with poster, controls and default captions, without autoplay', () => {
     const { container } = renderLanding();
-    const video = container.querySelector<HTMLVideoElement>('video.fh-landing__video');
+    const video = container.querySelector<HTMLVideoElement>('video.observe-video');
     expect(video).not.toBeNull();
     expect(video!.getAttribute('poster')).toBe('/video/poster.png');
     expect(video!.hasAttribute('controls')).toBe(true);
     expect(video!.getAttribute('preload')).toBe('metadata');
     expect(video!.playsInline).toBe(true);
+    // No autoplay at all on the main video, so never with sound.
     expect(video!.autoplay).toBe(false);
     expect(video!.hasAttribute('autoplay')).toBe(false);
 
@@ -52,10 +76,26 @@ describe('LandingPage', () => {
     expect(track!.hasAttribute('default')).toBe(true);
   });
 
-  it('has no autoplaying media anywhere (the ambient loop was removed)', () => {
+  it('autoplays the hero loop muted when reduced motion is not requested', () => {
+    stubMatchMedia(false);
     const { container } = renderLanding();
-    const autoplaying = container.querySelectorAll('[autoplay]');
-    expect(autoplaying).toHaveLength(0);
+    const loop = container.querySelector<HTMLVideoElement>('video.observe-loop-media');
+    expect(loop).not.toBeNull();
+    expect(loop!.autoplay).toBe(true);
+    expect(loop!.muted).toBe(true);
+    expect(loop!.loop).toBe(true);
+    expect(loop!.playsInline).toBe(true);
+    expect(loop!.getAttribute('poster')).toBe('/video/poster.png');
+  });
+
+  it('shows the poster still instead of the loop under reduced motion', () => {
+    stubMatchMedia(true);
+    const { container } = renderLanding();
+    expect(container.querySelector('video.observe-loop-media')).toBeNull();
+    const still = container.querySelector<HTMLImageElement>('img.observe-loop-media');
+    expect(still).not.toBeNull();
+    expect(still!.getAttribute('src')).toBe('/video/poster.png');
+    expect(still!.getAttribute('alt')).toContain('confirmation card');
   });
 
   it('has a skip link and the full transcript', () => {
@@ -63,6 +103,8 @@ describe('LandingPage', () => {
     const skip = screen.getByRole('link', { name: 'Skip video' });
     expect(skip.getAttribute('href')).toBe('#after-intro');
     expect(screen.getByText('Transcript')).toBeTruthy();
+    // The whole voice-over script is in the transcript,
+    // including the closing line.
     expect(document.body.textContent).toContain('Save a command once. Run it anywhere with fg.');
     expect(document.body.textContent).toContain("Other people's snippets need a typed yes.");
   });

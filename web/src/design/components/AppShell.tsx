@@ -64,7 +64,10 @@ export function AppShell({
     );
   };
   return (
-    <div className={`fh-shell fh-shell--${widthClass}`}>
+    <div className={`fh-shell fh-shell--${widthClass} observe-app`}>
+      {/* The Observe scene backdrop: fixed drifting smoke
+          behind the shell, dimmed by a scrim (observe.css). */}
+      <div className="observe-app-bg" aria-hidden="true" />
       <header className={`fh-topbar${widthClass === 'expanded' ? ' fh-topbar--medium' : ''}`}>
         <span className="fh-topbar__title">{title}</span>
         <span className="fh-topbar__actions">{actions}</span>

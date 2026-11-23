@@ -4,9 +4,9 @@ import { useSyncExternalStore } from 'react';
  * List density preference (Peak A5): comfortable (default)
  * or compact rows in snippet lists. Stored per device in
  * localStorage, mirrored onto <html data-density> so
- * components.css can tighten row spacing. public/theme-init.js
- * applies the stored value before first paint; this module
- * owns it at runtime (same pattern as theme.ts).
+ * components.css can tighten row spacing.
+ * public/density-init.js applies the stored value before
+ * first paint; this module owns it at runtime.
  */
 export type Density = 'comfortable' | 'compact';
 

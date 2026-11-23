@@ -7,13 +7,24 @@ sizes (`scripts/check-tokens.mjs` enforces this in lint). The gallery at
 `/dev/design` (route `/__design`, dev builds) shows every component and
 state; this file is the written contract.
 
-Foundations (Peak A1/A2): colour from seed `#36618E` (tonal spot) in light
-and dark schemes, switched by the `data-theme` attribute and the
-`forgehub-theme` preference (system / light / dark); the full M3 typescale
-with weights and tracking; the M3 shape scale; tonal elevation (shadows
-only at levels 1-2, plus Material's own for menus, dialogs and the FAB);
-state layers at the spec opacities (hover 8%, focus 10%, pressed 10%,
-dragged 16%); the full M3 duration and easing scale.
+Foundations: the visual design is the Observe theme (restored 2026-11-23
+at the owner's direction, replacing the Peak Material You redesign). One
+theme only - dark, monochrome glass: `index.html` pins `data-theme="dark"`,
+there is no theme switch and no light scheme. The shell carries
+`.observe-app`, whose scope at the end of `tokens.css` re-points every
+`--md-sys-color-*` role to the glass palette (white is the only accent;
+error red is deliberately not remapped), and `observe.css` adds the
+drifting smoke backdrop, glass top bar / bottom bar / cards, and the
+landing scene (`.observe-root`, liquid glass, Instrument Serif headline -
+the serif is landing-only; the app uses Roboto Flex). Underneath, the
+token machinery is unchanged from Peak A1/A2: colour generated from seed
+`#36618E` (tonal spot; the dark scheme is the base the Observe scope
+re-points), the full M3 typescale with weights and tracking, the M3 shape
+scale, tonal elevation (shadows only at levels 1-2, plus Material's own
+for menus, dialogs and the FAB), state layers at the spec opacities
+(hover 8%, focus 10%, pressed 10%, dragged 16%), and the full M3 duration
+and easing scale. The one display preference is list density
+(`forgehub-density`, comfortable / compact).
 
 ## Rules that apply to every component
 
@@ -45,8 +56,12 @@ The adaptive frame: small top app bar (compact/medium) or medium top app
 bar (expanded), navigation bar / rail / extended rail by width class, a
 content column that scrolls internally and resets on `scrollKey` change,
 and an optional FAB slot that clears the navigation bar on compact.
-States: active destination carries the secondary-container indicator and
-a state-layer overlay on hover/press.
+The shell root carries `.observe-app` and renders the fixed
+`.observe-app-bg` backdrop first, so the whole frame sits in the Observe
+scene: glass top bar, glass bottom bar pinned over the content on
+compact, and the active destination as the white pill.
+States: active destination carries the nav-active indicator (the white
+pill under the Observe scope) and a state-layer overlay on hover/press.
 
 ### Button (`components/core.tsx`)
 Filled (one primary action per view), tonal, outlined, text - over the

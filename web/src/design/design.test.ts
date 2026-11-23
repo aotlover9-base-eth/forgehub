@@ -21,9 +21,12 @@ describe('generated tokens', () => {
   });
 
   it('meet WCAG AA (4.5:1) for every text pair the UI uses, in both schemes', () => {
-    // Peak A1: extended from the original nine pairs to every
-    // foreground/background combination components actually
-    // render text with (measured against the generated tokens).
+    // The generated schemes are the generator's contract; the
+    // app ships the dark scheme only, re-pointed to the
+    // Observe monochrome palette by the .observe-app scope
+    // (whose own pairs are pinned in observe.test.ts). This
+    // suite guards every foreground/background combination
+    // components render text with in the generated values.
     const pairs: [string, string][] = [
       ['on-surface', 'surface'],
       ['on-surface', 'surface-dim'],

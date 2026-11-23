@@ -18,7 +18,7 @@ use crate::auth::{body, fmt_ts, random_from_alphabet, sha256_hex, RequireUser};
 use crate::collections::{collection_not_found, resolve_own_collection};
 use crate::db::now_iso;
 use crate::error::ApiError;
-use crate::pages::esc;
+use crate::pages::{esc, PAGE_CSS};
 use crate::repo::ShareLinkRow;
 use crate::snippets::check_write_scope_and_csrf;
 use crate::state::AppState;
@@ -152,7 +152,7 @@ async fn revoke_share_link(
 // ------------------------------------------------------------ page
 
 fn link_not_found_page() -> Response {
-    let html = "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Link not available - ForgeHub</title>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n</head>\n<body>\n<h1>This link is not available</h1>\n<p>It may have expired or been revoked by its owner, or the address may be mistyped. Ask the person who shared it for a fresh link.</p>\n<p><a href=\"/\">ForgeHub</a></p>\n</body>\n</html>\n";
+    let html = format!("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Link not available - ForgeHub</title>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<style>{PAGE_CSS}</style>\n</head>\n<body>\n<main>\n<h1>This link is not available</h1>\n<p>It may have expired or been revoked by its owner, or the address may be mistyped. Ask the person who shared it for a fresh link.</p>\n<p><a href=\"/\">ForgeHub</a></p>\n</main>\n</body>\n</html>\n");
     (
         StatusCode::NOT_FOUND,
         [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
@@ -217,8 +217,9 @@ async fn shared_collection_page(
         sections.push_str("<p>This collection is empty.</p>\n");
     }
     let html = format!(
-        "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>{} - a shared ForgeHub collection</title>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta name=\"robots\" content=\"noindex\">\n</head>\n<body>\n<header>\n<p>Shared by {} with a read-only link. The link expires on {}.</p>\n</header>\n<h1>{}</h1>\n<p>{}</p>\n{}\n<footer>\n<p>Read-only share: this page shows code for reading. Running snippets needs a ForgeHub account and access to each snippet - and, as always, read code before you run it.</p>\n</footer>\n</body>\n</html>\n",
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>{} - a shared ForgeHub collection</title>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta name=\"robots\" content=\"noindex\">\n<style>{}</style>\n</head>\n<body>\n<header>\n<p>Shared by {} with a read-only link. The link expires on {}.</p>\n</header>\n<main>\n<h1>{}</h1>\n<p>{}</p>\n</main>\n{}\n<footer>\n<p>Read-only share: this page shows code for reading. Running snippets needs a ForgeHub account and access to each snippet - and, as always, read code before you run it.</p>\n</footer>\n</body>\n</html>\n",
         esc(&collection.name),
+        PAGE_CSS,
         esc(&owner.username),
         esc(&link.expires_at),
         esc(&collection.name),

@@ -18,10 +18,8 @@ import {
   Menu,
   Skeleton,
   ToastProvider,
-  useThemePreference,
   useWidthClass,
   type NavItem,
-  type ThemePreference,
 } from './design';
 import { useLogout, useMe } from './api/hooks';
 import { fmt, m } from './i18n/messages';
@@ -95,32 +93,6 @@ function OfflineBanner() {
   );
 }
 
-const THEME_LABEL: Record<ThemePreference, string> = {
-  system: m.nav.themeSystem,
-  light: m.nav.themeLight,
-  dark: m.nav.themeDark,
-};
-const NEXT_THEME: Record<ThemePreference, ThemePreference> = {
-  system: 'light',
-  light: 'dark',
-  dark: 'system',
-};
-
-/** App bar theme control: cycles System -> Light -> Dark.
- * The full radio group lives in Settings -> Appearance. */
-function ThemeButton() {
-  const [pref, setPref] = useThemePreference();
-  return (
-    <Button
-      variant="text"
-      aria-label={fmt(m.nav.themeAria, { current: THEME_LABEL[pref], next: THEME_LABEL[NEXT_THEME[pref]] })}
-      onClick={() => setPref(NEXT_THEME[pref])}
-    >
-      {fmt(m.nav.themeWithLabel, { label: THEME_LABEL[pref] })}
-    </Button>
-  );
-}
-
 const STATIC_TITLES: Record<string, string> = {
   '/login': m.titles.login,
   '/signup': m.titles.signup,
@@ -161,7 +133,6 @@ function Shell() {
   const location = useLocation();
   const me = useMe();
   const logout = useLogout();
-  const [themePref, setThemePref] = useThemePreference();
   const widthClass = useWidthClass();
   const [helpOpen, setHelpOpen] = useState(false);
   usePageTitle();
@@ -242,25 +213,20 @@ function Shell() {
               items={[
                 { id: 'profile', label: fmt(m.nav.profileWithName, { username: me.data.username }), icon: 'person' },
                 { id: 'settings', label: m.nav.settings, icon: 'settings' },
-                { id: 'theme', label: fmt(m.nav.themeWithLabel, { label: THEME_LABEL[themePref] }), icon: 'contrast' },
                 { id: 'logout', label: m.nav.logOut, icon: 'logout' },
               ]}
               onSelect={(id) => {
                 if (!me.data) return;
                 if (id === 'profile') navigate(`/${me.data.username}`);
                 else if (id === 'settings') navigate('/settings');
-                else if (id === 'theme') setThemePref(NEXT_THEME[themePref]);
                 else if (id === 'logout')
                   logout.mutate(undefined, { onSuccess: () => navigate('/') });
               }}
             />
           ) : (
-            <>
-              <ThemeButton />
-              <Button variant="text" onClick={() => navigate('/login')}>
-                {m.nav.logIn}
-              </Button>
-            </>
+            <Button variant="text" onClick={() => navigate('/login')}>
+              {m.nav.logIn}
+            </Button>
           )}
         </>
       }
@@ -321,8 +287,8 @@ function Shell() {
 }
 
 const router = createBrowserRouter([
-  // The landing page is a standalone page (Peak A5) with its
-  // own top bar - it does not render inside the app shell.
+  // The landing page is a standalone Observe scene with its
+  // own glass nav - it does not render inside the app shell.
   { path: '/', element: <LandingPage /> },
   {
     element: <Shell />,

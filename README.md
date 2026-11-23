@@ -51,7 +51,7 @@ through shell history, no more "it worked on my old laptop".
 | Stack | Rust (CLI + axum/SQLite server) · React 19 web |
 | Status | v0.1.6 · 617 tests green · MIT |
 
-![ForgeHub landing page, light theme](docs/screenshots/landing-light.jpg)
+![ForgeHub landing page](docs/screenshots/landing.jpg)
 
 ## ✨ What is inside
 
@@ -126,50 +126,61 @@ downloads and only works once a repository is public.)
 
 ## 📸 Screenshots
 
-The current design is faithful Material You 3 - one seed
-colour, light + dark + system themes, Roboto Flex throughout.
-Every capture below is the real app, taken from a local
-server with a seeded demo account.
+The design is the "Observe" look: one dark theme,
+monochrome glass over a drifting smoke backdrop, white as
+the only accent. The landing page is a standalone glass
+scene with an Instrument Serif headline; the signed-in app
+is Roboto Flex. Every capture below is the real app, taken
+from a local server with a seeded demo account.
 
-| Landing, light | Landing, dark |
+| Landing | Library |
 |---|---|
-| ![Landing light](docs/screenshots/landing-light.jpg) | ![Landing dark](docs/screenshots/landing-dark.jpg) |
-
-| Library, light | Library, dark |
-|---|---|
-| ![Library light](docs/screenshots/library-light.jpg) | ![Library dark](docs/screenshots/library-dark.jpg) |
+| ![Landing](docs/screenshots/landing.jpg) | ![Library](docs/screenshots/library.jpg) |
 
 | Home | A snippet |
 |---|---|
-| ![Home](docs/screenshots/home-light.jpg) | ![Snippet page](docs/screenshots/snippet-light.jpg) |
+| ![Home](docs/screenshots/home.jpg) | ![Snippet page](docs/screenshots/snippet.jpg) |
 
 | A collection | Explore |
 |---|---|
-| ![Collection page](docs/screenshots/collection-light.jpg) | ![Explore](docs/screenshots/explore-light.jpg) |
+| ![Collection page](docs/screenshots/collection.jpg) | ![Explore](docs/screenshots/explore.jpg) |
 
 | New snippet editor | Profile |
 |---|---|
-| ![Editor](docs/screenshots/editor-light.jpg) | ![Profile](docs/screenshots/profile-light.jpg) |
+| ![Editor](docs/screenshots/editor.jpg) | ![Profile](docs/screenshots/profile.jpg) |
 
-Settings (theme picker included) and the landing on a phone:
+Settings, the public snippet page (server-rendered, no
+JavaScript) and the landing on a phone:
 
-| Settings | Landing, mobile |
+| Settings | Public page |
 |---|---|
-| ![Settings](docs/screenshots/settings-light.jpg) | ![Landing on mobile](docs/screenshots/landing-mobile.jpg) |
+| ![Settings](docs/screenshots/settings.jpg) | ![Public page](docs/screenshots/public-page.jpg) |
+
+| Landing, mobile |
+|---|
+| ![Landing on mobile](docs/screenshots/landing-mobile.jpg) |
 
 ## 🎨 Design
 
-- **Material You 3**, generated from a single seed colour
-  (`#36618E`) - colour comes from tokens, never hard-coded
-- **Three themes, one switch** - light, dark, or follow the
-  system; the same picker lives in Settings and the account
-  menu, and the choice is applied before first paint
-- **Roboto Flex everywhere**, self-hosted like every other
-  asset - no CDNs, no third-party fonts or scripts
-- **Responsive shell** - navigation rail on desktop, compact
-  bar on small screens; WCAG 2.2 AA contrast checked by an
-  automated suite, and a 72-screenshot visual regression
-  suite runs in CI
+- **One dark theme** - monochrome "liquid glass" surfaces
+  over a fixed smoke backdrop; white is the only accent
+  (the active nav pill, filled buttons), error red kept.
+  There is no theme switch: the design is the theme
+- **Instrument Serif on the landing page only**; the
+  signed-in app is Roboto Flex throughout. Both fonts are
+  self-hosted like every other asset - no CDNs, no
+  third-party fonts or scripts
+- **Colour comes from tokens, never hard-coded** - the
+  `.observe-app` scope re-points the Material colour roles
+  to the monochrome glass values, so every screen,
+  including the Peak-era collections, imports and activity
+  screens, wears the same design
+- **Responsive shell** - navigation rail on desktop, pinned
+  glass bar on small screens; entrance and route
+  animations are reduced-motion safe; WCAG 2.2 AA checked
+  by an axe sweep over every route, and a 36-screenshot
+  visual regression suite guards the look
+  (`scripts/visual-web.sh`)
 
 ## 🧰 Commands
 

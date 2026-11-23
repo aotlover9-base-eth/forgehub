@@ -3,10 +3,12 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 
 /**
- * Accessibility sweep (Peak A7): axe-core over every route,
- * in both themes, at the three M3 width classes (360 / 768 /
- * 1280). Any violation fails with the route, theme and width
- * in the message. Runs in the same harness as app.spec.ts
+ * Accessibility sweep (Peak A7, restored-design update
+ * 2026-11-23): axe-core over every route, in the one theme
+ * the product ships (the dark Observe design - there is no
+ * theme switch), at the three M3 width classes (360 / 768 /
+ * 1280). Any violation fails with the route and width in the
+ * message. Runs in the same harness as app.spec.ts
  * (scripts/e2e-web.sh starts a fresh server).
  */
 
@@ -18,7 +20,6 @@ const require = createRequire(import.meta.url);
 const AXE_SOURCE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 
 const WIDTHS = [360, 768, 1280];
-const THEMES = ['light', 'dark'] as const;
 
 function signedInRoutes(user: string) {
   return [
@@ -92,15 +93,12 @@ async function axeViolations(page: Page): Promise<string[]> {
   return violations;
 }
 
-async function sweep(browser: Browser, baseURL: string, theme: string, signedIn: boolean) {
+async function sweep(browser: Browser, baseURL: string, signedIn: boolean) {
   const context = await browser.newContext();
-  await context.addInitScript((t) => {
-    window.localStorage.setItem('forgehub-theme', t);
-  }, theme);
   const page = await context.newPage();
   // Each test seeds its own user: the server is shared by
   // the whole file, so names must not collide.
-  const user = signedIn ? `a11y-${theme}` : `a11y-out-${theme}`;
+  const user = signedIn ? 'a11y-in' : 'a11y-out';
   if (signedIn) {
     await seed(page, user);
   } else {
@@ -118,7 +116,7 @@ async function sweep(browser: Browser, baseURL: string, theme: string, signedIn:
       await page.waitForTimeout(350);
       const violations = await axeViolations(page);
       for (const v of violations) {
-        failures.push(`[${theme} @${width}px ${route}] ${v}`);
+        failures.push(`[dark @${width}px ${route}] ${v}`);
       }
     }
   }
@@ -128,14 +126,12 @@ async function sweep(browser: Browser, baseURL: string, theme: string, signedIn:
 
 test.describe('axe sweep', () => {
   test.setTimeout(300_000);
-  for (const theme of THEMES) {
-    test(`signed-in routes are axe-clean in ${theme}`, async ({ browser, baseURL }) => {
-      const failures = await sweep(browser, baseURL!, theme, true);
-      expect(failures, failures.join('\n')).toEqual([]);
-    });
-    test(`signed-out routes are axe-clean in ${theme}`, async ({ browser, baseURL }) => {
-      const failures = await sweep(browser, baseURL!, theme, false);
+  test('signed-in routes are axe-clean', async ({ browser, baseURL }) => {
+    const failures = await sweep(browser, baseURL!, true);
     expect(failures, failures.join('\n')).toEqual([]);
-    });
-  }
+  });
+  test('signed-out routes are axe-clean', async ({ browser, baseURL }) => {
+    const failures = await sweep(browser, baseURL!, false);
+    expect(failures, failures.join('\n')).toEqual([]);
+  });
 });

@@ -31,11 +31,6 @@ export const en = {
     accountMenuFor: 'Account menu for {username}',
     searchPublicSnippets: 'Search public snippets',
     newSnippet: 'New snippet',
-    themeAria: 'Theme: {current}. Activate to switch to {next}.',
-    themeWithLabel: 'Theme: {label}',
-    themeSystem: 'System',
-    themeLight: 'Light',
-    themeDark: 'Dark',
     offline: 'You are offline. Changes will fail until the connection is back.',
     footerTagline: 'ForgeHub - save a command once, run it anywhere.',
     footerSource: 'Source',
@@ -147,14 +142,6 @@ export const en = {
     sectionTokens: 'Tokens',
     sectionCli: 'CLI',
     sectionDanger: 'Danger zone',
-    theme: 'Theme',
-    themeSystem: 'System',
-    themeSystemHelp: 'Follow your device setting.',
-    themeLight: 'Light',
-    themeLightHelp: 'Always use the light scheme.',
-    themeDark: 'Dark',
-    themeDarkHelp: 'Always use the dark scheme.',
-    currentlyShowing: 'Currently showing the {scheme} scheme. The same choice lives in the app bar account menu.',
     density: 'Density',
     densityLabel: 'Compact list density',
     densityHelp:
@@ -545,20 +532,20 @@ export const en = {
     login: 'Log in',
     createAccount: 'Create account',
     heroTitle: 'Save a command once, run it anywhere.',
+    heroTitleStart: 'Save a command once, run it ',
+    heroTitleWord: 'anywhere',
     heroSub:
       'The shell commands you keep re-typing - stored once, shown in full, and run only with your approval.',
-    demoLabel: 'Terminal - fg ubuntu-setup',
+    getStarted: 'Get started',
+    socialAria: 'ForgeHub shortcuts',
+    sourceAria: 'ForgeHub source on GitHub',
+    explorePublicAria: 'Explore public snippets',
+    guideAria: 'Read the user guide',
+    loopCaption: 'The confirmation card, in an eight-second loop.',
+    loopAria: 'Eight-second loop: the ForgeHub confirmation card for fg ubuntu-setup',
+    loopAlt:
+      'The ForgeHub confirmation card for fg ubuntu-setup: the exact command, version 1, its sha256 hash and the uses-sudo warning, waiting for approval',
     exploreSnippets: 'Explore snippets',
-    featuresAria: 'What ForgeHub does',
-    feature1Title: 'Save it on the web',
-    feature1Body:
-      'Paste a command, name it, add tags. Private by default, versioned every time you change it.',
-    feature2Title: 'Run it anywhere',
-    feature2Body:
-      'One short command - fg and the name - on any machine where you are logged in. No paths, no hunting through history.',
-    feature3Title: 'Safety first',
-    feature3Body:
-      "You always see the full commands, the owner, the version and the hash before anything runs. Other people's snippets need a typed yes.",
     introTitle: 'See it run before it runs',
     introSub:
       'Sixty seconds, captioned: a command is saved once, then run anywhere - and ForgeHub shows you exactly what will run before anything executes.',
@@ -577,9 +564,6 @@ export const en = {
     transcript5:
       'Keep snippets private, share a link, or publish them. Search, star and fork. Record in your terminal and push like git.',
     transcript6: 'ForgeHub. Save a command once. Run it anywhere with fg.',
-    sourceOnGithub: 'Source on GitHub',
-    noTracking: 'No tracking. No ads.',
-    footerTagline: 'ForgeHub - save a command once, run it anywhere.',
   },
   explore: {
     title: 'Explore',

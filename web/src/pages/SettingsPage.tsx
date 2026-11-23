@@ -10,18 +10,14 @@ import {
   ErrorState,
   Checkbox,
   PageHeader,
-  Radio,
   SelectField,
   Skeleton,
   Switch,
   Tabs,
   TextField,
-  resolveTheme,
   useDensity,
-  useThemePreference,
   useToast,
   useWidthClass,
-  type ThemePreference,
 } from '../design';
 import { ApiError } from '../api/client';
 import {
@@ -122,37 +118,13 @@ export default function SettingsPage() {
   );
 }
 
-const THEME_OPTIONS: { id: ThemePreference; label: string; help: string }[] = [
-  { id: 'system', label: m.settings.themeSystem, help: m.settings.themeSystemHelp },
-  { id: 'light', label: m.settings.themeLight, help: m.settings.themeLightHelp },
-  { id: 'dark', label: m.settings.themeDark, help: m.settings.themeDarkHelp },
-];
-
 function AppearanceTab() {
-  const [pref, setPref] = useThemePreference();
   const [density, setDensity] = useDensity();
   return (
     <Card>
-      <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
-        <legend style={{ fontWeight: 500, marginBottom: 'var(--fh-space-2)' }}>{m.settings.theme}</legend>
-        <div style={{ display: 'grid', gap: 'var(--fh-space-2)' }}>
-          {THEME_OPTIONS.map((option) => (
-            <Radio
-              key={option.id}
-              name="theme"
-              value={option.id}
-              checked={pref === option.id}
-              onChange={(value) => setPref(value as ThemePreference)}
-              label={
-                <>
-                  <strong>{option.label}</strong> - {option.help}
-                </>
-              }
-            />
-          ))}
-        </div>
-      </fieldset>
-      <p>{fmt(m.settings.currentlyShowing, { scheme: resolveTheme(pref) })}</p>
+      {/* One theme only - the dark Observe theme - so there is
+          no theme picker here (restored 2026-11-23). List
+          density is the one display preference. */}
       <div>
         <p style={{ fontWeight: 500, margin: '0 0 var(--fh-space-2)' }}>{m.settings.density}</p>
         <Switch
