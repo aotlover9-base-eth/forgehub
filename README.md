@@ -117,14 +117,10 @@ fg push hello --public      # publish a local snippet
 fg run alice/docker-setup   # run anyone's public snippet (trust flow below)
 ```
 
-Prebuilt binaries (Linux x86_64 and aarch64 tarballs) are on
-the [Releases page](https://github.com/aotlover9-base-eth/forgehub/releases).
-ForgeHub is Linux-only - on other systems, use the web app in
-a browser or build the CLI from source. This repository is
-private, so download signed in - in the browser, or with
-`gh release download` - and verify against the release's
-`SHA256SUMS`. (`scripts/install.sh` uses unauthenticated
-downloads and only works once a repository is public.)
+There are no prebuilt binaries: build the CLI from source as
+above. ForgeHub is Linux-only - on other systems, use the web
+app in a browser. The intro video lives in
+[docs/assets](docs/assets/).
 
 ## 📸 Screenshots
 
