@@ -14,6 +14,9 @@ use crate::store::Store;
 pub enum UpdateStatus {
     /// The running version is the newest known.
     Latest,
+    /// No binary releases are published anywhere (GitHub
+    /// answered 404): upgrade by rebuilding from source.
+    NoReleases,
     /// A newer version exists.
     Available {
         latest: String,
@@ -66,15 +69,18 @@ pub fn check_github(api_base: &str) -> Result<Option<String>> {
         .timeout(std::time::Duration::from_secs(10))
         .user_agent(concat!("forgehub/", env!("CARGO_PKG_VERSION")))
         .build()?;
-    let body: serde_json::Value = http
+    let resp = http
         .get(format!(
             "{}/repos/aotlover9-base-eth/forgehub/releases/latest",
             api_base.trim_end_matches('/')
         ))
         .header("accept", "application/vnd.github+json")
-        .send()?
-        .error_for_status()?
-        .json()?;
+        .send()?;
+    // 404 = the repository has no published releases.
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    let body: serde_json::Value = resp.error_for_status()?.json()?;
     Ok(body["tag_name"].as_str().map(str::to_string))
 }
 
@@ -110,8 +116,9 @@ pub fn run_check(store: &Store, registry_flag: Option<&str>) -> Result<UpdateSta
         } else {
             UpdateStatus::Latest
         }),
-        _ => Err(CliError::failure(
-            "forgehub: could not check for updates\n  what: neither the registry nor GitHub answered\n  fix: check your connection, or look at https://github.com/aotlover9-base-eth/forgehub/releases",
+        Ok(None) => Ok(UpdateStatus::NoReleases),
+        Err(_) => Err(CliError::failure(
+            "forgehub: could not check for updates\n  what: neither the registry nor GitHub answered\n  fix: check your connection, or pull the latest source from https://github.com/aotlover9-base-eth/forgehub",
         )
         .into()),
     }
@@ -129,6 +136,19 @@ pub fn cmd_update_check(store: &Store, registry_flag: Option<&str>, json: bool) 
                 );
             } else {
                 println!("forgehub {current} - you are on the latest known version.");
+            }
+            Ok(0)
+        }
+        UpdateStatus::NoReleases => {
+            let how = "git pull && cargo install --locked --path crates/forge-cli --force";
+            if json {
+                println!(
+                    "{}",
+                    serde_json::json!({ "current": current, "latest": null, "update_available": false, "releases": false, "update_from_source": how })
+                );
+            } else {
+                println!("forgehub {current} - no binary releases are published.");
+                println!("  to update, rebuild from source: {how}");
             }
             Ok(0)
         }

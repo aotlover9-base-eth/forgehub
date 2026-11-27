@@ -134,7 +134,7 @@ fn fetch_sums(url: &str) -> Result<String, FetchFail> {
 /// automatic path cannot complete.
 fn manual_steps(version: &str) -> String {
     format!(
-        "To verify a downloaded release by hand:\n  gh release download v{version} --repo aotlover9-base-eth/forgehub\n  sha256sum -c SHA256SUMS\n(the release repository is private, so plain HTTPS downloads need the authenticated gh flow above; sha256sum -c must answer OK for the archive you installed from.)"
+        "No binary releases are published, so there is nothing to verify against; build from source instead (cargo install --locked --path crates/forge-cli).\nIf you do have a release archive and its SHA256SUMS (v{version}), verify by hand:\n  sha256sum -c SHA256SUMS"
     )
 }
 

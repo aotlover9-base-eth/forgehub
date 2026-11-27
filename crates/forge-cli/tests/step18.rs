@@ -226,3 +226,28 @@ fn offline_flag_fails_cloud_commands_fast_with_a_clear_message() {
         "unexpected stderr: {stderr}"
     );
 }
+
+#[test]
+fn update_check_handles_github_with_no_releases() {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { break };
+            let mut buf = [0u8; 1024];
+            let _ = std::io::Read::read(&mut stream, &mut buf);
+            let _ = stream.write_all(
+                b"HTTP/1.1 404 Not Found\r\ncontent-type: application/json\r\ncontent-length: 2\r\n\r\n{}",
+            );
+        }
+    });
+    let dir = tempfile::tempdir().unwrap();
+    let mut cmd = forgehub(dir.path());
+    cmd.env("FORGEHUB_GITHUB_API", &base)
+        .args(["--json", "update", "--check"]);
+    let out = run(&mut cmd, "");
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    let parsed: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    assert_eq!(parsed["update_available"], false);
+    assert_eq!(parsed["releases"], false);
+}
