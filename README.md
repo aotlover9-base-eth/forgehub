@@ -120,7 +120,7 @@ fg run alice/docker-setup   # run anyone's public snippet (trust flow below)
 There are no prebuilt binaries: build the CLI from source as
 above. ForgeHub is Linux-only - on other systems, use the web
 app in a browser. The intro video lives in
-[docs/assets](docs/assets/).
+[web/public/video](web/public/video/).
 
 ## 📸 Screenshots
 
