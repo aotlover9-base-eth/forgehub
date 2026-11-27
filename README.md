@@ -46,10 +46,12 @@ through shell history, no more "it worked on my old laptop".
   file, and snippets are text only (≤ 64 KiB - no uploads,
   no binaries)
 
-| | |
-|---|---|
-| Stack | Rust (CLI + axum/SQLite server) · React 19 web |
-| Status | v0.1.6 · 617 tests green · MIT |
+Built with Rust (CLI + axum/SQLite server) and a React 19 web app.
+
+**Jump to:** [Quickstart](#-quickstart---server-docker) ·
+[CLI](#%EF%B8%8F-quickstart---cli) · [Screenshots](#-screenshots) ·
+[Commands](#-commands) · [Safety](#%EF%B8%8F-safety-rules-enforced-not-optional) ·
+[Configuration](#%EF%B8%8F-configuration) · [Docs](#-documentation)
 
 ![ForgeHub landing page](docs/screenshots/landing.jpg)
 
@@ -99,7 +101,7 @@ create an account. Details: [docs/deploy.md](docs/deploy.md).
 ## ⌨️ Quickstart - CLI
 
 ```console
-cargo install --path crates/forge-cli   # from the clone; Rust 1.x
+cargo install --path crates/forge-cli   # from the clone; toolchain pinned in rust-toolchain.toml
 forgehub alias install                  # adds the `fg` alias
 fg init
 fg record hello             # capture shell: run `echo hello`, then `end`
@@ -149,16 +151,12 @@ from a local server with a seeded demo account.
 |---|---|
 | ![Editor](docs/screenshots/editor.jpg) | ![Profile](docs/screenshots/profile.jpg) |
 
-Settings, the public snippet page (server-rendered, no
-JavaScript) and the landing on a phone:
+Settings and the public snippet page (server-rendered, no
+JavaScript):
 
 | Settings | Public page |
 |---|---|
 | ![Settings](docs/screenshots/settings.jpg) | ![Public page](docs/screenshots/public-page.jpg) |
-
-| Landing, mobile |
-|---|
-| ![Landing on mobile](docs/screenshots/landing-mobile.jpg) |
 
 ## 🎨 Design
 
